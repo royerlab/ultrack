@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "ultrack"
+version = "0.1.0"
+description = ""
+authors = ["Jordao Bragantini <jordao.bragantini@czbiohub.org>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

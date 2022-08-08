@@ -1,0 +1,57 @@
+repos:
+# basic pre-commit
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-yaml
+# make every import absolute
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.0
+    hooks:
+      - id: absolufy-imports
+# sorting imports
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+# automatic upgrade to newer python versions syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.30.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py37-plus", "--keep-runtime-typing"]
+# syntax linting and formatting
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
+    hooks:
+      - id: autoflake
+        args: [--in-place, --remove-all-unused-imports,
+               --ignore-init-module-imports]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-typing-imports==1.7.0]
+        args: [--max-line-length, '120',
+               --ignore, 'E741,W503,E203']
+
+  - repo: https://github.com/psf/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+
+  # execute pytest
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+        verbose: true
