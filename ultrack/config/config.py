@@ -26,9 +26,9 @@ class ReaderConfig(BaseModel):
 
 
 class InitConfig(BaseModel):
-    threshold: float
-    max_area: int
-    min_area: int
+    threshold: float = 0.5
+    min_area: int = 100
+    max_area: int = 1_000_000
     min_frontier: float = 0.0
     anisotropy_penalization: float = 0.0
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
@@ -53,9 +53,9 @@ class InitConfig(BaseModel):
 
 
 class ComputeConfig(BaseModel):
-    appear_weight: float
-    disappear_weight: float
-    division_weight: float
+    appear_weight: float = -0.5
+    disappear_weight: float = -0.75
+    division_weight: float = -1.0
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
     solution_gap: float = 0.001
@@ -67,9 +67,11 @@ class ComputeConfig(BaseModel):
 
 class MainConfig(BaseModel):
     working_dir: Path = Path(".")
-    reader_config: ReaderConfig = Field(alias="reader")
-    init_config: InitConfig = Field(alias="init")
-    compute_config: ComputeConfig = Field(alias="compute")
+    reader_config: ReaderConfig = Field(default_factory=ReaderConfig, alias="reader")
+    init_config: InitConfig = Field(default_factory=InitConfig, alias="init")
+    compute_config: ComputeConfig = Field(
+        default_factory=ComputeConfig, alias="compute"
+    )
 
 
 def load_config(path: Union[str, Path]) -> MainConfig:
