@@ -1,8 +1,9 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pytest
 import toml
+import zarr
 
 
 @pytest.fixture
@@ -39,7 +40,22 @@ def config_content() -> Dict[str, Any]:
 
 @pytest.fixture
 def config_path(tmp_path: Path, config_content: Dict[str, Any]) -> Path:
-    path = tmp_path / "config"
+    path = tmp_path / "config.toml"
     with open(path, mode="w") as f:
         toml.dump(config_content, f)
     return path
+
+
+@pytest.fixture
+def zarr_dataset_paths(tmp_path: Path) -> List[str]:
+
+    paths = []
+    for filename in ("detection.zarr", "edge.zarr"):
+        path = tmp_path / filename
+        store = zarr.DirectoryStore(path)
+        _ = zarr.zeros(
+            shape=(25, 128, 128, 128), chunks=(1, 128, 128, 128), store=store
+        )
+        paths.append(str(path))
+
+    return paths

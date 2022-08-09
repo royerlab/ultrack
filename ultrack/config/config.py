@@ -14,7 +14,15 @@ NAME_TO_WS_HIER = {
 
 class ReaderConfig(BaseModel):
     reader_plugin: str = "builtins"
-    layer_names: List[Union[str, int]] = [0, 1]
+    layer_indices: List[Union[str, int]] = [0, 1]
+
+    @validator("layer_indices", pre=True)
+    def validate_layer_index_length(cls, value: List) -> List:
+        """Checks if layer_index has length 2"""
+        if len(value) != 2:
+            ValidationError(f"`layer_indices` must have length 2. Found {len(value)}.")
+
+        return value
 
 
 class InitConfig(BaseModel):
