@@ -19,6 +19,8 @@ pillow = "<9.2.0"  # tox wans't working for 9.2.0
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 pre-commit = "^2.20.0"
+pytest-qt = "^4.1.0"
+PyQt5 = "^5.15.7"
 
 [tool.poetry.scripts]
 ultrack = "ultrack.cli.main:main"
