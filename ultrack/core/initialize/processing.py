@@ -1,0 +1,217 @@
+import logging
+import multiprocessing as mp
+import pickle
+import uuid
+from contextlib import nullcontext
+from pathlib import Path
+from typing import Optional
+
+import fasteners
+import numpy as np
+import pandas as pd
+import sqlalchemy as sqla
+from numpy.typing import ArrayLike
+from toolz import curry
+from tqdm import tqdm
+
+from ultrack.config import InitConfig
+from ultrack.core.initialize.dbbase import Base, NodeDB, get_database_path
+from ultrack.core.initialize.utils import check_array_chunk
+from ultrack.core.segmentation.hierarchy import create_hierarchies
+
+logging.basicConfig()
+logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
+
+LOG = logging.getLogger(__name__)
+
+
+def generate_id(index: int, time: int, max_segments: int) -> int:
+    """Generates a unique id.
+
+    Parameters
+    ----------
+    index : int
+        Current index per time.
+    time_point : int
+        Current time.
+    max_segments : int
+        Upper bound of number of segments.
+
+    Returns
+    -------
+    int
+        Unique id.
+    """
+    return index + (time + 1) * max_segments
+
+
+@curry
+def _process(
+    time: int,
+    detection: ArrayLike,
+    edge: ArrayLike,
+    config: InitConfig,
+    db_path: str,
+    max_segments_per_time: int,
+    lock: Optional[fasteners.InterProcessLock] = None,
+) -> None:
+    """Process `detection` and `edge` of current time and add data to database.
+
+    Parameters
+    ----------
+    time : int
+        Current time.
+    detection : ArrayLike
+        Detection array of current `time`.
+    edge : ArrayLike
+        Edge array of current `time`.
+    config : InitConfig
+        Initialization configuration parameters.
+    db_path : str
+        Path to database including type prefix.
+    max_segments_per_time : int
+        Upper bound of segments per time point.
+    lock : Optional[fasteners.Lock], optional
+        Lock object for SQLite multiprocessing, optional otherwise, by default None.
+    """
+    np.random.seed(42)  # necessary because of watershed tie-zones
+
+    hiers = create_hierarchies(
+        detection[time] > config.threshold,
+        edge[time],
+        hierarchy_fun=config.ws_hierarchy,
+        max_area=config.max_area,
+        min_area=config.min_area,
+        min_frontier=config.min_frontier,
+    )
+
+    LOG.info(f"Computing nodes of time {time}")
+
+    df = []
+    index = 1
+    for h, hierarchy in enumerate(hiers):
+        hierarchy.cache = True
+
+        for node in hierarchy.nodes:
+            node.id = generate_id(index, time, max_segments_per_time)
+            node.time = time
+            node._parent = None  # avoiding pickling parent hierarchy
+            centroid = node.centroid
+
+            if len(centroid) == 2:
+                y, x = centroid
+                z = 0
+            else:
+                z, y, x = centroid
+
+            # TODO: write `to_row` method.
+
+            df.append(
+                {
+                    "id": node.id,
+                    "t_node_id": index,
+                    "t_hier_id": h + 1,
+                    "t": time,
+                    "z": z,
+                    "y": y,
+                    "x": x,
+                    "selected": False,
+                    "area": node.area,
+                    "pickle": pickle.dumps(node),
+                }
+            )
+            index += 1
+
+        hierarchy.cache = False
+        hierarchy.free_props()
+
+        if index > max_segments_per_time:
+            raise ValueError(
+                f"Number of segments exceeds upper bound of {max_segments_per_time} per time."
+            )
+
+    df = pd.DataFrame(df)
+
+    with lock if lock is not None else nullcontext():
+        LOG.info(f"Pushing nodes from time {time} to {db_path}")
+        engine = sqla.create_engine(db_path, hide_parameters=True)
+        with engine.begin() as conn:
+            df.to_sql(
+                name=NodeDB.__tablename__, con=conn, if_exists="append", index=False
+            )
+
+
+def add_nodes_to_database(
+    detection: ArrayLike,
+    edge: ArrayLike,
+    config: InitConfig,
+    working_dir: Path,
+    database: str = "sqlite",
+    max_segments_per_time: int = 1_000_000,
+) -> None:
+    """Add candidate segmentation (nodes) from `detection` and `edge` to database.
+
+    Parameters
+    ----------
+    detection : ArrayLike
+        Fuzzy detection array of shape (T, (Z), Y, X)
+    edge : ArrayLike
+        Edge array of shape (T, (Z), Y, X)
+
+    config : InitConfig
+        Initialization configuration parameters.
+    working_dir : Path
+        Working directory.
+    database : str, optional
+        Database type, by default "sqlite"
+    max_segments_per_time : int
+        Upper bound of segments per time point.
+    """
+    LOG.info(f"Adding nodes with InitConfig:\n{config}")
+
+    if detection.shape != edge.shape:
+        raise ValueError(
+            f"`detection` and `edge` shape must match. Found {detection.shape} and {edge.shape}"
+        )
+
+    check_array_chunk(detection)
+    check_array_chunk(edge)
+
+    LOG.info(f"Detection array with shape {detection.shape}")
+    LOG.info(f"Edge array with shape {edge.shape}")
+
+    db_path = get_database_path(working_dir, database)
+
+    engine = sqla.create_engine(db_path)
+    Base.metadata.create_all(engine)
+
+    lock = None
+    if database.lower() == "sqlite":
+        identifier = uuid.uuid4().hex
+        lock = fasteners.InterProcessLock(path=working_dir / f"{identifier}.lock")
+
+    process = _process(
+        detection=detection,
+        edge=edge,
+        config=config,
+        db_path=db_path,
+        lock=lock,
+        max_segments_per_time=max_segments_per_time,
+    )
+
+    length = detection.shape[0]
+    if config.n_workers > 1:
+        with mp.Pool(min(config.n_workers, length)) as pool:
+            list(
+                tqdm(
+                    pool.imap(process, range(length)),
+                    desc="Adding nodes to database.",
+                    total=length,
+                )
+            )
+    else:
+        for t in tqdm(range(length), "Adding nodes to database."):
+            process(t)
+
+    if lock is not None:
+        Path(str(lock.path)).unlink(missing_ok=True)

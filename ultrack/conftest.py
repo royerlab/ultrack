@@ -1,13 +1,20 @@
+import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
+import numpy as np
 import pytest
 import toml
 import zarr
 
+from ultrack.config.config import MainConfig, load_config
+from ultrack.utils.data import make_segmentation_mock_data
+
+LOG = logging.getLogger(__name__)
+
 
 @pytest.fixture
-def config_content() -> Dict[str, Any]:
+def config_content(request) -> Dict[str, Any]:
     content = {
         "working_dir": ".",
         "reader": {},
@@ -35,6 +42,16 @@ def config_content() -> Dict[str, Any]:
             "edge_transform": None,
         },
     }
+
+    if hasattr(request, "param"):
+        for keys, value in request.param.items():
+            param = content
+            keys = keys.split(".")
+            for k in keys[:-1]:
+                param = param[k]
+            param[keys[-1]] = value
+
+    LOG.info(content)
     return content
 
 
@@ -44,6 +61,11 @@ def config_path(tmp_path: Path, config_content: Dict[str, Any]) -> Path:
     with open(path, mode="w") as f:
         toml.dump(config_content, f)
     return path
+
+
+@pytest.fixture
+def config_instance(config_path: Path) -> MainConfig:
+    return load_config(config_path)
 
 
 @pytest.fixture
@@ -59,3 +81,28 @@ def zarr_dataset_paths(tmp_path: Path) -> List[str]:
         paths.append(str(path))
 
     return paths
+
+
+@pytest.fixture
+def segmentation_mock_data(request) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    return make_segmentation_mock_data(**request.param)
+
+
+@pytest.fixture
+def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
+    length = request.param.pop("length")
+    blobs, contours, _ = make_segmentation_mock_data(**request.param)
+    shape = (length,) + blobs.shape
+
+    detection = zarr.empty(
+        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=blobs.dtype
+    )
+    edge = zarr.empty(
+        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=contours.dtype
+    )
+
+    for t in range(length):
+        detection[t] = blobs
+        edge[t] = contours
+
+    return detection, edge

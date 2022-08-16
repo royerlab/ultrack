@@ -15,6 +15,10 @@ higra = "^0.6.5"
 zarr = "^2.12.0"
 napari = "^0.4.15"
 pillow = "<9.2.0"  # tox wans't working for 9.2.0
+numba = "^0.56.0"
+blosc = "^1.10.6"
+tensorstore = "^0.1.22"
+SQLAlchemy = "^1.4.40"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

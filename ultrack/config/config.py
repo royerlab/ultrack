@@ -73,6 +73,20 @@ class MainConfig(BaseModel):
         default_factory=ComputeConfig, alias="compute"
     )
 
+    @validator("working_dir", pre=True)
+    def validate_working_dir_writeable(cls, value: str) -> Path:
+        """Converts string to watershed hierarchy function."""
+        value = Path(value)
+        try:
+            tmp_path = value / ".write_test"
+            file_handle = open(tmp_path, "w")
+            file_handle.close()
+            tmp_path.unlink()
+        except OSError:
+            ValidationError(f"Working directory {value} isn't writable.")
+
+        return value
+
 
 def load_config(path: Union[str, Path]) -> MainConfig:
     """Creates MainConfig from TOML file."""
