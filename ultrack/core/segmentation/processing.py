@@ -14,10 +14,10 @@ from numpy.typing import ArrayLike
 from toolz import curry
 from tqdm import tqdm
 
-from ultrack.config import InitConfig
-from ultrack.core.initialize.dbbase import Base, NodeDB, get_database_path
-from ultrack.core.initialize.utils import check_array_chunk
+from ultrack.config import SegmentationConfig
+from ultrack.core.segmentation.dbbase import Base, NodeDB, get_database_path
 from ultrack.core.segmentation.hierarchy import create_hierarchies
+from ultrack.core.segmentation.utils import check_array_chunk
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -50,7 +50,7 @@ def _process(
     time: int,
     detection: ArrayLike,
     edge: ArrayLike,
-    config: InitConfig,
+    config: SegmentationConfig,
     db_path: str,
     max_segments_per_time: int,
     lock: Optional[fasteners.InterProcessLock] = None,
@@ -141,10 +141,10 @@ def _process(
             )
 
 
-def add_nodes_to_database(
+def segment(
     detection: ArrayLike,
     edge: ArrayLike,
-    config: InitConfig,
+    config: SegmentationConfig,
     working_dir: Path,
     database: str = "sqlite",
     max_segments_per_time: int = 1_000_000,

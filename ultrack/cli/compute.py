@@ -9,4 +9,6 @@ from ultrack.config import MainConfig
 def compute_cli(config: MainConfig) -> None:
     """Computes tracking and segmentation."""
 
-    # TODO: check if this function/wrapper is necessary
+    # TODO:
+    #  - check if this function/wrapper is necessary
+    #  - rename to `track`

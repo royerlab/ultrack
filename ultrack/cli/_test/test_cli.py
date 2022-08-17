@@ -11,8 +11,8 @@ def _run_command(commands: List[str]) -> None:
         assert exit.code == 0
 
 
-def test_initialize(config_path: Path, zarr_dataset_paths: List[str]) -> None:
-    _run_command(["initialize", "-cfg", str(config_path)] + zarr_dataset_paths)
+def test_segment(config_path: Path, zarr_dataset_paths: List[str]) -> None:
+    _run_command(["segment", "-cfg", str(config_path)] + zarr_dataset_paths)
 
 
 def test_compute(config_path: Path) -> None:

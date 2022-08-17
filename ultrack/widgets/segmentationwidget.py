@@ -1,12 +1,12 @@
 from magicgui.widgets import ComboBox, FloatSpinBox, PushButton, SpinBox
 
-from ultrack.config.config import NAME_TO_WS_HIER, InitConfig
+from ultrack.config.config import NAME_TO_WS_HIER, SegmentationConfig
 from ultrack.widgets.baseconfigwidget import BaseConfigWidget
 
 
-class InitWidget(BaseConfigWidget):
-    def __init__(self, config: InitConfig):
-        super().__init__(label="Initialization param.", config=config)
+class SegmentationWidget(BaseConfigWidget):
+    def __init__(self, config: SegmentationConfig):
+        super().__init__(label="Segmentation", config=config)
 
     def _setup_widgets(self) -> None:
         self._attr_to_widget = {
@@ -21,14 +21,12 @@ class InitWidget(BaseConfigWidget):
                 label="Watershed by", choices=list(NAME_TO_WS_HIER.items())
             ),
             "n_workers": SpinBox(label="Num. workers"),
-            "max_neighbors": SpinBox(label="Max. neighbors"),
-            "max_distance": FloatSpinBox(label="Max. distance"),
         }
         for widget in self._attr_to_widget.values():
             self.append(widget)
 
-        self._build_w = PushButton(text="Build")
-        self.append(self._build_w)
+        self._segment_btn = PushButton(text="Segment")
+        self.append(self._segment_btn)
 
-        self._load_w = PushButton(text="Load")
-        self.append(self._load_w)
+        self._load_btn = PushButton(text="Load")
+        self.append(self._load_btn)

@@ -14,11 +14,11 @@ LOG = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def config_content(request) -> Dict[str, Any]:
+def config_content(tmp_path: Path, request) -> Dict[str, Any]:
     content = {
-        "working_dir": ".",
+        "working_dir": str(tmp_path),
         "reader": {},
-        "init": {
+        "segmentation": {
             "threshold": 0.5,
             "max_area": 7500,
             "min_area": 500,
@@ -26,10 +26,13 @@ def config_content(request) -> Dict[str, Any]:
             "anisotropy_penalization": 0.0,
             "ws_hierarchy": "area",
             "n_workers": 1,
+        },
+        "linking": {
             "max_neighbors": 10,
             "max_distance": 15.0,
+            "n_workers": 1,
         },
-        "compute": {
+        "tracking": {
             "appear_weight": -0.2,
             "disappear_weight": -1.0,
             "division_weight": -0.1,

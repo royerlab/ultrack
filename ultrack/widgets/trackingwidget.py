@@ -1,12 +1,12 @@
 from magicgui.widgets import FloatSpinBox, PushButton
 
-from ultrack.config.config import ComputeConfig
+from ultrack.config.config import TrackingConfig
 from ultrack.widgets.baseconfigwidget import BaseConfigWidget
 
 
-class ComputeWidget(BaseConfigWidget):
-    def __init__(self, config: ComputeConfig):
-        super().__init__(label="Compute param.", config=config)
+class TrackingWidget(BaseConfigWidget):
+    def __init__(self, config: TrackingConfig):
+        super().__init__(label="Tracking", config=config)
 
     def _setup_widgets(self) -> None:
         self._attr_to_widget = {
@@ -19,5 +19,5 @@ class ComputeWidget(BaseConfigWidget):
         for widget in self._attr_to_widget.values():
             self.append(widget)
 
-        self._run_w = PushButton(text="Run")
+        self._run_w = PushButton(text="Track")
         self.append(self._run_w)

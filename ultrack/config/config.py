@@ -25,7 +25,7 @@ class ReaderConfig(BaseModel):
         return value
 
 
-class InitConfig(BaseModel):
+class SegmentationConfig(BaseModel):
     threshold: float = 0.5
     min_area: int = 100
     max_area: int = 1_000_000
@@ -52,7 +52,13 @@ class InitConfig(BaseModel):
         return NAME_TO_WS_HIER[value]
 
 
-class ComputeConfig(BaseModel):
+class LinkingConfig(BaseModel):
+    n_workers: int = 1
+    max_neighbors: int = 10
+    max_distance: float = 15.0
+
+
+class TrackingConfig(BaseModel):
     appear_weight: float = -0.5
     disappear_weight: float = -0.75
     division_weight: float = -1.0
@@ -68,9 +74,14 @@ class ComputeConfig(BaseModel):
 class MainConfig(BaseModel):
     working_dir: Path = Path(".")
     reader_config: ReaderConfig = Field(default_factory=ReaderConfig, alias="reader")
-    init_config: InitConfig = Field(default_factory=InitConfig, alias="init")
-    compute_config: ComputeConfig = Field(
-        default_factory=ComputeConfig, alias="compute"
+    segmentation_config: SegmentationConfig = Field(
+        default_factory=SegmentationConfig, alias="segmentation"
+    )
+    linking_config: LinkingConfig = Field(
+        default_factory=LinkingConfig, alias="linking"
+    )
+    tracking_config: TrackingConfig = Field(
+        default_factory=TrackingConfig, alias="tracking"
     )
 
     @validator("working_dir", pre=True)

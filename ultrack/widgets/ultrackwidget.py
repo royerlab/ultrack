@@ -4,9 +4,10 @@ import napari
 from magicgui.widgets import Container
 
 from ultrack.config.config import MainConfig, load_config
-from ultrack.widgets.computewidget import ComputeWidget
-from ultrack.widgets.initwidget import InitWidget
+from ultrack.widgets.linkingwidget import LinkingWidget
 from ultrack.widgets.mainconfigwidget import MainConfigWidget
+from ultrack.widgets.segmentationwidget import SegmentationWidget
+from ultrack.widgets.trackingwidget import TrackingWidget
 
 
 class UltrackWidget(Container):
@@ -21,11 +22,14 @@ class UltrackWidget(Container):
         self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
         self.append(self._main_config_w)
 
-        self._init_w = InitWidget(config=config.init_config)
-        self.append(self._init_w)
+        self._segmentation_w = SegmentationWidget(config=config.segmentation_config)
+        self.append(self._segmentation_w)
 
-        self._compute_w = ComputeWidget(config=config.compute_config)
-        self.append(self._compute_w)
+        self._linking_w = LinkingWidget(config=config.linking_config)
+        self.append(self._linking_w)
+
+        self._tracking_w = TrackingWidget(config=config.tracking_config)
+        self.append(self._tracking_w)
 
     @property
     def config(self) -> MainConfig:
@@ -34,8 +38,9 @@ class UltrackWidget(Container):
     @config.setter
     def config(self, value: MainConfig) -> None:
         self._main_config_w.config = value
-        self._init_w.config = value.init_config
-        self._compute_w.config = value.compute_config
+        self._segmentation_w.config = value.segmentation_config
+        self._linking_w.config = value.linking_config
+        self._tracking_w.config = value.tracking_config
 
     def _on_config_loaded(self, value: Path) -> None:
         self.config = load_config(value)

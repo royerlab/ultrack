@@ -20,13 +20,16 @@ def _assert_input_in_target(input: Dict, target: Dict) -> None:
 
 def _format_config(config: Dict) -> None:
     """Formats dictionary config according to Config transforms."""
-    config["init"]["ws_hierarchy"] = NAME_TO_WS_HIER[config["init"]["ws_hierarchy"]]
+    config["segmentation"]["ws_hierarchy"] = NAME_TO_WS_HIER[
+        config["segmentation"]["ws_hierarchy"]
+    ]
 
     config["working_dir"] = Path(config["working_dir"])
 
     config["reader_config"] = config.pop("reader")
-    config["init_config"] = config.pop("init")
-    config["compute_config"] = config.pop("compute")
+    config["segmentation_config"] = config.pop("segmentation")
+    config["linking_config"] = config.pop("linking")
+    config["tracking_config"] = config.pop("tracking")
 
 
 def test_config_content(config_path: Path, config_content: Dict[str, Any]) -> None:
@@ -38,7 +41,7 @@ def test_config_content(config_path: Path, config_content: Dict[str, Any]) -> No
 
 def test_invalid_config_content(tmp_path: Path, config_content: Dict[str, Any]) -> None:
     """Tests invalid content"""
-    config_content["init"]["ws_hierarchy"] = "other"
+    config_content["segmentation"]["ws_hierarchy"] = "other"
     path = tmp_path / "config.toml"
 
     with open(path, mode="w") as f:
