@@ -13,8 +13,8 @@ from ultrack.core.segmentation.vendored.node import Node as _Node
 LOG = logging.getLogger(__name__)
 
 
-@njit(inline=True)
-def intersects(bbox1: types.int64[:], bbox2: types.int64[:], n_dim: int) -> bool:
+@njit
+def intersects(bbox1: types.int64[:], bbox2: types.int64[:]) -> bool:
     """Checks if bounding box intersects by checking if their coordinates are within the
     range of the other along each axis.
 
@@ -24,14 +24,12 @@ def intersects(bbox1: types.int64[:], bbox2: types.int64[:], n_dim: int) -> bool
         Bounding box as (min_0, min_1, ..., max_0, max_1, ...).
     bbox2 : ArrayLike
         Bounding box as (min_0, min_1, ..., max_0, max_1, ...).
-    n_dim : int
-        Number of dimensions of bounding-box, bbox length x2.
-
     Returns
     -------
     bool
         Boolean indicating intersection.
     """
+    n_dim = len(bbox1) // 2
     intersects = True
     for i in range(n_dim):
         k = i + n_dim
@@ -48,7 +46,33 @@ def intersects(bbox1: types.int64[:], bbox2: types.int64[:], n_dim: int) -> bool
 
 
 @njit
-def iou_with_bbox(
+def iou_with_bbox_2d(
+    bbox1: np.ndarray, bbox2: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
+) -> float:
+    y_min = max(bbox1[0], bbox2[0])
+    x_min = max(bbox1[1], bbox2[1])
+    y_max = min(bbox1[2], bbox2[2])
+    x_max = min(bbox1[3], bbox2[3])
+
+    aligned_mask1 = mask1[
+        y_min - bbox1[0] : mask1.shape[0] + y_max - bbox1[2],
+        x_min - bbox1[1] : mask1.shape[1] + x_max - bbox1[3],
+    ]
+
+    aligned_mask2 = mask2[
+        y_min - bbox2[0] : mask2.shape[0] + y_max - bbox2[2],
+        x_min - bbox2[1] : mask2.shape[1] + x_max - bbox2[3],
+    ]
+
+    inter = np.logical_and(aligned_mask1, aligned_mask2).sum()
+    if inter == 0:  # this avoids dividing by zero when the bbox don't intersect
+        return 0
+    union = mask1.sum() + mask2.sum() - inter
+    return (inter / union).item()
+
+
+@njit
+def iou_with_bbox_3d(
     bbox1: np.ndarray, bbox2: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
 ) -> float:
     z_min = max(bbox1[0], bbox2[0])
@@ -87,12 +111,17 @@ class Node(_Node):
         else:
             self.centroid = self._centroid()
 
-        LOG.info(self)
+        LOG.info(f"Constructed node {self}")
 
     def IoU(self, other: "Node") -> float:
         if not intersects(self.bbox, other.bbox):
             return 0.0
-        return iou_with_bbox(self.bbox, other.bbox, self.mask, other.mask)
+        if self.mask.ndim == 2:
+            return iou_with_bbox_2d(self.bbox, other.bbox, self.mask, other.mask)
+        elif self.mask.ndim == 3:
+            return iou_with_bbox_3d(self.bbox, other.bbox, self.mask, other.mask)
+        else:
+            raise NotImplementedError
 
     def distance(self, other: "Node") -> float:
         return np.sqrt(np.square(self.centroid - other.centroid).sum())

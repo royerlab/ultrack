@@ -1,12 +1,13 @@
 import pickle
 from typing import Tuple
 
+import numpy as np
 import pandas as pd
 import pytest
 import zarr
 
 from ultrack.config.config import MainConfig
-from ultrack.core.segmentation.dbbase import NodeDB, get_database_path
+from ultrack.core.segmentation.dbbase import NodeDB, OverlapDB, get_database_path
 from ultrack.core.segmentation.processing import segment
 
 
@@ -39,6 +40,30 @@ def test_multiprocessing(
     # assert all columns are present
     assert set(NodeDB.__table__.columns.keys()) == set(df.columns)
 
+    nodes = {}
     # assert unpickling works
     for blob in df["pickle"]:
-        pickle.loads(blob)
+        node = pickle.loads(blob)
+        nodes[node.id] = node
+
+    overlaps = pd.read_sql_table(OverlapDB.__tablename__, con=db_path)
+
+    assert np.all(overlaps["node_id"] != overlaps["ancestor_id"])
+
+    # asserting they really overlap
+    for node_id, ancestor_id in zip(overlaps["node_id"], overlaps["ancestor_id"]):
+        assert nodes[node_id].IoU(nodes[ancestor_id]) > 0.0
+
+    overlaps = set(zip(overlaps["node_id"].tolist(), overlaps["ancestor_id"].tolist()))
+
+    # assert we didn't miss any overlap
+    for _, group in df.groupby(["t", "t_hier_id"]):
+        indices = group["id"].tolist()
+        for i in indices:
+            node_i = nodes[i]
+            for j in indices:
+                if i == j or (i, j) in overlaps or (j, i) in overlaps:
+                    # overlaps have alreayd been checked
+                    continue
+                node_j = nodes[j]
+                assert node_i.IoU(node_j) == 0.0

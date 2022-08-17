@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from sqlalchemy import BigInteger, Boolean, Column, Float, Integer, PickleType
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    Float,
+    ForeignKey,
+    Integer,
+    PickleType,
+)
 from sqlalchemy.orm import declarative_base
 
 # constant value to indicate it has no parent
@@ -22,6 +30,13 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean)
     pickle = Column(PickleType)
+
+
+class OverlapDB(Base):
+    __tablename__ = "overlaps"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    node_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    ancestor_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
 
 
 def get_database_path(working_dir: Path, database: str) -> str:
