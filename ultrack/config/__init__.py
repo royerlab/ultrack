@@ -1,4 +1,5 @@
 from ultrack.config.config import (
+    DataConfig,
     LinkingConfig,
     MainConfig,
     SegmentationConfig,

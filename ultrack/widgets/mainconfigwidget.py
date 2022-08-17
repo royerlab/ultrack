@@ -1,4 +1,4 @@
-from magicgui.widgets import FileEdit, LineEdit, create_widget
+from magicgui.widgets import FileEdit, create_widget
 from napari.layers import Image
 
 from ultrack.config import MainConfig
@@ -18,10 +18,3 @@ class MainConfigWidget(BaseConfigWidget):
 
         self._config_loader_w = FileEdit(filter=".toml", label="Load config.")
         self.append(self._config_loader_w)
-
-        self._attr_to_widget = {
-            "working_dir": LineEdit(label="Working dir."),
-        }
-
-        for widget in self._attr_to_widget.values():
-            self.append(widget)

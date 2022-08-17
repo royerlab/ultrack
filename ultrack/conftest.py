@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 @pytest.fixture
 def config_content(tmp_path: Path, request) -> Dict[str, Any]:
     content = {
-        "working_dir": str(tmp_path),
+        "data": {"working_dir": str(tmp_path)},
         "reader": {},
         "segmentation": {
             "threshold": 0.5,

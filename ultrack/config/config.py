@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
@@ -10,6 +11,38 @@ NAME_TO_WS_HIER = {
     "dynamics": hg.watershed_hierarchy_by_dynamics,
     "volume": hg.watershed_hierarchy_by_volume,
 }
+
+
+class DataBaseChoices(Enum):
+    sqlite = "sqlite"
+
+
+class DataConfig(BaseModel):
+    working_dir: Path = Path(".")
+    database: DataBaseChoices = "sqlite"
+
+    @validator("working_dir")
+    def validate_working_dir_writeable(cls, value: Path) -> Path:
+        """Converts string to watershed hierarchy function."""
+        try:
+            tmp_path = value / ".write_test"
+            file_handle = open(tmp_path, "w")
+            file_handle.close()
+            tmp_path.unlink()
+        except OSError:
+            ValidationError(f"Working directory {value} isn't writable.")
+
+        return value
+
+    @property
+    def database_path(self) -> str:
+        """Returns database path given working directory and database type."""
+        if self.database == "sqlite":
+            return f"sqlite:///{self.working_dir.absolute()}/data.db"
+        else:
+            raise NotImplementedError(
+                f"Dataset type {self.database} support not implemented."
+            )
 
 
 class ReaderConfig(BaseModel):
@@ -72,7 +105,7 @@ class TrackingConfig(BaseModel):
 
 
 class MainConfig(BaseModel):
-    working_dir: Path = Path(".")
+    data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
     reader_config: ReaderConfig = Field(default_factory=ReaderConfig, alias="reader")
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"
@@ -83,20 +116,6 @@ class MainConfig(BaseModel):
     tracking_config: TrackingConfig = Field(
         default_factory=TrackingConfig, alias="tracking"
     )
-
-    @validator("working_dir", pre=True)
-    def validate_working_dir_writeable(cls, value: str) -> Path:
-        """Converts string to watershed hierarchy function."""
-        value = Path(value)
-        try:
-            tmp_path = value / ".write_test"
-            file_handle = open(tmp_path, "w")
-            file_handle.close()
-            tmp_path.unlink()
-        except OSError:
-            ValidationError(f"Working directory {value} isn't writable.")
-
-        return value
 
 
 def load_config(path: Union[str, Path]) -> MainConfig:

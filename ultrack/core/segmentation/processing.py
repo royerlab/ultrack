@@ -14,8 +14,8 @@ from numpy.typing import ArrayLike
 from toolz import curry
 from tqdm import tqdm
 
-from ultrack.config import SegmentationConfig
-from ultrack.core.segmentation.dbbase import Base, NodeDB, OverlapDB, get_database_path
+from ultrack.config import DataConfig, SegmentationConfig
+from ultrack.core.dbbase import Base, NodeDB, OverlapDB
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk
 
@@ -168,9 +168,8 @@ def _process(
 def segment(
     detection: ArrayLike,
     edge: ArrayLike,
-    config: SegmentationConfig,
-    working_dir: Path,
-    database: str = "sqlite",
+    segmentation_config: SegmentationConfig,
+    data_config: DataConfig,
     max_segments_per_time: int = 1_000_000,
 ) -> None:
     """Add candidate segmentation (nodes) from `detection` and `edge` to database.
@@ -191,7 +190,7 @@ def segment(
     max_segments_per_time : int
         Upper bound of segments per time point.
     """
-    LOG.info(f"Adding nodes with InitConfig:\n{config}")
+    LOG.info(f"Adding nodes with InitConfig:\n{segmentation_config}")
 
     if detection.shape != edge.shape:
         raise ValueError(
@@ -204,28 +203,28 @@ def segment(
     LOG.info(f"Detection array with shape {detection.shape}")
     LOG.info(f"Edge array with shape {edge.shape}")
 
-    db_path = get_database_path(working_dir, database)
-
-    engine = sqla.create_engine(db_path)
+    engine = sqla.create_engine(data_config.database_path)
     Base.metadata.create_all(engine)
 
     lock = None
-    if database.lower() == "sqlite":
+    if data_config.database == "sqlite":
         identifier = uuid.uuid4().hex
-        lock = fasteners.InterProcessLock(path=working_dir / f"{identifier}.lock")
+        lock = fasteners.InterProcessLock(
+            path=data_config.working_dir / f"{identifier}.lock"
+        )
 
     process = _process(
         detection=detection,
         edge=edge,
-        config=config,
-        db_path=db_path,
+        config=segmentation_config,
+        db_path=data_config.database_path,
         lock=lock,
         max_segments_per_time=max_segments_per_time,
     )
 
     length = detection.shape[0]
-    if config.n_workers > 1:
-        with mp.Pool(min(config.n_workers, length)) as pool:
+    if segmentation_config.n_workers > 1:
+        with mp.Pool(min(segmentation_config.n_workers, length)) as pool:
             list(
                 tqdm(
                     pool.imap(process, range(length)),

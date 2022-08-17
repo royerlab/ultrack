@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -39,9 +37,8 @@ class OverlapDB(Base):
     ancestor_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
 
 
-def get_database_path(working_dir: Path, database: str) -> str:
-    """Returns database path given working directory and database type."""
-    if database.lower() == "sqlite":
-        return f"sqlite:///{working_dir.absolute()}/data.db"
-    else:
-        raise NotImplementedError
+class LinkDB(Base):
+    __tablename__ = "links"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))

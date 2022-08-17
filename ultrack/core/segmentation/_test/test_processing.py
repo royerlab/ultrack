@@ -7,7 +7,7 @@ import pytest
 import zarr
 
 from ultrack.config.config import MainConfig
-from ultrack.core.segmentation.dbbase import NodeDB, OverlapDB, get_database_path
+from ultrack.core.dbbase import NodeDB, OverlapDB
 from ultrack.core.segmentation.processing import segment
 
 
@@ -31,11 +31,12 @@ def test_multiprocessing(
         detection,
         edges,
         config_instance.segmentation_config,
-        config_instance.working_dir,
+        config_instance.data_config,
     )
 
-    db_path = get_database_path(config_instance.working_dir, "sqlite")
-    df = pd.read_sql_table(NodeDB.__tablename__, con=db_path)
+    df = pd.read_sql_table(
+        NodeDB.__tablename__, con=config_instance.data_config.database_path
+    )
 
     # assert all columns are present
     assert set(NodeDB.__table__.columns.keys()) == set(df.columns)
@@ -46,7 +47,9 @@ def test_multiprocessing(
         node = pickle.loads(blob)
         nodes[node.id] = node
 
-    overlaps = pd.read_sql_table(OverlapDB.__tablename__, con=db_path)
+    overlaps = pd.read_sql_table(
+        OverlapDB.__tablename__, con=config_instance.data_config.database_path
+    )
 
     assert np.all(overlaps["node_id"] != overlaps["ancestor_id"])
 

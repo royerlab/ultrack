@@ -24,8 +24,9 @@ def _format_config(config: Dict) -> None:
         config["segmentation"]["ws_hierarchy"]
     ]
 
-    config["working_dir"] = Path(config["working_dir"])
+    config["data"]["working_dir"] = Path(config["data"]["working_dir"])
 
+    config["data_config"] = config.pop("data")
     config["reader_config"] = config.pop("reader")
     config["segmentation_config"] = config.pop("segmentation")
     config["linking_config"] = config.pop("linking")

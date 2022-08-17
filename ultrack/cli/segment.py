@@ -23,4 +23,4 @@ def segmentation_cli(
     detection = viewer.layers[config.reader_config.layer_indices[0]].data
     edge = viewer.layers[config.reader_config.layer_indices[1]].data
 
-    segment(detection, edge, config.segmentation_config, config.working_dir)
+    segment(detection, edge, config.segmentation_config, config.data_config)

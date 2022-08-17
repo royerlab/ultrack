@@ -4,6 +4,7 @@ import napari
 from magicgui.widgets import Container
 
 from ultrack.config.config import MainConfig, load_config
+from ultrack.widgets.datawidget import DataWidget
 from ultrack.widgets.linkingwidget import LinkingWidget
 from ultrack.widgets.mainconfigwidget import MainConfigWidget
 from ultrack.widgets.segmentationwidget import SegmentationWidget
@@ -22,6 +23,9 @@ class UltrackWidget(Container):
         self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
         self.append(self._main_config_w)
 
+        self._data_config_w = DataWidget(config=config.data_config)
+        self.append(self._data_config_w)
+
         self._segmentation_w = SegmentationWidget(config=config.segmentation_config)
         self.append(self._segmentation_w)
 
@@ -38,6 +42,7 @@ class UltrackWidget(Container):
     @config.setter
     def config(self, value: MainConfig) -> None:
         self._main_config_w.config = value
+        self._data_config_w.config = value.data_config
         self._segmentation_w.config = value.segmentation_config
         self._linking_w.config = value.linking_config
         self._tracking_w.config = value.tracking_config
