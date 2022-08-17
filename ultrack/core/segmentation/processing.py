@@ -1,9 +1,6 @@
 import logging
-import multiprocessing as mp
 import pickle
-import uuid
 from contextlib import nullcontext
-from pathlib import Path
 from typing import Optional
 
 import fasteners
@@ -12,12 +9,15 @@ import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
 from toolz import curry
-from tqdm import tqdm
 
 from ultrack.config import DataConfig, SegmentationConfig
 from ultrack.core.dbbase import Base, NodeDB, OverlapDB
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk
+from ultrack.utils.multiprocessing import (
+    multiprocessing_apply,
+    multiprocessing_sqlite_lock,
+)
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -180,17 +180,14 @@ def segment(
         Fuzzy detection array of shape (T, (Z), Y, X)
     edge : ArrayLike
         Edge array of shape (T, (Z), Y, X)
-
-    config : InitConfig
-        Initialization configuration parameters.
-    working_dir : Path
-        Working directory.
-    database : str, optional
-        Database type, by default "sqlite"
+    segmentation_config : SegmentationConfig
+        Segmentation configuration parameters.
+    data_config : DataConfig
+        Data configuration parameters.
     max_segments_per_time : int
         Upper bound of segments per time point.
     """
-    LOG.info(f"Adding nodes with InitConfig:\n{segmentation_config}")
+    LOG.info(f"Adding nodes with SegmentationConfig:\n{segmentation_config}")
 
     if detection.shape != edge.shape:
         raise ValueError(
@@ -206,35 +203,21 @@ def segment(
     engine = sqla.create_engine(data_config.database_path)
     Base.metadata.create_all(engine)
 
-    lock = None
-    if data_config.database == "sqlite":
-        identifier = uuid.uuid4().hex
-        lock = fasteners.InterProcessLock(
-            path=data_config.working_dir / f"{identifier}.lock"
+    with multiprocessing_sqlite_lock(data_config) as lock:
+
+        process = _process(
+            detection=detection,
+            edge=edge,
+            config=segmentation_config,
+            db_path=data_config.database_path,
+            lock=lock,
+            max_segments_per_time=max_segments_per_time,
         )
 
-    process = _process(
-        detection=detection,
-        edge=edge,
-        config=segmentation_config,
-        db_path=data_config.database_path,
-        lock=lock,
-        max_segments_per_time=max_segments_per_time,
-    )
-
-    length = detection.shape[0]
-    if segmentation_config.n_workers > 1:
-        with mp.Pool(min(segmentation_config.n_workers, length)) as pool:
-            list(
-                tqdm(
-                    pool.imap(process, range(length)),
-                    desc="Adding nodes to database.",
-                    total=length,
-                )
-            )
-    else:
-        for t in tqdm(range(length), "Adding nodes to database."):
-            process(t)
-
-    if lock is not None:
-        Path(str(lock.path)).unlink(missing_ok=True)
+        length = detection.shape[0]
+        multiprocessing_apply(
+            process,
+            range(length),
+            segmentation_config.n_workers,
+            desc="Adding nodes to database",
+        )
