@@ -56,7 +56,7 @@ def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
             "time_limit": 36000,
             "method": -1,
             "n_threads": -1,
-            "edge_transform": None,
+            "link_function": "identity",
         },
     }
 

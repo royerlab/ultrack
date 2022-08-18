@@ -1,6 +1,6 @@
 from magicgui.widgets import ComboBox, FloatSpinBox, PushButton, SpinBox
 
-from ultrack.config.config import NAME_TO_WS_HIER, SegmentationConfig
+from ultrack.config.segmentationconfig import NAME_TO_WS_HIER, SegmentationConfig
 from ultrack.widgets.baseconfigwidget import BaseConfigWidget
 
 
