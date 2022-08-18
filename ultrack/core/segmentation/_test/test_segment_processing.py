@@ -21,7 +21,7 @@ from ultrack.core.segmentation.processing import segment
     ],
     indirect=True,
 )
-def test_multiprocessing(
+def test_multiprocessing_segment(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
 ) -> None:

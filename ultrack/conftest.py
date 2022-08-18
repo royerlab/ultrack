@@ -8,6 +8,7 @@ import toml
 import zarr
 
 from ultrack.config.config import MainConfig, load_config
+from ultrack.core.segmentation.processing import segment
 from ultrack.utils.data import make_segmentation_mock_data
 
 LOG = logging.getLogger(__name__)
@@ -93,7 +94,10 @@ def segmentation_mock_data(request) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 @pytest.fixture
 def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
-    length = request.param.pop("length")
+    if not hasattr(request, "param"):
+        request.param = {}
+
+    length = request.param.pop("length", 4)
     blobs, contours, _ = make_segmentation_mock_data(**request.param)
     shape = (length,) + blobs.shape
 
@@ -109,3 +113,18 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
         edge[t] = contours
 
     return detection, edge
+
+
+@pytest.fixture
+def segmentation_database_mock_data(
+    config_instance: MainConfig,
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
+) -> MainConfig:
+    detection, edge = timelapse_mock_data
+    segment(
+        detection,
+        edge,
+        config_instance.segmentation_config,
+        config_instance.data_config,
+    )
+    return config_instance

@@ -8,7 +8,8 @@ from skimage.segmentation import find_boundaries, relabel_sequential, watershed
 
 
 def make_segmentation_mock_data(
-    size: int, n_dim: int
+    size: int = 64,
+    n_dim: int = 3,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generates mock segmentation dataset producing binary blobs, their contours and labels."""
     rng = np.random.default_rng(42)

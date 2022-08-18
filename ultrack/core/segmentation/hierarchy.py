@@ -31,7 +31,21 @@ def create_hierarchies(
     edge: ArrayLike,
     **kwargs,
 ) -> List[Hierarchy]:
-    """TODO"""
+    """Computes a collection of hierarchical watersheds inside `binary_detection` mask.
+
+    Parameters
+    ----------
+    binary_detection : ArrayLike
+        Binary array showing regions of interest.
+
+    edge : ArrayLike
+        Fuzzy contour image representing instances boundaries.
+
+    Returns
+    -------
+    List[Hierarchy]
+        List of hierarchical watersheds.
+    """
 
     assert (
         issubclass(binary_detection.dtype.type, np.integer)
