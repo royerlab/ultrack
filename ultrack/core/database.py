@@ -42,3 +42,4 @@ class LinkDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    iou = Column(Float)

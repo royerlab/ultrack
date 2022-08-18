@@ -7,7 +7,7 @@ import pytest
 import zarr
 
 from ultrack.config.config import MainConfig
-from ultrack.core.dbbase import NodeDB, OverlapDB
+from ultrack.core.database import NodeDB, OverlapDB
 from ultrack.core.segmentation.processing import segment
 
 

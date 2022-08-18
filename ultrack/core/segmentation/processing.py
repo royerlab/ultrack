@@ -11,7 +11,7 @@ from numpy.typing import ArrayLike
 from toolz import curry
 
 from ultrack.config import DataConfig, SegmentationConfig
-from ultrack.core.dbbase import Base, NodeDB, OverlapDB
+from ultrack.core.database import Base, NodeDB, OverlapDB
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk
 from ultrack.utils.multiprocessing import (
