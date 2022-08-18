@@ -1,7 +1,7 @@
 import click
 
-from ultrack.cli.compute import compute_cli
 from ultrack.cli.export import export_cli
+from ultrack.cli.link import link_cli
 from ultrack.cli.segment import segmentation_cli
 
 
@@ -11,5 +11,5 @@ def main():
 
 
 main.add_command(segmentation_cli)
-main.add_command(compute_cli)
+main.add_command(link_cli)
 main.add_command(export_cli)

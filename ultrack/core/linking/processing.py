@@ -110,6 +110,8 @@ def link(
         max_t = session.query(func.max(NodeDB.t)).scalar()
 
     LOG.info(f"Found max time = {max_t}")
+    if max_t is None:
+        raise ValueError(f"Dataset at {data_config.database_path} is empty.")
 
     with multiprocessing_sqlite_lock(data_config) as lock:
         process = _process(

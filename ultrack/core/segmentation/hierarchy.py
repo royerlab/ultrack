@@ -46,6 +46,8 @@ def create_hierarchies(
     List[Hierarchy]
         List of hierarchical watersheds.
     """
+    binary_detection = np.asarray(binary_detection)
+    edge = np.asarray(edge)
 
     assert (
         issubclass(binary_detection.dtype.type, np.integer)

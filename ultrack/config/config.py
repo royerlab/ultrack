@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 from pathlib import Path
 from typing import Callable, List, Optional, Union
@@ -13,6 +14,9 @@ NAME_TO_WS_HIER = {
 }
 
 
+LOG = logging.getLogger(__name__)
+
+
 class DataBaseChoices(Enum):
     sqlite = "sqlite"
 
@@ -24,6 +28,8 @@ class DataConfig(BaseModel):
     @validator("working_dir")
     def validate_working_dir_writeable(cls, value: Path) -> Path:
         """Converts string to watershed hierarchy function."""
+
+        value.mkdir(exist_ok=True)
         try:
             tmp_path = value / ".write_test"
             file_handle = open(tmp_path, "w")
@@ -121,4 +127,6 @@ class MainConfig(BaseModel):
 def load_config(path: Union[str, Path]) -> MainConfig:
     """Creates MainConfig from TOML file."""
     with open(path) as f:
-        return MainConfig.parse_obj(toml.load(f))
+        data = toml.load(f)
+        LOG.info(data)
+        return MainConfig.parse_obj(data)
