@@ -36,9 +36,9 @@ def test_multiprocess_link(
         assert len(group) <= config.linking_config.max_neighbors
         assert (group["iou"] == 1.0).sum() == 1.0
 
-    # validate if distances are respected
+    # validate if distances are whitin max_distance
     nodes = pd.read_sql_query(
-        f"SELECT id, z, y, x FROM {NodeDB.__tablename__}",
+        f"SELECT id, t, z, y, x FROM {NodeDB.__tablename__}",
         con=config.data_config.database_path,
         index_col="id",
     )
@@ -48,3 +48,8 @@ def test_multiprocess_link(
 
     distances = np.linalg.norm(target_pos - source_pos)
     assert np.all(distances < config.linking_config.max_distance)
+
+    # assert every node is present in edges --- not necessary in the real case, but here we know it's true.
+    last_t = nodes["t"].max()
+    assert np.all(nodes[nodes["t"] != last_t].index.isin(edges["source_id"]))
+    assert np.all(nodes[nodes["t"] != 0].index.isin(edges["target_id"]))
