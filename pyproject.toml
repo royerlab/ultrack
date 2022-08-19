@@ -19,6 +19,7 @@ numba = "^0.56.0"
 blosc = "^1.10.6"
 tensorstore = "^0.1.22"
 SQLAlchemy = "^1.4.40"
+gurobipy = "^9.5.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -19,7 +19,7 @@ class TrackingConfig(BaseModel):
     solution_gap: float = 0.001
     time_limit: int = 36000
     method: int = -1
-    n_threads: int = -1
+    n_threads: int = 0
     link_function: LinkFunctionChoices = "identity"
     power: float = 4
     bias: float = -0.005

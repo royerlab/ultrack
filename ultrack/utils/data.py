@@ -55,7 +55,7 @@ def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
             "solution_gap": 0.001,
             "time_limit": 36000,
             "method": -1,
-            "n_threads": -1,
+            "n_threads": 0,
             "link_function": "identity",
         },
     }
