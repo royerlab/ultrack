@@ -7,12 +7,11 @@ import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from scipy.spatial import KDTree
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config import DataConfig, LinkingConfig
-from ultrack.core.database import LinkDB, NodeDB
+from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.utils.multiprocessing import (
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
@@ -105,13 +104,7 @@ def link(
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        max_t = session.query(func.max(NodeDB.t)).scalar()
-
-    LOG.info(f"Found max time = {max_t}")
-    if max_t is None:
-        raise ValueError(f"Dataset at {data_config.database_path} is empty.")
+    max_t = maximum_time(data_config)
 
     with multiprocessing_sqlite_lock(data_config) as lock:
         process = _process(

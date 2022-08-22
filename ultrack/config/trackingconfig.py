@@ -16,6 +16,8 @@ class TrackingConfig(BaseModel):
     division_weight: float = -1.0
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
+    window_size: Optional[int] = None
+    overlap_size: int = 1
     solution_gap: float = 0.001
     time_limit: int = 36000
     method: int = -1

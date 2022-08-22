@@ -20,3 +20,18 @@ def config_option() -> Callable:
         )(f)
 
     return decorator
+
+
+def batch_index_option() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--batch-index",
+            "-b",
+            required=False,
+            default=None,
+            show_default=True,
+            type=int,
+            help="batch index to process a subset of time points. ATTENTION: this it not the time index.",
+        )(f)
+
+    return decorator

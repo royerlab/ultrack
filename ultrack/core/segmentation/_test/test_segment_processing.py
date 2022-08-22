@@ -6,9 +6,9 @@ import pandas as pd
 import pytest
 import zarr
 
+from ultrack import segment
 from ultrack.config.config import MainConfig
 from ultrack.core.database import NodeDB, OverlapDB
-from ultrack.core.segmentation.processing import segment
 
 
 @pytest.mark.parametrize(

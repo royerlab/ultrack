@@ -1,3 +1,6 @@
+import logging
+
+import sqlalchemy as sqla
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -6,13 +9,18 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     PickleType,
+    func,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Session, declarative_base
+
+from ultrack.config.dataconfig import DataConfig
 
 # constant value to indicate it has no parent
 NO_PARENT = -1
 
 Base = declarative_base()
+
+LOG = logging.getLogger(__name__)
 
 
 class NodeDB(Base):
@@ -43,3 +51,16 @@ class LinkDB(Base):
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     iou = Column(Float)
+
+
+def maximum_time(data_config: DataConfig) -> int:
+    """Returns the maximum `t` found in the `NodesDB`."""
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        max_t = session.query(func.max(NodeDB.t)).scalar()
+
+    LOG.info(f"Found max time = {max_t}")
+    if max_t is None:
+        raise ValueError(f"Dataset at {data_config.database_path} is empty.")
+
+    return max_t

@@ -1,5 +1,4 @@
 import tempfile
-from pathlib import Path
 from typing import List
 
 import pytest
@@ -34,11 +33,11 @@ class TestCommandLine:
             ["segment", "-cfg", instance_config_path] + zarr_dataset_paths
         )
 
-    def test_link(self, instance_config_path: Path) -> None:
+    def test_link(self, instance_config_path: str) -> None:
         self._run_command(["link", "-cfg", str(instance_config_path)])
 
     def test_export(self, instance_config_path: str) -> None:
         self._run_command(["export", "-cfg", instance_config_path, "-f", "ctc"])
 
-    # def test_tracking(config_path: Path) -> None:
-    #     _run_command(["track", "-cfg", str(config_path)])
+    def test_tracking(self, instance_config_path: str) -> None:
+        self._run_command(["track", "-cfg", instance_config_path])
