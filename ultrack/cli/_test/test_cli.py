@@ -1,4 +1,5 @@
 import tempfile
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -36,8 +37,17 @@ class TestCommandLine:
     def test_link(self, instance_config_path: str) -> None:
         self._run_command(["link", "-cfg", str(instance_config_path)])
 
-    def test_export(self, instance_config_path: str) -> None:
-        self._run_command(["export", "-cfg", instance_config_path, "-f", "ctc"])
-
     def test_tracking(self, instance_config_path: str) -> None:
         self._run_command(["track", "-cfg", instance_config_path])
+
+    def test_ctc_export(self, instance_config_path: str, tmp_path: Path) -> None:
+        self._run_command(
+            [
+                "export",
+                "ctc",
+                "-cfg",
+                instance_config_path,
+                "-o",
+                str(tmp_path / "01_RES"),
+            ]
+        )

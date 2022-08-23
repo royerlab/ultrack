@@ -132,6 +132,12 @@ class Node(_Node):
             indices[i] += self.bbox[i]  # centering at bbox
         return tuple(indices)
 
+    def contains(self, coords: Union[np.ndarray, Tuple]) -> bool:
+        coords = np.round(coords)
+        indices = np.asarray(self.mask_indices()).T
+        dist = np.square(indices - coords).sum(axis=1)
+        return np.any(dist < 1)
+
     @property
     def slice(self) -> Tuple[slice, slice, slice]:
         bbox = self.bbox

@@ -40,7 +40,7 @@ class SQLTracking:
         self._max_t = maximum_time(self._data_config)
         if self._tracking_config.window_size is None:
             LOG.info(f"Window size not set, configured to {self._max_t}.")
-            self._window_size = self._max_t
+            self._window_size = self._max_t + 1
         else:
             self._window_size = self._tracking_config.window_size
 
@@ -98,7 +98,7 @@ class SQLTracking:
         Parameters
         ----------
         index : int
-            _description_
+            Batch index.
         """
         start_time, end_time = self._window_limits(index, True)
 
@@ -130,7 +130,7 @@ class SQLTracking:
             query = (
                 session.query(LinkDB)
                 .join(NodeDB, NodeDB.id == LinkDB.source_id)
-                .where(NodeDB.t.between(start_time, end_time - 1))
+                .where(NodeDB.t.between(start_time, end_time))
                 # subtracting one because we're using source_id as reference
             )
             df = pd.read_sql(query.statement, session.bind)

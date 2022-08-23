@@ -35,3 +35,17 @@ def batch_index_option() -> Callable:
         )(f)
 
     return decorator
+
+
+def overwrite_option() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--overwrite",
+            "-ow",
+            is_flag=True,
+            default=False,
+            type=bool,
+            help="allows overwriting existing data.",
+        )(f)
+
+    return decorator
