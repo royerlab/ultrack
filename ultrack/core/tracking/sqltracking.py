@@ -181,7 +181,7 @@ class SQLTracking:
             .values(parent_id=sqla.bindparam("parent_id"), selected=True)
         )
 
-        engine = sqla.create_engine(self._data_config.database_path, echo=True)
+        engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
             session.execute(
                 stmt,

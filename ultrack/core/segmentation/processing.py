@@ -204,6 +204,8 @@ def segment(
     engine = sqla.create_engine(data_config.database_path)
     Base.metadata.create_all(engine)
 
+    data_config.metadata_add({"shape": detection.shape})
+
     with multiprocessing_sqlite_lock(data_config) as lock:
 
         process = _process(

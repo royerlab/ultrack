@@ -1,7 +1,12 @@
+import logging
 from enum import Enum
 from pathlib import Path
+from typing import Any, Dict
 
+import toml
 from pydantic import BaseModel, ValidationError, validator
+
+LOG = logging.getLogger(__name__)
 
 
 class DataBaseChoices(Enum):
@@ -36,3 +41,27 @@ class DataConfig(BaseModel):
             raise NotImplementedError(
                 f"Dataset type {self.database} support not implemented."
             )
+
+    @property
+    def metadata_path(self) -> Path:
+        return self.working_dir / "metadata.toml"
+
+    def metadata_add(self, data: Dict[str, Any]) -> None:
+        """Adds `data` content to metadata file."""
+        metadata = self.metadata
+        metadata.update(data)
+
+        LOG.info(f"Updated metadata. New content {metadata}.")
+
+        with open(self.metadata_path, mode="w") as f:
+            toml.dump(metadata, f)
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        if not self.metadata_path.exists():
+            return {}
+
+        with open(self.metadata_path) as f:
+            metadata = toml.load(f)
+
+        return metadata

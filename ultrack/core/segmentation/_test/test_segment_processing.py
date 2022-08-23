@@ -34,6 +34,8 @@ def test_multiprocessing_segment(
         config_instance.data_config,
     )
 
+    assert config_instance.data_config.metadata["shape"] == list(edges.shape)
+
     df = pd.read_sql_table(
         NodeDB.__tablename__, con=config_instance.data_config.database_path
     )
