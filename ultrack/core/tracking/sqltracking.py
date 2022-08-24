@@ -63,7 +63,11 @@ class SQLTracking:
         self._solver.reset()
         self._add_nodes(index=index)
         self._add_edges(index=index)
-        self._add_constraints(index=index)
+
+        self._solver.set_standard_constraints()
+        self._add_overlap_constraints(index=index)
+        self._add_boundary_constraints(index=index)
+
         self._solver.optimize()
 
         self._update_solution(index, self._solver.solution())
@@ -137,7 +141,7 @@ class SQLTracking:
 
         self._solver.add_edges(df["source_id"], df["target_id"], df["iou"])
 
-    def _add_constraints(self, index: int) -> None:
+    def _add_overlap_constraints(self, index: int) -> None:
         """Adds overlap and standard biological contraints.
 
         Parameters
@@ -156,8 +160,33 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
-        self._solver.set_standard_constraints()
         self._solver.add_overlap_constraints(df["node_id"], df["ancestor_id"])
+
+    def _add_boundary_constraints(self, index: int) -> None:
+        """
+        Enforce to solution nodes from the boundary (in time) already selected from adjacent batches.
+
+        Parameters
+        ----------
+        index : int
+            Batch index.
+        """
+        start_time, end_time = self._window_limits(index, True)
+
+        engine = sqla.create_engine(self._data_config.database_path)
+        with Session(engine) as session:
+            query = session.query(NodeDB.id).where(NodeDB.selected)
+
+            start_nodes = [n for n, in query.where(NodeDB.t == start_time)]
+            end_nodes = [n for n, in query.where(NodeDB.t == end_time)]
+
+        LOG.info(
+            f"# {len(start_nodes)} boundary constraints found at at t = {start_time}"
+        )
+        LOG.info(f"# {len(end_nodes)} boundary constraints found at at t = {end_time}")
+
+        self._solver.enforce_node_to_solution(start_nodes)
+        self._solver.enforce_node_to_solution(end_nodes)
 
     def _update_solution(self, index: int, solution: pd.DataFrame) -> None:
         """Updates solution in database.
