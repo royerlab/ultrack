@@ -47,6 +47,8 @@ class TestCommandLine:
                 "ctc",
                 "-cfg",
                 instance_config_path,
+                "-s",
+                "1,1,1",
                 "-o",
                 str(tmp_path / "01_RES"),
             ]

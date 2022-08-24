@@ -9,6 +9,7 @@ import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
 from scipy.ndimage import zoom
+from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from sqlalchemy.orm import Session
 from tifffile import imwrite
@@ -16,6 +17,7 @@ from tqdm import tqdm
 
 from ultrack.config import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.core.export.utils import estimate_drift
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -129,54 +131,103 @@ def tracks_forest(df: pd.DataFrame) -> Dict[int, int]:
     return graph
 
 
-def query_by_id(data_config: DataConfig, indices: List[int]) -> pd.DataFrame:
-    # TODO
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        statement = session.query(
-            NodeDB.id, NodeDB.t, NodeDB.z, NodeDB.y, NodeDB.x
-        ).where(NodeDB.id == sqla.bindparam("node_id"))
-        query = session.execute(statement, {"node_id": id for id in indices})
-        df = pd.read_sql(query.statement, session.bind)
-
-    return df
-
-
-def do_stitching() -> Set[int]:
-    pass
-
-
-def stitch_tracks(
-    data_config: DataConfig,
-    graph: Dict[int, int],
+def stitch_tracks_df(
+    graph: Dict[int, List[int]],
     df: pd.DataFrame,
     selected_track_ids: Set[int],
 ) -> pd.DataFrame:
-    # TODO
+    """Filters selected tracks and stitches (connects) incomplete tracks to nearby tracks on subsequent time point.
 
-    selected_mask = df["track_id"].isin(selected_track_ids)
+    Parameters
+    ----------
+    graph : Dict[int, List[int]]
+        Forest graph indexed by subtree root.
+    df : pd.DataFrame
+        Tracks dataframe.
+    selected_track_ids : Set[int]
+        Set of selected tracks to be kept.
 
-    # selecting terminal (cannot be other track parent) nodes from tracks selected tracks
-    mask = np.logical_and(
-        selected_mask, np.logical_not(df["track_id"].isin(df["parent_track_id"]))
-    )
-    end_points = []
-    for _, group in df[mask].groupby("track_id"):
-        end_points.append(group.index[group["t"].argmax()])
-    end_points = query_by_id(data_config, end_points)
+    Returns
+    -------
+    pd.DataFrame
+        Filtered and stitched tracks dataframe.
+    """
+    selected_track_ids = selected_track_ids.copy()
 
-    # selecting starting (must have no parent)nodes from not selected tracks
-    mask = np.logical_and(
-        np.logical_not(selected_mask), df["parent_track_id"] == NO_PARENT
-    )
-    start_points = []
-    for _, group in df[mask].groupby("track_id"):
-        start_points.append(group.index[group["t"].argmin()])
-    start_points = query_by_id(data_config, start_points)
+    start_df = []
+    end_df = []
+    track_ids = []
+    for i, group in df.groupby("track_id", as_index=True):
+        start_df.append(group.loc[group["t"].idxmin()])
+        end_df.append(group.loc[group["t"].idxmax()])
+        track_ids.append(int(i))
 
-    selected_track_ids = do_stitching()
+    start_df = pd.DataFrame(start_df, index=track_ids)
+    # removing samples from divisions
+    start_df = start_df[start_df["parent_track_id"] == NO_PARENT]
 
-    return selected_track_ids
+    end_df = pd.DataFrame(end_df, index=track_ids)
+    # removing samples from divisions
+    end_df = end_df[np.logical_not(end_df.index.isin(df["parent_track_id"]))]
+
+    start_by_t = start_df.groupby("t")
+    track_id_mapping = {i: i for i in track_ids}
+    track_id_mapping[NO_PARENT] = NO_PARENT
+
+    max_distance = estimate_drift(df)
+
+    for t, end_group in end_df.groupby("t"):
+        end_group = end_group[end_group.index.isin(selected_track_ids)]
+
+        LOG.info(f"# {len(end_group)} track ends at t = {t}")
+        if len(end_group) == 0:
+            continue
+
+        try:
+            start_group = start_by_t.get_group(t + 1)
+        except KeyError:
+            continue
+
+        start_group = start_group[
+            np.logical_not(start_group.index.isin(selected_track_ids))
+        ]
+
+        LOG.info(f"# {len(end_group)} track ends at t = {t + 1}")
+        if len(start_group) == 0:
+            continue
+
+        kdtree = KDTree(start_group[["z", "y", "x"]])
+        dist, neighbors = kdtree.query(
+            end_group[["z", "y", "x"]],
+            distance_upper_bound=max_distance,
+        )
+
+        # removing invalid neighbors
+        valid = dist != np.inf
+        neighbors = neighbors[valid]
+        neigh_df = pd.DataFrame(
+            {"dist": dist[valid], "neighbor": start_group.index.values[neighbors]},
+            index=end_group.index.values[valid],
+        )
+
+        neigh_df = neigh_df.sort_values(by=["dist"])
+        neigh_df = neigh_df.drop_duplicates("neighbor", keep="first")
+
+        LOG.info(
+            f"stitching {neigh_df.index.values} to {neigh_df['neighbor'].values} at t = {t}"
+        )
+
+        for prev_id, new_id in zip(neigh_df["neighbor"], neigh_df.index):
+            track_id_mapping[int(prev_id)] = int(new_id)
+            selected_track_ids.update(connected_component(graph, prev_id))
+
+    LOG.info(f"track_id remapping {track_id_mapping}")
+
+    df["track_id"] = df["track_id"].map(track_id_mapping)
+    df["parent_track_id"] = df["parent_track_id"].map(track_id_mapping)
+    df = df[df["track_id"].isin(selected_track_ids)]
+
+    return df
 
 
 def connected_component(graph: Dict[int, int], index: int) -> Set[int]:
@@ -210,7 +261,7 @@ def select_tracks_from_first_frame(
     df : pd.DataFrame
         Tracks dataframe.
     stitch_tracks : bool
-        Flag indicating if incomplete tracks should be stitched to the nearest tracklet.
+        Stitches (connects) incomplete tracks nearby tracks on subsequent time point.
     """
 
     # query starting nodes data
@@ -234,10 +285,9 @@ def select_tracks_from_first_frame(
             selected_track_ids.add(connected_component(graph, track_id))
 
     if stitch_tracks:
-        raise NotImplementedError
-        selected_track_ids = ...  # TODO stich_tracks_split()
-
-    selected_df = df[df["track_id"].isin(selected_track_ids)].copy()
+        selected_df = stitch_tracks_df(graph, df, selected_track_ids)
+    else:
+        selected_df = df[df["track_id"].isin(selected_track_ids)].copy()
 
     return selected_df
 
@@ -271,6 +321,7 @@ def to_ctc(
     data_config: DataConfig,
     scale: Optional[Tuple[float]] = None,
     first_frame: Optional[ArrayLike] = None,
+    stitch_tracks: bool = False,
     overwrite: bool = False,
 ) -> None:
     """
@@ -286,9 +337,15 @@ def to_ctc(
         Optional scaling of output segmentation masks, by default None
     first_frame : Optional[ArrayLike], optional
         Optional first frame detection mask to select a subset of tracks (e.g. Fluo-N3DL-DRO), by default None
+    stitch_tracks: bool, optional
+        Stitches (connects) incomplete tracks nearby tracks on subsequent time point, by default False
     overwrite : bool, optional
         Flag to overwrite existing `output_dir` content, by default False
     """
+    if stitch_tracks and first_frame is None:
+        raise NotImplementedError(
+            "Tracks stitching only implemented for when `first_frame` is supplied."
+        )
 
     output_dir.mkdir(exist_ok=True)
     tracks_path = output_dir / "res_track.txt"
@@ -300,7 +357,14 @@ def to_ctc(
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         statement = (
-            session.query(NodeDB.id, NodeDB.parent_id, NodeDB.t).where(NodeDB.selected)
+            session.query(
+                NodeDB.id,
+                NodeDB.parent_id,
+                NodeDB.t,
+                NodeDB.z,
+                NodeDB.y,
+                NodeDB.x,
+            ).where(NodeDB.selected)
         ).statement
         df = pd.read_sql(statement, session.bind, index_col="id")
 
@@ -308,7 +372,9 @@ def to_ctc(
 
     if first_frame is not None:
         if scale is not None:
-            first_frame = zoom(first_frame, 1 / np.asarray(scale), order=0)
+            first_frame = zoom(
+                first_frame, 1 / np.asarray(scale)[-first_frame.ndim :], order=0
+            )
 
         df = select_tracks_from_first_frame(
             data_config, first_frame, df, stitch_tracks=False
@@ -344,6 +410,6 @@ def to_ctc(
                 )
 
             if scale is not None:
-                buffer = zoom(buffer, scale, order=0)
+                buffer = zoom(buffer, scale[-buffer.ndim :], order=0)
 
             imwrite(output_dir / f"mask{t:03}.tif", buffer)

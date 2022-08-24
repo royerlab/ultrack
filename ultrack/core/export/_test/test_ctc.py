@@ -3,7 +3,11 @@ import pandas as pd
 import pytest
 
 from ultrack.core.database import NO_PARENT
-from ultrack.core.export.ctc import add_paths_to_forest, ctc_compress_forest
+from ultrack.core.export.ctc import (
+    add_paths_to_forest,
+    ctc_compress_forest,
+    stitch_tracks_df,
+)
 
 
 @pytest.fixture
@@ -77,3 +81,66 @@ def test_ctc_compress_forest(dataframe_forest_with_time: pd.DataFrame) -> pd.Dat
 
     assert np.all(df.columns == ["L", "B", "E", "P"])
     assert np.all(df.values == expected_df)
+
+
+def test_tracks_df_stitching() -> None:
+    """
+    Input data:
+                   5
+         2         --
+         --   4  /
+     1  /    ---
+    ---          \\
+       \\         -- --
+         --       6  7
+         3
+                 ---
+                  8
+
+    Output:
+                 5
+                 --
+            2   /
+         -----
+     1  /      \\
+    ---          -----
+       \\         6
+         --
+         3
+
+    """
+    df = pd.DataFrame(
+        [
+            [1, 0, 1, 1, 1, NO_PARENT],
+            [1, 1, 1, 1, 1, NO_PARENT],
+            [1, 2, 1, 1, 1, NO_PARENT],
+            [2, 3, 2, 2, 2, 1],
+            [2, 4, 2, 2, 2, 1],
+            [3, 3, 0, 0, 0, 1],
+            [3, 4, 0, 0, 0, 1],
+            [4, 5, 2, 2, 3, NO_PARENT],
+            [4, 6, 2, 3, 3, NO_PARENT],
+            [4, 7, 3, 3, 3, NO_PARENT],
+            [5, 8, 3, 3, 3, 4],
+            [5, 9, 4, 4, 4, 4],
+            [6, 8, 2, 2, 2, 4],
+            [6, 9, 1, 1, 2, 4],
+            [7, 10, 1, 1, 1, NO_PARENT],
+            [7, 11, 2, 1, 1, NO_PARENT],
+            [8, 5, 10, 10, 10, NO_PARENT],
+            [8, 6, 11, 11, 11, NO_PARENT],
+            [8, 7, 12, 12, 12, NO_PARENT],
+        ],
+        columns=["track_id", "t", "z", "y", "x", "parent_track_id"],
+    )
+
+    graph = {1: [1, 2], 4: [5, 6]}
+
+    stitched_df = stitch_tracks_df(graph, df, {1, 2, 3})
+
+    assert not np.any(stitched_df["track_id"].isin({4, 7, 8}).values)
+    assert not np.any(stitched_df["parent_track_id"].isin({4, 7, 8}).values)
+    assert np.all(stitched_df["track_id"].isin({1, 2, 3, 5, 6}).values)
+    assert np.all(stitched_df["parent_track_id"].isin({1, 2, NO_PARENT}).values)
+    assert np.sum(stitched_df["track_id"] == 2) == 5
+    assert np.sum(stitched_df["track_id"] == 6) == 4

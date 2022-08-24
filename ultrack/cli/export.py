@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 import click
 from tifffile import imread
 
-from ultrack.cli.utils import config_option, overwrite_option
+from ultrack.cli.utils import config_option, overwrite_option, tuple_callback
 from ultrack.config import MainConfig
 from ultrack.core.export.ctc import to_ctc
 
@@ -23,9 +23,11 @@ from ultrack.core.export.ctc import to_ctc
     "--scale",
     "-s",
     default=None,
-    type=tuple,
+    type=str,
     show_default=True,
-    help="Output scale factor (e.g. (0.2, 1, 1)). Useful when tracking was done on upscaled input.",
+    help="Output scale factor (e.g. 0.2,1,1 ). Useful when tracking was done on upscaled input."
+    "Must have length 3, first dimension is ignored on for 2-d images.",
+    callback=tuple_callback(length=3, dtype=float),
 )
 @click.option(
     "--first-frame-path",
@@ -34,11 +36,19 @@ from ultrack.core.export.ctc import to_ctc
     show_default=True,
     help="Optional first frame path used to select a subset of lineages connected to this reference annotations.",
 )
+@click.option(
+    "--stitch-tracks",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="Stitches (connects) incomplete tracks nearby tracks on subsequent time point.",
+)
 def ctc_cli(
     output_directory: Path,
     config: MainConfig,
     scale: Optional[Tuple[float]],
     first_frame_path: Optional[Path],
+    stitch_tracks: bool,
     overwrite: bool,
 ) -> None:
     """Exports tracking results to cell-tracking challenge (http://celltrackingchallenge.net) format."""
@@ -48,7 +58,14 @@ def ctc_cli(
     else:
         first_frame = imread(first_frame_path)
 
-    to_ctc(output_directory, config.data_config, scale, first_frame, overwrite)
+    to_ctc(
+        output_directory,
+        config.data_config,
+        scale,
+        first_frame,
+        stitch_tracks,
+        overwrite,
+    )
 
 
 @click.group("export")

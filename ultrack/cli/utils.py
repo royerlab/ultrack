@@ -1,6 +1,7 @@
-from typing import Callable
+from typing import Any, Callable, Optional, Tuple
 
 import click
+from toolz import curry
 
 from ultrack.config import MainConfig, load_config
 
@@ -49,3 +50,38 @@ def overwrite_option() -> Callable:
         )(f)
 
     return decorator
+
+
+@curry
+def tuple_callback(
+    ctx: click.Context,
+    opt: click.Option,
+    value: str,
+    dtype: Callable = int,
+    length: Optional[int] = None,
+) -> Optional[Tuple[Any]]:
+    """Parses string to tuple given dtype and optional length.
+       Returns None if None is supplied.
+    Parameters
+    ----------
+    ctx : click.Context
+        CLI context, not used.
+    opt : click.Option
+        CLI option, not used.
+    value : str
+        Input value.
+    dtype : Callable, optional
+        Data type for type casting, by default int
+    length : Optional[int], optional
+        Optional length for length checking, by default None
+    Returns
+    -------
+    Tuple[Any]
+        Tuple of given dtype and length (optional).
+    """
+    if value is None:
+        return None
+    tup = tuple(dtype(s) for s in value.split(","))
+    if length is not None and length != len(tup):
+        raise ValueError(f"Expected tuple of length {length}, got input {tup}")
+    return tup
