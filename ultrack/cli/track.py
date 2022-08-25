@@ -12,5 +12,5 @@ from ultrack.config import MainConfig
 @batch_index_option()
 @overwrite_option()
 def track_cli(config: MainConfig, batch_index: Optional[int], overwrite: bool) -> None:
-    """Compute tracks by selecting optimal segmentation candidates and links."""
+    """Compute tracks by selecting optimal linking between candidate segments."""
     track(config.tracking_config, config.data_config, batch_index, overwrite)

@@ -25,7 +25,7 @@ def test_multiprocessing_segment(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
 ) -> None:
-    detection, edges = timelapse_mock_data
+    detection, edges, _ = timelapse_mock_data
 
     segment(
         detection,

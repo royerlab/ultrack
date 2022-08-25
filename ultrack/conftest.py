@@ -40,7 +40,7 @@ def zarr_dataset_paths(
 
     paths = []
     for src_array, filename in zip(
-        timelapse_mock_data, ("detection.zarr", "edge.zarr")
+        timelapse_mock_data, ("detection.zarr", "edge.zarr", "labels.zarr")
     ):
         path = tmp_path / filename
         dst_store = zarr.DirectoryStore(path)
@@ -56,7 +56,7 @@ def segmentation_mock_data(request) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
 @pytest.fixture
-def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
+def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array, zarr.Array]:
     if not hasattr(request, "param"):
         request.param = {}
 
@@ -64,7 +64,7 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
     kwargs = request.param.copy()
     length = kwargs.pop("length", 4)
 
-    blobs, contours, _ = make_segmentation_mock_data(**kwargs)
+    blobs, contours, labels = make_segmentation_mock_data(**kwargs)
     shape = (length,) + blobs.shape
 
     detection = zarr.empty(
@@ -73,12 +73,16 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array]:
     edge = zarr.empty(
         shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=contours.dtype
     )
+    segmentation = zarr.empty(
+        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=labels.dtype
+    )
 
     for t in range(length):
         detection[t] = blobs
         edge[t] = contours
+        segmentation[t] = labels
 
-    return detection, edge
+    return detection, edge, segmentation
 
 
 @pytest.fixture
@@ -86,7 +90,7 @@ def segmentation_database_mock_data(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
 ) -> MainConfig:
-    detection, edge = timelapse_mock_data
+    detection, edge, _ = timelapse_mock_data
     segment(
         detection,
         edge,

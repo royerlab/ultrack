@@ -1,6 +1,7 @@
 import click
 
 from ultrack.cli.config import config_cli
+from ultrack.cli.estimate_params import estimate_params_cli
 from ultrack.cli.export import export_cli
 from ultrack.cli.link import link_cli
 from ultrack.cli.segment import segmentation_cli
@@ -12,8 +13,9 @@ def main():
     pass
 
 
-main.add_command(segmentation_cli)
-main.add_command(link_cli)
-main.add_command(track_cli)
-main.add_command(export_cli)
 main.add_command(config_cli)
+main.add_command(estimate_params_cli)
+main.add_command(export_cli)
+main.add_command(link_cli)
+main.add_command(segmentation_cli)
+main.add_command(track_cli)
