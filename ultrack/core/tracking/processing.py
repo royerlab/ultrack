@@ -9,6 +9,7 @@ def track(
     tracking_config: TrackingConfig,
     data_config: DataConfig,
     indices: Optional[Union[Sequence[int], int]] = None,
+    overwrite: bool = False,
 ) -> None:
     """Compute tracking by selecting nodes with maximum flow from database.
 
@@ -20,8 +21,13 @@ def track(
         Data configuration parameters.
     indices : Optional[Sequence[int], int], optional
         Batch indices for tracking a subset of nodes, by default everything is tracked.
+    overwrite : bool, optional
+        Resets existing solution before processing.
     """
     tracker = SQLTracking(tracking_config, data_config)
+
+    if overwrite:
+        tracker.reset_solution()
 
     if indices is None:
         indices = range(0, tracker.num_batches)

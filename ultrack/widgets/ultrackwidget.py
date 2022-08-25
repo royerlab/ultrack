@@ -71,6 +71,6 @@ class UltrackWidget(Container):
         link(self._linking_w.config, self._data_config_w.config)
 
     def _on_track(self) -> None:
-        track(self._tracking_w.config, self._data_config_w.config)
+        track(self._tracking_w.config, self._data_config_w.config, overwrite=True)
         tracks, graph = to_tracks_layer(self._data_config_w.config)
         self._viewer.add_tracks(tracks, graph=graph)

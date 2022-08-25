@@ -37,7 +37,7 @@ class TestCommandLine:
         _run_command(["link", "-cfg", str(instance_config_path)])
 
     def test_tracking(self, instance_config_path: str) -> None:
-        _run_command(["track", "-cfg", instance_config_path])
+        _run_command(["track", "-cfg", instance_config_path, "-ow"])
 
     def test_ctc_export(self, instance_config_path: str, tmp_path: Path) -> None:
         _run_command(

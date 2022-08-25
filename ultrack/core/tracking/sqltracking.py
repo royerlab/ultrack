@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.trackingconfig import TrackingConfig
-from ultrack.core.database import LinkDB, NodeDB, OverlapDB, maximum_time
+from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
 from ultrack.core.tracking.gurobi_solver import GurobiSolver
 
 logging.basicConfig()
@@ -39,7 +39,7 @@ class SQLTracking:
 
         self._max_t = maximum_time(self._data_config)
         if self._tracking_config.window_size is None:
-            LOG.info(f"Window size not set, configured to {self._max_t}.")
+            LOG.info(f"Window size not set, configured to {self._max_t + 1}.")
             self._window_size = self._max_t + 1
         else:
             self._window_size = self._tracking_config.window_size
@@ -217,4 +217,13 @@ class SQLTracking:
                 solution[["node_id", "parent_id"]].to_dict("records"),
                 execution_options={"synchronize_session": False},
             )
+            session.commit()
+
+    def reset_solution(self) -> None:
+        """Resets every node parent_id and selected variables."""
+        LOG.info("Resetting database solutions.")
+        engine = sqla.create_engine(self._data_config.database_path)
+        with Session(engine) as session:
+            statement = sqla.update(NodeDB).values(parent_id=NO_PARENT, selected=False)
+            session.execute(statement)
             session.commit()
