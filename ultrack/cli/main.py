@@ -1,5 +1,6 @@
 import click
 
+from ultrack.cli.clear_database import clear_database_cli
 from ultrack.cli.config import config_cli
 from ultrack.cli.estimate_params import estimate_params_cli
 from ultrack.cli.export import export_cli
@@ -13,6 +14,7 @@ def main():
     pass
 
 
+main.add_command(clear_database_cli)
 main.add_command(config_cli)
 main.add_command(estimate_params_cli)
 main.add_command(export_cli)

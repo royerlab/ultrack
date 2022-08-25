@@ -6,6 +6,7 @@ from napari.viewer import ViewerModel
 from rich import print
 from rich.table import Table
 
+from ultrack.cli.utils import layer_key_option, napari_reader_option
 from ultrack.utils.estimation import estimate_parameters_from_labels
 
 
@@ -26,22 +27,8 @@ def _print_df(df: pd.DataFrame) -> None:
 
 @click.command("estimate_params")
 @click.argument("path", nargs=1, type=click.Path(path_type=Path))
-@click.option(
-    "--reader-plugin",
-    "-r",
-    default="builtins",
-    type=str,
-    show_default=True,
-    help="Napari reader plugin",
-)
-@click.option(
-    "--layer-key",
-    "-l",
-    default=0,
-    type=str,
-    show_default=True,
-    help="Labels key from napari layers.",
-)
+@napari_reader_option()
+@layer_key_option()
 @click.option(
     "--timelapse",
     "-t/-nt",

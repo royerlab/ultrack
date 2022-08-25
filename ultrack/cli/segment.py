@@ -5,15 +5,18 @@ import click
 from napari.viewer import ViewerModel
 
 from ultrack import segment
-from ultrack.cli.utils import config_option
+from ultrack.cli.utils import config_option, overwrite_option
 from ultrack.config import MainConfig
 
 
 @click.command("segment")
 @click.argument("input-paths", nargs=-1, type=click.Path(path_type=Path), required=True)
 @config_option()
+@overwrite_option()
 def segmentation_cli(
-    input_paths: Union[Sequence[Path], Path], config: MainConfig
+    input_paths: Union[Sequence[Path], Path],
+    config: MainConfig,
+    overwrite: bool,
 ) -> None:
     """Compute candidate segments for tracking model from input data."""
 
@@ -23,4 +26,10 @@ def segmentation_cli(
     detection = viewer.layers[config.reader_config.layer_indices[0]].data
     edge = viewer.layers[config.reader_config.layer_indices[1]].data
 
-    segment(detection, edge, config.segmentation_config, config.data_config)
+    segment(
+        detection,
+        edge,
+        config.segmentation_config,
+        config.data_config,
+        overwrite=overwrite,
+    )

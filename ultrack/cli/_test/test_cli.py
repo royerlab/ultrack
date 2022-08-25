@@ -53,6 +53,16 @@ class TestCommandLine:
             ]
         )
 
+    def test_clear_database(self, instance_config_path: str) -> None:
+        _run_command(
+            [
+                "clear_database",
+                "all",
+                "-cfg",
+                instance_config_path,
+            ]
+        )
+
 
 def test_create_config(tmp_path: Path) -> None:
     _run_command(["create_config", str(tmp_path / "config.toml")])

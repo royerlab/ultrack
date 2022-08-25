@@ -13,7 +13,7 @@ from toolz import curry
 from ultrack.config import DataConfig, SegmentationConfig
 from ultrack.core.database import NO_PARENT, Base, NodeDB, OverlapDB
 from ultrack.core.segmentation.hierarchy import create_hierarchies
-from ultrack.core.segmentation.utils import check_array_chunk
+from ultrack.core.segmentation.utils import check_array_chunk, clear_segmentation_data
 from ultrack.utils.multiprocessing import (
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
@@ -172,6 +172,7 @@ def segment(
     segmentation_config: SegmentationConfig,
     data_config: DataConfig,
     max_segments_per_time: int = 1_000_000,
+    overwrite: bool = False,
 ) -> None:
     """Add candidate segmentation (nodes) from `detection` and `edge` to database.
 
@@ -187,6 +188,8 @@ def segment(
         Data configuration parameters.
     max_segments_per_time : int
         Upper bound of segments per time point.
+    overwrite : bool
+        Cleans up segmentation, linking, and tracking database content before processing.
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{segmentation_config}")
 
@@ -203,6 +206,9 @@ def segment(
 
     engine = sqla.create_engine(data_config.database_path)
     Base.metadata.create_all(engine)
+
+    if overwrite:
+        clear_segmentation_data(data_config.database_path)
 
     data_config.metadata_add({"shape": detection.shape})
 

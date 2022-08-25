@@ -65,10 +65,11 @@ class UltrackWidget(Container):
             edge=self._main_config_w._edge_layer_w.value.data,
             segmentation_config=self._segmentation_w.config,
             data_config=self._data_config_w.config,
+            overwrite=True,
         )
 
     def _on_link(self) -> None:
-        link(self._linking_w.config, self._data_config_w.config)
+        link(self._linking_w.config, self._data_config_w.config, overwrite=True)
 
     def _on_track(self) -> None:
         track(self._tracking_w.config, self._data_config_w.config, overwrite=True)

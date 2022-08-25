@@ -221,8 +221,12 @@ class SQLTracking:
 
     def reset_solution(self) -> None:
         """Resets every node parent_id and selected variables."""
-        LOG.info("Resetting database solutions.")
-        engine = sqla.create_engine(self._data_config.database_path)
+        self.clear_solution_from_database(self._data_config.database_path)
+
+    @staticmethod
+    def clear_solution_from_database(database_path: str) -> None:
+        LOG.info("Clearing nodes database solutions.")
+        engine = sqla.create_engine(database_path)
         with Session(engine) as session:
             statement = sqla.update(NodeDB).values(parent_id=NO_PARENT, selected=False)
             session.execute(statement)

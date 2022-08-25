@@ -12,6 +12,7 @@ from toolz import curry
 
 from ultrack.config import DataConfig, LinkingConfig
 from ultrack.core.database import LinkDB, NodeDB, maximum_time
+from ultrack.core.linking.utils import clear_linking_data
 from ultrack.utils.multiprocessing import (
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
@@ -92,6 +93,7 @@ def _process(
 def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
+    overwrite: bool = False,
 ) -> None:
     """Links candidate segments (nodes) with their neighbors on the next time.
 
@@ -101,10 +103,15 @@ def link(
         Linking configuration parameters.
     data_config : DataConfig
         Data configuration parameters.
+    overwrite : bool
+        Cleans up linking database content before processing.
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
     max_t = maximum_time(data_config)
+
+    if overwrite:
+        clear_linking_data(data_config.database_path)
 
     with multiprocessing_sqlite_lock(data_config) as lock:
         process = _process(
