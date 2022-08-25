@@ -6,7 +6,6 @@ import toml
 from pydantic import ValidationError
 
 from ultrack.config import load_config
-from ultrack.config.segmentationconfig import NAME_TO_WS_HIER
 from ultrack.config.trackingconfig import LinkFunctionChoices
 
 
@@ -21,11 +20,6 @@ def _assert_input_in_target(input: Dict, target: Dict) -> None:
 
 def _format_config(config: Dict) -> None:
     """Formats dictionary config according to Config transforms."""
-    config["segmentation"]["ws_hierarchy"] = NAME_TO_WS_HIER[
-        config["segmentation"]["ws_hierarchy"]
-    ]
-
-    config["data"]["working_dir"] = Path(config["data"]["working_dir"])
     config["tracking"]["link_function"] = getattr(
         LinkFunctionChoices, config["tracking"]["link_function"]
     )

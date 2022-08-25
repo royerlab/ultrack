@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import higra as hg
 from pydantic import BaseModel, ValidationError, validator
@@ -18,8 +18,6 @@ class SegmentationConfig(BaseModel):
     anisotropy_penalization: float = 0.0
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
     n_workers: int = 1
-    max_neighbors: int = 10
-    max_distance: float = 15.0
 
     @validator("ws_hierarchy", pre=True)
     def ws_name_to_function(cls, value: str) -> Callable:
@@ -35,3 +33,11 @@ class SegmentationConfig(BaseModel):
             )
 
         return NAME_TO_WS_HIER[value]
+
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        d = super().dict(*args, **kwargs)
+        for name, func in NAME_TO_WS_HIER.items():
+            if func == d["ws_hierarchy"]:
+                d["ws_hierarchy"] = name
+                break
+        return d

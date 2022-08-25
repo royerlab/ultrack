@@ -15,7 +15,10 @@ class DataBaseChoices(Enum):
 
 class DataConfig(BaseModel):
     working_dir: Path = Path(".")
-    database: DataBaseChoices = "sqlite"
+    database: DataBaseChoices = DataBaseChoices.sqlite
+
+    class Config:
+        validate_assignment = True
 
     @validator("working_dir")
     def validate_working_dir_writeable(cls, value: Path) -> Path:
@@ -35,7 +38,7 @@ class DataConfig(BaseModel):
     @property
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
-        if self.database == "sqlite":
+        if self.database.value == "sqlite":
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
         else:
             raise NotImplementedError(
@@ -65,3 +68,8 @@ class DataConfig(BaseModel):
             metadata = toml.load(f)
 
         return metadata
+
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        d = super().dict(*args, **kwargs)
+        d["working_dir"] = str(d["working_dir"])
+        return d
