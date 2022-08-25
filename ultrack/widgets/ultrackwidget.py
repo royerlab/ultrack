@@ -3,6 +3,7 @@ from pathlib import Path
 import napari
 from magicgui.widgets import Container
 
+from ultrack import link, segment, track
 from ultrack.config.config import MainConfig, load_config
 from ultrack.widgets.datawidget import DataWidget
 from ultrack.widgets.linkingwidget import LinkingWidget
@@ -35,6 +36,13 @@ class UltrackWidget(Container):
         self._tracking_w = TrackingWidget(config=config.tracking_config)
         self.append(self._tracking_w)
 
+        self._setup_signals()
+
+    def _setup_signals(self) -> None:
+        self._segmentation_w._segment_btn.changed.connect(self._on_segment)
+        self._linking_w._link_btn.changed.connect(self._on_link)
+        self._tracking_w._track_btn.changed.connect(self._on_track)
+
     @property
     def config(self) -> MainConfig:
         return self._main_config_w.config
@@ -50,9 +58,16 @@ class UltrackWidget(Container):
     def _on_config_loaded(self, value: Path) -> None:
         self.config = load_config(value)
 
+    def _on_segment(self) -> None:
+        segment(
+            detection=self._main_config_w._detection_layer_w.value.data,
+            edge=self._main_config_w._edge_layer_w.value.data,
+            segmentation_config=self._segmentation_w.config,
+            data_config=self._data_config_w.config,
+        )
 
-if __name__ == "__main__":
-    viewer = napari.Viewer()
-    widget = UltrackWidget(viewer)
-    viewer.window.add_dock_widget(widget)
-    napari.run()
+    def _on_link(self) -> None:
+        link(self._linking_w.config, self._data_config_w.config)
+
+    def _on_track(self) -> None:
+        track(self._tracking_w.config, self._data_config_w.config)

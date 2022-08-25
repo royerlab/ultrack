@@ -368,6 +368,9 @@ def to_ctc(
         ).statement
         df = pd.read_sql(statement, session.bind, index_col="id")
 
+    if len(df) == 0:
+        raise ValueError("Solution is empty.")
+
     df = add_paths_to_forest(df)
 
     if first_frame is not None:

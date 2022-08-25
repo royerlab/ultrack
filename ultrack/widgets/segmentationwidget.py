@@ -11,7 +11,7 @@ class SegmentationWidget(BaseConfigWidget):
     def _setup_widgets(self) -> None:
         self._attr_to_widget = {
             "threshold": FloatSpinBox(label="Det. threshold"),
-            "min_area": SpinBox(label="Min. area"),
+            "min_area": SpinBox(label="Min. area", max=1_000_000_000),
             "max_area": SpinBox(label="Max. area", max=1_000_000_000),
             "min_frontier": FloatSpinBox(label="Min. frontier"),
             "anisotropy_penalization": FloatSpinBox(
@@ -27,6 +27,3 @@ class SegmentationWidget(BaseConfigWidget):
 
         self._segment_btn = PushButton(text="Segment")
         self.append(self._segment_btn)
-
-        self._load_btn = PushButton(text="Load")
-        self.append(self._load_btn)

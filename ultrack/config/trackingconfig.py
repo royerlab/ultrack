@@ -22,7 +22,7 @@ class TrackingConfig(BaseModel):
     time_limit: int = 36000
     method: int = -1
     n_threads: int = 0
-    link_function: LinkFunctionChoices = "identity"
+    link_function: LinkFunctionChoices = LinkFunctionChoices.identity
     power: float = 4
     bias: float = -0.005
 

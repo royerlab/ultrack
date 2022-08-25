@@ -19,5 +19,5 @@ class TrackingWidget(BaseConfigWidget):
         for widget in self._attr_to_widget.values():
             self.append(widget)
 
-        self._run_w = PushButton(text="Track")
-        self.append(self._run_w)
+        self._track_btn = PushButton(text="Track")
+        self.append(self._track_btn)

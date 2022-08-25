@@ -16,5 +16,5 @@ class MainConfigWidget(BaseConfigWidget):
         self._edge_layer_w = create_widget(annotation=Image, label="Edge")
         self.append(self._edge_layer_w)
 
-        self._config_loader_w = FileEdit(filter=".toml", label="Load config.")
+        self._config_loader_w = FileEdit(filter="*.toml", label="Load config.")
         self.append(self._config_loader_w)

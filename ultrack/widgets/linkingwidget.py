@@ -17,5 +17,5 @@ class LinkingWidget(BaseConfigWidget):
         for widget in self._attr_to_widget.values():
             self.append(widget)
 
-        self._build_w = PushButton(text="Link")
-        self.append(self._build_w)
+        self._link_btn = PushButton(text="Link")
+        self.append(self._link_btn)
