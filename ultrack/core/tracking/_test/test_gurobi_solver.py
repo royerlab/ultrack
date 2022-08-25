@@ -13,6 +13,8 @@ from ultrack.core.tracking.gurobi_solver import GurobiSolver
             "tracking.appear_weight": -0.25,
             "tracking.disappear_weight": -1.0,
             "tracking.division_weight": -0.5,
+            "tracking.link_function": "identity",
+            "tracking.bias": 0,
         },
     ],
     indirect=True,
