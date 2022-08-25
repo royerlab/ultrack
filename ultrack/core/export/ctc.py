@@ -1,7 +1,6 @@
 import logging
 import warnings
 from pathlib import Path
-from queue import Queue
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -17,70 +16,17 @@ from tqdm import tqdm
 
 from ultrack.config import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
-from ultrack.core.export.utils import estimate_drift
+from ultrack.core.export.utils import (
+    add_track_ids_to_forest,
+    estimate_drift,
+    solution_dataframe_from_sql,
+    tracks_forest,
+)
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
-
-
-def add_paths_to_forest(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds `track_id` and `parent_track_id` columns to forest `df`.
-    Each maximal path receveis a unique `track_id`.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Forest defined by the `parent_id` column and the dataframe indices.
-
-    Returns
-    -------
-    pd.DataFrame
-        Inplace modified input dataframe with additional columns.
-    """
-    forest = {
-        parent_id: group.index.tolist() for parent_id, group in df.groupby("parent_id")
-    }
-
-    roots = df.index[df["parent_id"] == NO_PARENT]
-
-    df["track_id"] = NO_PARENT
-    df["parent_track_id"] = NO_PARENT
-
-    track_id = 1
-    for root in roots:
-        queue = Queue()
-        queue.put((root, NO_PARENT))
-
-        while not queue.empty():
-            node, parent_track_id = queue.get()
-
-            while True:
-                df.loc[node, "track_id"] = track_id
-                df.loc[node, "parent_track_id"] = parent_track_id
-
-                children = forest.get(node, [])
-                if len(children) == 0:
-                    # end of track
-                    break
-
-                elif len(children) == 1:
-                    node = children[0]
-
-                elif len(children) == 2:
-                    queue.put((children[0], track_id))
-                    queue.put((children[1], track_id))
-                    break
-
-                else:
-                    raise RuntimeError(
-                        f"Something is wrong. Found {len(children)} children when parsing tracks, expected 0, 1, or 2."
-                    )
-
-            track_id += 1
-
-    return df
 
 
 def ctc_compress_forest(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,16 +65,6 @@ def ctc_compress_forest(df: pd.DataFrame) -> pd.DataFrame:
     ctc_df.loc[ctc_df["P"] == NO_PARENT, "P"] = 0
 
     return ctc_df
-
-
-def tracks_forest(df: pd.DataFrame) -> Dict[int, int]:
-    """Returns `track_id` and `parent_track_id` forest (set of trees) graph structure."""
-    df = df.drop_duplicates(["track_id", "parent_track_id"])
-    df = df[df["parent_track_id"] != NO_PARENT]
-    graph = {}
-    for parent_id, id in zip(df["parent_track_id"], df["track_id"]):
-        graph[parent_id] = graph.get(parent_id, []) + [id]
-    return graph
 
 
 def stitch_tracks_df(
@@ -353,25 +289,12 @@ def to_ctc(
     _validate_masks_path(output_dir, overwrite)
     _validate_tracks_path(tracks_path, overwrite)
 
-    # query and convert tracking data to dataframe
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        statement = (
-            session.query(
-                NodeDB.id,
-                NodeDB.parent_id,
-                NodeDB.t,
-                NodeDB.z,
-                NodeDB.y,
-                NodeDB.x,
-            ).where(NodeDB.selected)
-        ).statement
-        df = pd.read_sql(statement, session.bind, index_col="id")
+    df = solution_dataframe_from_sql(data_config.database_path)
 
     if len(df) == 0:
         raise ValueError("Solution is empty.")
 
-    df = add_paths_to_forest(df)
+    df = add_track_ids_to_forest(df)
 
     if first_frame is not None:
         if scale is not None:
@@ -391,6 +314,7 @@ def to_ctc(
 
     shape = data_config.metadata["shape"]
 
+    engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         for t in tqdm(df["t"].unique(), "Saving CTC masks"):
             buffer = np.zeros(shape[1:], dtype=np.uint16)

@@ -3,11 +3,8 @@ import pandas as pd
 import pytest
 
 from ultrack.core.database import NO_PARENT
-from ultrack.core.export.ctc import (
-    add_paths_to_forest,
-    ctc_compress_forest,
-    stitch_tracks_df,
-)
+from ultrack.core.export.ctc import ctc_compress_forest, stitch_tracks_df
+from ultrack.core.export.utils import add_track_ids_to_forest
 
 
 @pytest.fixture
@@ -60,7 +57,7 @@ def dataframe_forest_with_time(dataframe_forest: pd.DataFrame) -> pd.DataFrame:
 
 
 def test_add_paths_to_forest(dataframe_forest: pd.DataFrame) -> None:
-    df = add_paths_to_forest(dataframe_forest)
+    df = add_track_ids_to_forest(dataframe_forest)
 
     assert np.all(df["track_id"].values[0:10] == 1)
     assert np.all(df["track_id"].values[10:20] == 2)
@@ -73,7 +70,7 @@ def test_add_paths_to_forest(dataframe_forest: pd.DataFrame) -> None:
 
 
 def test_ctc_compress_forest(dataframe_forest_with_time: pd.DataFrame) -> pd.DataFrame:
-    df = ctc_compress_forest(add_paths_to_forest(dataframe_forest_with_time))
+    df = ctc_compress_forest(add_track_ids_to_forest(dataframe_forest_with_time))
 
     expected_df = np.array(
         [[1, 0, 9, 0], [2, 10, 19, 1], [3, 10, 19, 1], [4, 5, 14, 0]]

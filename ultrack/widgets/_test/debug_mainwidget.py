@@ -4,7 +4,7 @@ Auxiliary file to log and debug main widget usage.
 
 import logging
 
-logging.basicConfig(filename="ultrackwidget.log", mode="w", level=logging.INFO)
+logging.basicConfig(filename="ultrackwidget.log", filemode="w", level=logging.INFO)
 
 import napari
 

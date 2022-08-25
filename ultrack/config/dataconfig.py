@@ -9,13 +9,13 @@ from pydantic import BaseModel, ValidationError, validator
 LOG = logging.getLogger(__name__)
 
 
-class DataBaseChoices(Enum):
+class DatabaseChoices(Enum):
     sqlite = "sqlite"
 
 
 class DataConfig(BaseModel):
     working_dir: Path = Path(".")
-    database: DataBaseChoices = DataBaseChoices.sqlite
+    database: DatabaseChoices = DatabaseChoices.sqlite
 
     class Config:
         validate_assignment = True
@@ -38,7 +38,7 @@ class DataConfig(BaseModel):
     @property
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
-        if self.database.value == "sqlite":
+        if self.database == DatabaseChoices.sqlite:
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
         else:
             raise NotImplementedError(

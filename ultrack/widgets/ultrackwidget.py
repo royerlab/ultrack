@@ -5,6 +5,7 @@ from magicgui.widgets import Container
 
 from ultrack import link, segment, track
 from ultrack.config.config import MainConfig, load_config
+from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.widgets.datawidget import DataWidget
 from ultrack.widgets.linkingwidget import LinkingWidget
 from ultrack.widgets.mainconfigwidget import MainConfigWidget
@@ -71,3 +72,5 @@ class UltrackWidget(Container):
 
     def _on_track(self) -> None:
         track(self._tracking_w.config, self._data_config_w.config)
+        tracks, graph = to_tracks_layer(self._data_config_w.config)
+        self._viewer.add_tracks(tracks, graph=graph)
