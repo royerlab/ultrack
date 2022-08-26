@@ -9,6 +9,7 @@ import zarr
 from ultrack.config.config import MainConfig, load_config
 from ultrack.core.linking.processing import link
 from ultrack.core.segmentation.processing import segment
+from ultrack.core.tracking.processing import track
 from ultrack.utils.data import make_config_content, make_segmentation_mock_data
 
 
@@ -101,9 +102,18 @@ def segmentation_database_mock_data(
 
 
 @pytest.fixture(scope="function")
-def linking_database_mock_data(
+def linked_database_mock_data(
     segmentation_database_mock_data: MainConfig,
 ) -> MainConfig:
     config = segmentation_database_mock_data
     link(config.linking_config, config.data_config)
+    return config
+
+
+@pytest.fixture(scope="function")
+def tracked_database_mock_data(
+    linked_database_mock_data: MainConfig,
+) -> MainConfig:
+    config = linked_database_mock_data
+    track(config.tracking_config, config.data_config)
     return config

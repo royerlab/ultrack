@@ -37,7 +37,9 @@ class TestCommandLine:
         _run_command(["link", "-cfg", str(instance_config_path)])
 
     def test_tracking(self, instance_config_path: str) -> None:
-        _run_command(["track", "-cfg", instance_config_path, "-ow"])
+        with pytest.warns(UserWarning):
+            # batch index with overwrite should trigger warning
+            _run_command(["track", "-cfg", instance_config_path, "-ow", "-b", "0"])
 
     def test_ctc_export(self, instance_config_path: str, tmp_path: Path) -> None:
         _run_command(
@@ -53,11 +55,12 @@ class TestCommandLine:
             ]
         )
 
-    def test_clear_database(self, instance_config_path: str) -> None:
+    @pytest.mark.parametrize("mode", ["all", "links", "solutions"])
+    def test_clear_database(self, instance_config_path: str, mode: str) -> None:
         _run_command(
             [
                 "clear_database",
-                "all",
+                mode,
                 "-cfg",
                 instance_config_path,
             ]

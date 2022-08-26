@@ -42,7 +42,8 @@ def batch_index_option() -> Callable:
             required=False,
             default=None,
             show_default=True,
-            type=_batch_index_callback,
+            type=int,
+            callback=_batch_index_callback,
             help="Batch index to process a subset of time points. ATTENTION: this it not the time index.",
         )(f)
 

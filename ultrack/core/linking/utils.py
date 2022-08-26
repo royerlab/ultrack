@@ -16,5 +16,5 @@ def clear_linking_data(database_path: str) -> None:
     LOG.info("Clearing links database.")
     engine = sqla.create_engine(database_path)
     with Session(engine) as session:
-        session.query(LinkDB)
+        session.query(LinkDB).delete()
         session.commit()

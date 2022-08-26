@@ -1,10 +1,13 @@
 import numpy as np
 import pandas as pd
 import pytest
+import sqlalchemy as sqla
+from sqlalchemy.orm import Session
 
 from ultrack import track
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.tracking.sqltracking import SQLTracking
 
 _TEST_PARAMS = (
     {
@@ -53,9 +56,9 @@ def _validate_tracking_solution(config: MainConfig):
     indirect=True,
 )
 def test_sql_tracking(
-    linking_database_mock_data: MainConfig,
+    linked_database_mock_data: MainConfig,
 ) -> None:
-    config = linking_database_mock_data
+    config = linked_database_mock_data
 
     track(config.tracking_config, config.data_config)
 
@@ -68,9 +71,9 @@ def test_sql_tracking(
     indirect=True,
 )
 def test_batch_sql_tracking(
-    linking_database_mock_data: MainConfig,
+    linked_database_mock_data: MainConfig,
 ) -> None:
-    config = linking_database_mock_data
+    config = linked_database_mock_data
 
     track(config.tracking_config, config.data_config, indices=0)
     track(config.tracking_config, config.data_config, indices=1)
@@ -79,3 +82,28 @@ def test_batch_sql_tracking(
         track(config.tracking_config, config.data_config, indices=2)
 
     _validate_tracking_solution(config)
+
+
+@pytest.mark.parametrize(
+    "config_content",
+    [
+        {
+            "segmentation.n_workers": 4,
+            "linking.n_workers": 4,
+        }
+    ],
+    indirect=True,
+)
+def test_clear_solution(
+    tracked_database_mock_data: MainConfig,
+) -> None:
+    database_path = tracked_database_mock_data.data_config.database_path
+
+    SQLTracking.clear_solution_from_database(database_path)
+
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        assert session.query(LinkDB).count() > 0
+        assert session.query(NodeDB).count() > 0
+        assert session.query(NodeDB).where(NodeDB.selected).count() == 0
+        assert session.query(NodeDB).where(NodeDB.parent_id != NO_PARENT).count() == 0
