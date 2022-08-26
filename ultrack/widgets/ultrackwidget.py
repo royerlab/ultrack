@@ -58,7 +58,8 @@ class UltrackWidget(Container):
         self._tracking_w.config = value.tracking_config
 
     def _on_config_loaded(self, value: Path) -> None:
-        self.config = load_config(value)
+        if value.exists() and value.is_file():
+            self.config = load_config(value)
 
     def _on_segment(self) -> None:
         segment(

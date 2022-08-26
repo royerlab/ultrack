@@ -48,6 +48,10 @@ def test_ultrack_widget(
         widget.config.segmentation_config.ws_hierarchy
         == hg.watershed_hierarchy_by_dynamics
     )
+    # test save config
+    tmp_path.mkdir(exist_ok=True)
+    widget._main_config_w._config_loader_w.value = tmp_path / "config.toml"
+    widget._main_config_w._save_config_btn.clicked.emit()
 
     # temporary working dir
     config.data_config.working_dir = tmp_path
