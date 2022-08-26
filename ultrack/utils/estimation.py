@@ -60,6 +60,5 @@ def estimate_parameters_from_labels(
         distance = df.groupby("track_id", sort=True).apply(spatial_drift)
         df.sort_values(["track_id", "t"], inplace=True)
         df["distance"] = distance.values
-        df.drop(["t"], axis="columns", inplace=True)
 
-    return df.drop(["track_id", "z", "y", "x"], axis="columns")
+    return df

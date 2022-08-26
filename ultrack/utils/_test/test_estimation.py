@@ -12,7 +12,6 @@ def test_timelapse_parameter_estimation(
 ) -> None:
     _, _, labels = timelapse_mock_data
     df = estimate_parameters_from_labels(labels, is_timelapse=True)
-    assert np.all(df.columns == ["area", "distance"])
     assert not np.any(df["area"] == np.nan)
     # there's zero drift between time points on mock data
     assert np.all(df["distance"] == 0.0)
@@ -28,5 +27,4 @@ def test_stack_parameter_estimation(
 ) -> None:
     _, _, labels = segmentation_mock_data
     df = estimate_parameters_from_labels(labels, is_timelapse=False)
-    assert df.columns == ["area"]
     assert not np.any(df["area"] == np.nan)

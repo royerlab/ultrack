@@ -68,5 +68,5 @@ def test_create_config(tmp_path: Path) -> None:
     _run_command(["create_config", str(tmp_path / "config.toml")])
 
 
-def test_estimate_params(zarr_dataset_paths: List[str]) -> None:
-    _run_command(["estimate_params", zarr_dataset_paths[2]])
+def test_estimate_params(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
+    _run_command(["estimate_params", zarr_dataset_paths[2], "-o", str(tmp_path)])
