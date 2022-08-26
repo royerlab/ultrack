@@ -55,3 +55,8 @@ def test_ultrack_widget(
     widget._segmentation_w._segment_btn.clicked.emit()
     widget._linking_w._link_btn.clicked.emit()
     widget._tracking_w._track_btn.clicked.emit()
+
+    # checking if the whole thing can be run twice --- overwrite is working
+    widget._segmentation_w._segment_btn.clicked.emit()
+    widget._linking_w._link_btn.clicked.emit()
+    widget._tracking_w._track_btn.clicked.emit()

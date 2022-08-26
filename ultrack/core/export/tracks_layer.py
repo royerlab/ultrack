@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 
-import numpy as np
+import pandas as pd
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.export.utils import (
@@ -12,7 +12,7 @@ from ultrack.core.export.utils import (
 
 def to_tracks_layer(
     data_config: DataConfig,
-) -> Tuple[np.ndarray, Dict[int, List[int]]]:
+) -> Tuple[pd.DataFrame, Dict[int, List[int]]]:
     """Exports solution from database to napari tracks layer format.
 
     Parameters
@@ -22,8 +22,8 @@ def to_tracks_layer(
 
     Returns
     -------
-    Tuple[np.ndarray, Dict[int, List[int]]]
-        A matrix with ID,T,(Z),Y,X on column-axis and an lineage graph, mapping node_id -> parent_id.
+    Tuple[pd.DataFrame, Dict[int, List[int]]]
+        Tracks dataframe and an lineage graph, mapping node_id -> parent_id.
     """
     df = solution_dataframe_from_sql(data_config.database_path)
     df = add_track_ids_to_forest(df)
@@ -39,4 +39,4 @@ def to_tracks_layer(
             f"Expected dataset with 3 or 4 dimensions, T(Z)YX. Found {data_dim}."
         )
 
-    return df[columns].values, graph
+    return df[columns], graph

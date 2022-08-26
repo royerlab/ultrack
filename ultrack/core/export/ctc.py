@@ -1,5 +1,4 @@
 import logging
-import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -12,6 +11,7 @@ from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from sqlalchemy.orm import Session
 from tifffile import imwrite
+from toolz import curry
 from tqdm import tqdm
 
 from ultrack.config import DataConfig
@@ -19,6 +19,7 @@ from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
     estimate_drift,
+    export_segmentation_generic,
     solution_dataframe_from_sql,
     tracks_forest,
 )
@@ -252,6 +253,32 @@ def _validate_tracks_path(tracks_path: Path, overwrite: bool) -> None:
             )
 
 
+@curry
+def _write_tiff_buffer(
+    t: int,
+    buffer: np.ndarray,
+    output_dir: Path,
+    scale: Optional[ArrayLike] = None,
+) -> None:
+    """Writes a single tiff stack into `output_dir` / "mask%03d.tif"
+
+    Parameters
+    ----------
+    t : int
+        Time index.
+    buffer : np.ndarray
+        Segmentation mask uint16 buffer.
+    output_dir : Path
+        Output directory.
+    scale : Optional[ArrayLike], optional
+        Mask rescaling factor, by default None
+    """
+    if scale is not None:
+        buffer = zoom(buffer, scale[-buffer.ndim :], order=0)
+
+    imwrite(output_dir / f"mask{t:03}.tif", buffer)
+
+
 def to_ctc(
     output_dir: Path,
     data_config: DataConfig,
@@ -312,31 +339,6 @@ def to_ctc(
 
     LOG.info(f"CTC tracking data:\n{tracks_df}")
 
-    shape = data_config.metadata["shape"]
-
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        for t in tqdm(df["t"].unique(), "Saving CTC masks"):
-            buffer = np.zeros(shape[1:], dtype=np.uint16)
-            query = list(
-                session.query(NodeDB.id, NodeDB.pickle).where(
-                    NodeDB.t == t.item(), NodeDB.selected
-                )
-            )
-
-            if len(query) == 0:
-                warnings.warn(f"Segmentation mask from t = {t} is empty.")
-
-            LOG.info(f"t = {t} containts {len(query)} segments.")
-
-            for id, node in query:
-                LOG.info(f"Painting t = {t} with node {id}.")
-
-                node.paint_buffer(
-                    buffer, value=df.loc[id, "track_id"], include_time=False
-                )
-
-            if scale is not None:
-                buffer = zoom(buffer, scale[-buffer.ndim :], order=0)
-
-            imwrite(output_dir / f"mask{t:03}.tif", buffer)
+    export_segmentation_generic(
+        data_config, df, _write_tiff_buffer(scale=scale, output_dir=output_dir)
+    )

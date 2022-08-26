@@ -1,12 +1,15 @@
 import logging
+import warnings
 from queue import Queue
-from typing import Dict, List, Sequence
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
+from tqdm import tqdm
 
+from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
 
 LOG = logging.getLogger(__name__)
@@ -181,3 +184,96 @@ def solution_dataframe_from_sql(
         df = pd.read_sql(statement, session.bind, index_col="id")
 
     return df
+
+
+def export_segmentation_generic(
+    data_config: DataConfig,
+    df: pd.DataFrame,
+    export_func: Callable[[int, np.ndarray], None],
+) -> None:
+    """
+    Generic function to export segmentation masks, segments labeled by `track_id` from `df`.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data parameters configuration.
+    df : pd.DataFrame
+        Tracks dataframe indexed by node id.
+    export_func : Callable[[int, np.ndarray], None]
+        Export function, it receives as input a time index `t` and its respective uint16 labeled buffer.
+    """
+
+    if "track_id" not in df.columns:
+        raise ValueError(f"Dataframe must have `track_id` column. Found {df.columns}")
+
+    LOG.info(f"Exporting segmentation masks with {export_func}")
+
+    engine = sqla.create_engine(data_config.database_path)
+    shape = data_config.metadata["shape"]
+
+    with Session(engine) as session:
+        for t in tqdm(range(shape[0]), "Exporting segmentation masks"):
+            buffer = np.zeros(shape[1:], dtype=np.uint16)
+            query = list(
+                session.query(NodeDB.id, NodeDB.pickle).where(
+                    NodeDB.t == t, NodeDB.selected
+                )
+            )
+
+            if len(query) == 0:
+                warnings.warn(f"Segmentation mask from t = {t} is empty.")
+
+            LOG.info(f"t = {t} containts {len(query)} segments.")
+
+            for id, node in query:
+                LOG.info(f"Painting t = {t} with node {id}.")
+
+                node.paint_buffer(
+                    buffer, value=df.loc[id, "track_id"], include_time=False
+                )
+
+            export_func(t, buffer)
+
+
+def large_chunk_size(
+    shape: Tuple[int],
+    dtype: Union[str, np.dtype],
+    max_size: int = 2147483647,
+) -> Tuple[int]:
+    """
+    Computes a large chunk size for a given `shape` and `dtype`.
+    Large chunks improves the performance on Elastic Storage Systems (ESS).
+    Leading dimension (time) will always be chunked as 1.
+
+    Parameters
+    ----------
+    shape : Tuple[int]
+        Input data shape.
+    dtype : Union[str, np.dtype]
+        Input data type.
+    max_size : int, optional
+        Reference maximum size, by default 2147483647
+
+    Returns
+    -------
+    Tuple[int]
+        Suggested chunk size.
+    """
+
+    if not isinstance(dtype, np.dtype):
+        dtype = np.dtype(dtype)
+
+    plane_shape = np.minimum(shape[-2:], 32768)
+
+    if len(shape) == 3:
+        chunks = (1, *plane_shape)
+    elif len(shape) == 4:
+        depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
+        chunks = (1, depth, *plane_shape)
+    else:
+        raise NotImplementedError(
+            f"Large chunk size only implemented for 2,3-D + time arrays. Found {len(shape) - 1} + time."
+        )
+
+    return chunks

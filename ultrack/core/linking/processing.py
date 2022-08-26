@@ -59,9 +59,6 @@ def _process(
     current_kdtree = KDTree(current_pos)
     next_kdtree = KDTree(next_pos)
 
-    # TODO:
-    # - benchmark kdtree vs point query
-
     neighbors = current_kdtree.query_ball_tree(
         next_kdtree,
         r=config.max_distance,
@@ -70,16 +67,19 @@ def _process(
     links = []
     for i, node in enumerate(current_nodes):
         neighborhood = []
-        for j in neighbors[i]:
-            neigh = next_nodes[j]
+        neigh_size = len(neighbors[i])
+        for j, neigh_idx in enumerate(neighbors[i]):
+            neigh = next_nodes[neigh_idx]
             iou = node.IoU(neigh)
-            neighborhood.append((iou, node.id, neigh.id))
+            # assuming neighbors are ordered so size - j will be used as tie breaker
+            neighborhood.append((iou, neigh_size - j, node.id, neigh.id))
 
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
         LOG.info(f"Node {node.id} links {neighborhood}")
         links += neighborhood
 
-    df = pd.DataFrame(np.asarray(links), columns=["iou", "source_id", "target_id"])
+    links = np.asarray(links)[:, [0, 2, 3]]  # ignoring index column
+    df = pd.DataFrame(links, columns=["iou", "source_id", "target_id"])
 
     with write_lock if write_lock is not None else nullcontext():
         LOG.info(f"Pushing links from time {time} to {db_path}")
