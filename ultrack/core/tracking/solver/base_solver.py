@@ -93,8 +93,15 @@ class BaseSolver:
         """
 
     @abstractmethod
-    def optimize(self) -> None:
-        """Computes solution"""
+    def optimize(self) -> float:
+        """
+        Computes solution.
+
+        Returns
+        -------
+        float
+            Solution objective value.
+        """
 
     @abstractmethod
     def solution(self) -> pd.DataFrame:

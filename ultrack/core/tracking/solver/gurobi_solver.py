@@ -169,9 +169,10 @@ class GurobiSolver(BaseSolver):
         # TODO
         pass
 
-    def optimize(self) -> None:
+    def optimize(self) -> float:
         """Optimizes gurobi model."""
         self._model.optimize()
+        return self._model.getObjective().getValue()
 
     def solution(self) -> pd.DataFrame:
         """Returns the nodes present on the solution.
