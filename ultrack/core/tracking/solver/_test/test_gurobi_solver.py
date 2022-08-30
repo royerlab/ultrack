@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from ultrack.config.config import MainConfig
-from ultrack.core.tracking.gurobi_solver import GurobiSolver
+from ultrack.core.tracking.solver.gurobi_solver import GurobiSolver
 
 
 @pytest.mark.parametrize(

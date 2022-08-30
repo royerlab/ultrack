@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ultrack.core.tracking.heuristic._heap import Heap, Policy
+from ultrack.core.tracking.solver.heuristic._heap import Heap, Policy
 
 
 @pytest.mark.parametrize(

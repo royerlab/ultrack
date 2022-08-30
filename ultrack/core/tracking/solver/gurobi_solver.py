@@ -8,11 +8,12 @@ from numpy.typing import ArrayLike
 
 from ultrack.config.config import TrackingConfig
 from ultrack.core.database import NO_PARENT
+from ultrack.core.tracking.solver.base_solver import BaseSolver
 
 LOG = logging.getLogger(__name__)
 
 
-class GurobiSolver:
+class GurobiSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
@@ -64,6 +65,10 @@ class GurobiSolver:
         if len(self._nodes) > 0:
             raise ValueError("Nodes have already been added.")
 
+        self._assert_same_length(
+            indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
+        )
+
         LOG.info(f"# {np.sum(is_first_t)} nodes at starting `t`.")
         LOG.info(f"# {np.sum(is_last_t)} nodes at last `t`.")
 
@@ -99,11 +104,7 @@ class GurobiSolver:
         if len(self._edges) > 0:
             raise ValueError("Edges have already been added.")
 
-        if len(weights) != len(sources) or len(weights) != len(targets):
-            raise ValueError(
-                "`sources`, `targets` and `weights` must have the same length."
-                f"Found {len(sources)}, {len(targets)}, {len(weights)}."
-            )
+        self._assert_same_length(sources=sources, targets=targets, weights=weights)
 
         weights = self._config.apply_link_function(weights)
 

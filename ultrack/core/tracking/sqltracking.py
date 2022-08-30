@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.trackingconfig import TrackingConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
-from ultrack.core.tracking.gurobi_solver import GurobiSolver
+from ultrack.core.tracking.solver.gurobi_solver import GurobiSolver
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -35,7 +35,6 @@ class SQLTracking:
 
         self._tracking_config = tracking_config
         self._data_config = data_config
-        self._solver = GurobiSolver(self._tracking_config)
 
         self._max_t = maximum_time(self._data_config)
         if self._tracking_config.window_size is None:
@@ -60,17 +59,19 @@ class SQLTracking:
             )
 
         LOG.info(f"Tracking batch {index}")
-        self._solver.reset()
-        self._add_nodes(index=index)
-        self._add_edges(index=index)
+        solver = GurobiSolver(self._tracking_config)
 
-        self._solver.set_standard_constraints()
-        self._add_overlap_constraints(index=index)
-        self._add_boundary_constraints(index=index)
+        self._add_nodes(solver=solver, index=index)
+        self._add_edges(solver=solver, index=index)
 
-        self._solver.optimize()
+        solver.set_standard_constraints()
 
-        self._update_solution(index, self._solver.solution())
+        self._add_overlap_constraints(solver=solver, index=index)
+        self._add_boundary_constraints(solver=solver, index=index)
+
+        solver.optimize()
+
+        self._update_solution(index, solver.solution())
 
     def _window_limits(self, index: int, with_overlap: bool) -> Tuple[int, int]:
         """Computes time window of a given index, with or without overlap.
@@ -96,7 +97,7 @@ class SQLTracking:
         ) * self._window_size + with_overlap * self._tracking_config.overlap_size
         return start_time, end_time - 1
 
-    def _add_nodes(self, index: int) -> None:
+    def _add_nodes(self, solver: GurobiSolver, index: int) -> None:
         """Query nodes from a given batch index and add them to solver.
 
         Parameters
@@ -113,13 +114,13 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
-        self._solver.add_nodes(
+        solver.add_nodes(
             df["id"],
             df["t"] == max(start_time, 0),
             df["t"] == min(end_time, self._max_t),
         )
 
-    def _add_edges(self, index: int) -> None:
+    def _add_edges(self, solver: GurobiSolver, index: int) -> None:
         """Query edges from a given batch index and add them to solver.
 
         Parameters
@@ -139,9 +140,9 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
-        self._solver.add_edges(df["source_id"], df["target_id"], df["iou"])
+        solver.add_edges(df["source_id"], df["target_id"], df["iou"])
 
-    def _add_overlap_constraints(self, index: int) -> None:
+    def _add_overlap_constraints(self, solver: GurobiSolver, index: int) -> None:
         """Adds overlap and standard biological contraints.
 
         Parameters
@@ -160,9 +161,9 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
-        self._solver.add_overlap_constraints(df["node_id"], df["ancestor_id"])
+        solver.add_overlap_constraints(df["node_id"], df["ancestor_id"])
 
-    def _add_boundary_constraints(self, index: int) -> None:
+    def _add_boundary_constraints(self, solver: GurobiSolver, index: int) -> None:
         """
         Enforce to solution nodes from the boundary (in time) already selected from adjacent batches.
 
@@ -185,8 +186,8 @@ class SQLTracking:
         )
         LOG.info(f"# {len(end_nodes)} boundary constraints found at at t = {end_time}")
 
-        self._solver.enforce_node_to_solution(start_nodes)
-        self._solver.enforce_node_to_solution(end_nodes)
+        solver.enforce_node_to_solution(start_nodes)
+        solver.enforce_node_to_solution(end_nodes)
 
     def _update_solution(self, index: int, solution: pd.DataFrame) -> None:
         """Updates solution in database.
