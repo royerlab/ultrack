@@ -166,9 +166,30 @@ class HeuristicSolver(BaseSolver):
 
     def random_ascent(self, objective: float) -> float:
         n_nodes = len(self._appear_weight)
+
+        self._forward_graph = sparse.csr_matrix(
+            (self._weights, (self._out_edge, self._in_edge)),
+            shape=(n_nodes, n_nodes),
+        )
+        self._backward_graph = sparse.csr_matrix(
+            (self._weights, (self._in_edge, self._out_edge)),
+            shape=(n_nodes, n_nodes),
+        )
+
+        self._forward_selected = np.full_like(n_nodes, -1, dtype=int)
+        self._backward_selected = np.full_like(n_nodes, -1, dtype=int)
+
+        selected = np.nonzero(self._selected_edges)
+        self._forward_selected[self._out_edge[selected]] = selected
+        self._backward_selected[self._in_edge[selected]] = selected
+
         node_ids = self._rng.choice(n_nodes, size=n_nodes, replace=False)
         for node_id in node_ids:
             pass
+            # objective += self._local_move_backward(node_id)
+            # objective += self._local_move_forward(node_id)
+
+        return objective
 
     def _forbid_overlap(self, node_index: int) -> None:
         for i in range(
