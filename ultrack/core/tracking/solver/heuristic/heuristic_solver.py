@@ -120,22 +120,22 @@ class HeuristicSolver(BaseSolver):
             dtype=np.float32,
         )
 
-    def add_overlap_constraints(self, source: ArrayLike, target: ArrayLike) -> None:
+    def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
         """Add constraints such that `source` and `target` can't be present in the same solution.
 
         Parameters
         ----------
-        source : ArrayLike
+        sources : ArrayLike
             Source nodes indices.
-        target : ArrayLike
+        targets : ArrayLike
             Target nodes indices.
         """
-        source = self._forward_map[np.asarray(source)]
-        target = self._forward_map[np.asarray(target)]
-        mask = np.ones(len(source), dtype=bool)
+        sources = self._forward_map[np.asarray(sources)]
+        targets = self._forward_map[np.asarray(targets)]
+        mask = np.ones(len(sources), dtype=bool)
         size = len(self._appear_weight)
         self._overlap = sparse.csr_matrix(
-            (mask, (source, target)), shape=(size, size), dtype=bool
+            (mask, (sources, targets)), shape=(size, size), dtype=bool
         )
 
     def enforce_node_to_solution(self, indices: ArrayLike) -> None:
@@ -252,8 +252,8 @@ class HeuristicSolver(BaseSolver):
             objective + self._transition_weight(self._add_in_map, node_index)
 
         # search local maximum
-        max_obj_delta = 0.0
-        argmax_obj_delta = 0.0
+        max_obj_delta = np.finfo(np.float32).min
+        argmax_obj_delta = -1
         argmax_weight = 0.0
         for i in range(
             self._in_out_digraph.indptr[node_index],
@@ -284,6 +284,9 @@ class HeuristicSolver(BaseSolver):
             self._in_count[node_index] += 1
             self._forbid_overlap(node_index)
             self._selected_nodes[node_index] = True
+
+        # sanity check
+        assert argmax_obj_delta != -1
 
         # adding to solution
         self._forbid_overlap(argmax_obj_delta)

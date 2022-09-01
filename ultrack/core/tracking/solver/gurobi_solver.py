@@ -140,7 +140,7 @@ class GurobiSolver(BaseSolver):
             self._nodes[i] >= self._divisions[i] for i in self._nodes.keys()
         )
 
-    def add_overlap_constraints(self, source: ArrayLike, target: ArrayLike) -> None:
+    def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
         """Add constraints such that `source` and `target` can't be present in the same solution.
 
         Parameters
@@ -151,8 +151,8 @@ class GurobiSolver(BaseSolver):
             Target nodes indices.
         """
         self._model.addConstrs(
-            self._nodes[source[i]] + self._nodes[target[i]] <= 1
-            for i in range(len(source))
+            self._nodes[sources[i]] + self._nodes[targets[i]] <= 1
+            for i in range(len(sources))
         )
 
     def enforce_node_to_solution(self, indices: ArrayLike) -> None:

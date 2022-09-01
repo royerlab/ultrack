@@ -28,6 +28,7 @@ pytest = "^5.2"
 pre-commit = "^2.20.0"
 pytest-qt = "^4.1.0"
 PyQt5 = "^5.15.7"
+asv = "^0.5.1"
 
 [tool.poetry.scripts]
 ultrack = "ultrack.cli.main:main"

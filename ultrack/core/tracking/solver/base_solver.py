@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import pandas as pd
 from numpy.typing import ArrayLike
@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 from ultrack.config.config import TrackingConfig
 
 
-class BaseSolver:
+class BaseSolver(ABC):
     def __init__(
         self,
         config: TrackingConfig,
@@ -71,14 +71,14 @@ class BaseSolver:
         """
 
     @abstractmethod
-    def add_overlap_constraints(self, source: ArrayLike, target: ArrayLike) -> None:
+    def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
         """Add constraints such that `source` and `target` can't be present in the same solution.
 
         Parameters
         ----------
-        source : ArrayLike
+        sources : ArrayLike
             Source nodes indices.
-        target : ArrayLike
+        targets : ArrayLike
             Target nodes indices.
         """
 
