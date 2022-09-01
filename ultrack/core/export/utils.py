@@ -227,11 +227,11 @@ def export_segmentation_generic(
             LOG.info(f"t = {t} containts {len(query)} segments.")
 
             for id, node in query:
-                LOG.info(f"Painting t = {t} with node {id}.")
-
-                node.paint_buffer(
-                    buffer, value=df.loc[id, "track_id"], include_time=False
+                track_id = df.loc[id, "track_id"]
+                LOG.info(
+                    f"Painting t = {t} node {id} with value {track_id} area {node.area}"
                 )
+                node.paint_buffer(buffer, value=track_id, include_time=False)
 
             export_func(t, buffer)
 

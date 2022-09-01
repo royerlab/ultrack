@@ -18,7 +18,7 @@ class GurobiSolver(BaseSolver):
         self,
         config: TrackingConfig,
     ) -> None:
-        """Generic maxflow gurobi optimization solver for biological systems.
+        """Generic maxflow gurobi solver for cell-tracking ILP.
 
         Parameters
         ----------

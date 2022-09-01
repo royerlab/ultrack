@@ -274,7 +274,9 @@ def _write_tiff_buffer(
         Mask rescaling factor, by default None
     """
     if scale is not None:
-        buffer = zoom(buffer, scale[-buffer.ndim :], order=0)
+        buffer = zoom(
+            buffer, scale[-buffer.ndim :], order=0, grid_mode=True, mode="grid-constant"
+        )
 
     imwrite(output_dir / f"mask{t:03}.tif", buffer)
 
@@ -326,7 +328,11 @@ def to_ctc(
     if first_frame is not None:
         if scale is not None:
             first_frame = zoom(
-                first_frame, 1 / np.asarray(scale)[-first_frame.ndim :], order=0
+                first_frame,
+                1 / np.asarray(scale)[-first_frame.ndim :],
+                order=0,
+                grid_mode=True,
+                mode="grid-constant",
             )
 
         df = select_tracks_from_first_frame(

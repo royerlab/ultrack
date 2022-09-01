@@ -1,25 +1,34 @@
+from itertools import product
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from ultrack.config.config import MainConfig
+from ultrack.core.tracking.solver.base_solver import BaseSolver
 from ultrack.core.tracking.solver.gurobi_solver import GurobiSolver
+from ultrack.core.tracking.solver.heuristic.heuristic_solver import HeuristicSolver
 
 
 @pytest.mark.parametrize(
-    "config_content",
-    [
-        {
-            "tracking.appear_weight": -0.25,
-            "tracking.disappear_weight": -1.0,
-            "tracking.division_weight": -0.5,
-            "tracking.link_function": "identity",
-            "tracking.bias": 0,
-        },
-    ],
-    indirect=True,
+    "solver,config_content",
+    list(
+        product(
+            [GurobiSolver, HeuristicSolver],
+            [
+                {
+                    "tracking.appear_weight": -0.25,
+                    "tracking.disappear_weight": -1.0,
+                    "tracking.division_weight": -0.5,
+                    "tracking.link_function": "identity",
+                    "tracking.bias": 0,
+                }
+            ],
+        )
+    ),
+    indirect=["config_content"],
 )
-def test_gurobi_optimize(config_instance: MainConfig) -> None:
+def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> None:
     """
     This demo builds a very simple graph with 7 nodes and a single overlap constraint (2,5)
     and a two possible divisions on 2 and 6.
@@ -44,7 +53,7 @@ def test_gurobi_optimize(config_instance: MainConfig) -> None:
 
     Result: 0.5 + 0.5 + 1.0 + 0.7 - division_weight
     """
-    solver = GurobiSolver(config_instance.tracking_config)
+    solver = solver(config_instance.tracking_config)
 
     nodes = np.array([1, 2, 3, 4, 5, 6, 7])
     is_first = np.array([1, 0, 0, 0, 0, 0, 0], dtype=bool)
@@ -61,8 +70,7 @@ def test_gurobi_optimize(config_instance: MainConfig) -> None:
 
     solver.add_overlap_constraints([2], [5])
 
-    solver.optimize()
-
+    objective = solver.optimize()
     solution = solver.solution()
 
     expected_solution = pd.DataFrame(
@@ -78,7 +86,7 @@ def test_gurobi_optimize(config_instance: MainConfig) -> None:
     assert np.all(
         expected_solution.loc[solution.index, "parent_id"] == solution["parent_id"]
     )
-    assert (
-        solver._model.getObjective().getValue()
-        == weights[expected_edges].sum() + solver._config.division_weight
+    assert np.allclose(
+        objective,
+        weights[expected_edges].sum() + config_instance.tracking_config.division_weight,
     )

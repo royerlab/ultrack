@@ -58,7 +58,7 @@ def overwrite_option() -> Callable:
             is_flag=True,
             default=False,
             type=bool,
-            help="Allows overwriting existing data.",
+            help="Enables overwriting existing data.",
             is_eager=True,
         )(f)
 
