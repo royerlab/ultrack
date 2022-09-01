@@ -23,6 +23,20 @@ class HeuristicSolver(BaseSolver):
         self._config = config
         self._rng = np.random.default_rng(42)
 
+        # w_ap, w_dap, w_div
+        self._add_in_map = np.full((2, 3, 3), fill_value=-1e6, dtype=np.float32)
+        self._add_in_map[0, 0] = (0, 1, 0)
+        self._add_in_map[0, 1:] = (-1, 0, 0)
+
+        self._sub_in_map = -np.roll(self._add_in_map, shift=1, axis=0)
+
+        self._add_out_map = np.full((2, 3, 3), fill_value=-1e6, dtype=np.float32)
+        self._add_out_map[0, 0] = (1, 0, 0)
+        self._add_out_map[1, 0] = (0, -1, 0)
+        self._add_out_map[:, 1] = (0, 0, 1)
+
+        self._sub_out_map = -np.roll(self._add_out_map, shift=1, axis=1)
+
     def add_nodes(
         self, indices: ArrayLike, is_first_t: ArrayLike, is_last_t: ArrayLike
     ) -> None:
@@ -108,21 +122,32 @@ class HeuristicSolver(BaseSolver):
     def optimize(self) -> float:
         """Optimizes objective function."""
         n_nodes = len(self._appear_weight)
-        n_edges = len(self._weights)
 
         self._in_count = np.zeros(n_nodes, dtype=np.uint8)
         self._out_count = np.zeros(n_nodes, dtype=np.uint8)
-        self._selected_edges = np.zeros(n_edges, dtype=bool)
+        self._selected_nodes = np.zeros(n_nodes, dtype=bool)
+        self._selected_edges = set()
 
         objective = self.mst_pass()
-        objective = self.random_ascent(objective)
+        # objective = self.random_ascent(objective)
 
         return objective
+
+    def _transition_weight(self, transition: np.ndarray, node_id: int) -> float:
+        # TODO
+        weights = (
+            self._appear_weight[node_id],
+            self._disappear_weight[node_id],
+            self._config.division_weight,
+        )
+        return np.sum(
+            transition[self._in_count[node_id], self._out_count[node_id]] * weights
+        )
 
     def mst_pass(self, objective: float = 0.0) -> float:
 
         heap = Heap(self._weights)
-        heap.insert_array(np.arange(len(self._selected_edges)))
+        heap.insert_array(np.arange(len(self._weights)))
 
         while not heap.is_empty():
             edge_index = heap.pop()
@@ -138,25 +163,16 @@ class HeuristicSolver(BaseSolver):
                 continue
 
             obj_delta = self._weights[edge_index]
-
-            if self._out_count[in_node] == 0:
-                obj_delta += self._disappear_weight[in_node]
-            else:
-                obj_delta -= self._appear_weight[in_node]
-
-            if self._in_count[out_node] == 0:
-                obj_delta += self._appear_weight[out_node]
-            elif self._out_count[out_node] == 0:  # making sure it isn't a division
-                obj_delta -= self._disappear_weight[out_node]
-
-            # division
-            if self._out_count[out_node] == 1:
-                obj_delta += self._config.division_weight
+            obj_delta += self._transition_weight(self._add_in_map, in_node)
+            obj_delta += self._transition_weight(self._add_out_map, out_node)
 
             # any other check?
             objective = objective + obj_delta
 
-            self._selected_edges[edge_index] = True
+            self._selected_edges.add((out_node, in_node))
+            self._selected_nodes[out_node] = True
+            self._selected_nodes[in_node] = True
+
             self._out_count[out_node] += 1
             self._in_count[in_node] += 1
             self._forbid_overlap(in_node)
@@ -205,9 +221,7 @@ class HeuristicSolver(BaseSolver):
         pd.DataFrame
             Dataframe indexed by nodes as indices and their parent (NA if orphan).
         """
-        nodes = self._backward_map[
-            np.logical_or(self._in_count > 0, self._out_count > 0)
-        ]
+        nodes = self._backward_map[np.nonzero(self._selected_nodes)[0]]
 
         nodes = pd.DataFrame(
             data=NO_PARENT,
@@ -215,8 +229,10 @@ class HeuristicSolver(BaseSolver):
             columns=["parent_id"],
         )
 
-        node_id = self._backward_map[self._in_edge[self._selected_edges]]
-        parent_id = self._backward_map[self._out_edge[self._selected_edges]]
+        parent_id, node_id = zip(*self._selected_edges)
+
+        node_id = self._backward_map[np.asarray(node_id)]
+        parent_id = self._backward_map[np.asarray(parent_id)]
 
         inv_edges = pd.DataFrame(
             data=parent_id,
