@@ -12,6 +12,7 @@ class SolverSuite:
         [
             (10, 100, 5, 5),
             (30, 1_000, 10, 10),
+            (50, 10_000, 10, 10),
         ],
     ]
 
@@ -93,3 +94,6 @@ class SolverSuite:
 
     def time_optimize(self, *params) -> None:
         self._solver.optimize()
+
+    def track_objective(self, *params) -> float:
+        return self._solver.optimize()
