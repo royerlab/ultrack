@@ -23,16 +23,15 @@ asv setup
 
 To run the ASV benchmark from ultrack root directory.
 
-To test uncommited changes replace `run` with `dev`.
-
 ```
 cd benchmarks
 asv run
 asv publish
 asv preview
+
 ```
 
-Additional information can be found on their [official documentation](https://asv.readthedocs.io/en/stable/).
+To test uncommited changes replace `run` with `dev`.
 
 
 ## Profiling
@@ -47,3 +46,5 @@ For example:
 ```
 python get_profile_results.py .asv/results/<machine.name>/<run.name>.json -b "benchmark_solver.SolverSuite.time_optimize"
 ```
+
+Additional information can be found on their [official documentation](https://asv.readthedocs.io/en/stable/).
