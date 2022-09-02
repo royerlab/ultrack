@@ -11,7 +11,9 @@ class SolverSuite:
         ["gurobi", "heuristic"],
         [
             (10, 100, 5, 5),
-            (30, 1_000, 10, 10),
+            (10, 1_000, 5, 5),
+            (20, 1_000, 5, 5),
+            (20, 1_000, 10, 10),
             (50, 10_000, 10, 10),
         ],
     ]
@@ -32,7 +34,7 @@ class SolverSuite:
             length, n_nodes_per_time, n_neighbors, shift_over_time=True
         )
         self._add_edges_data["weights"] = self._rng.uniform(
-            size=len(self._add_edges_data["sources"])
+            low=-0.25, high=1, size=len(self._add_edges_data["sources"])
         )
         self._add_overlaps_data = self._random_pairs(
             length, n_nodes_per_time, n_overlaps, shift_over_time=False

@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.trackingconfig import TrackingConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
-from ultrack.core.tracking.solver.gurobi_solver import GurobiSolver
+from ultrack.core.tracking.solver import GurobiSolver
+from ultrack.core.tracking.solver.base_solver import BaseSolver
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -97,7 +98,7 @@ class SQLTracking:
         ) * self._window_size + with_overlap * self._tracking_config.overlap_size
         return start_time, end_time - 1
 
-    def _add_nodes(self, solver: GurobiSolver, index: int) -> None:
+    def _add_nodes(self, solver: BaseSolver, index: int) -> None:
         """Query nodes from a given batch index and add them to solver.
 
         Parameters
@@ -120,7 +121,7 @@ class SQLTracking:
             df["t"] == min(end_time, self._max_t),
         )
 
-    def _add_edges(self, solver: GurobiSolver, index: int) -> None:
+    def _add_edges(self, solver: BaseSolver, index: int) -> None:
         """Query edges from a given batch index and add them to solver.
 
         Parameters
@@ -142,7 +143,7 @@ class SQLTracking:
 
         solver.add_edges(df["source_id"], df["target_id"], df["iou"])
 
-    def _add_overlap_constraints(self, solver: GurobiSolver, index: int) -> None:
+    def _add_overlap_constraints(self, solver: BaseSolver, index: int) -> None:
         """Adds overlap and standard biological contraints.
 
         Parameters
@@ -163,7 +164,7 @@ class SQLTracking:
 
         solver.add_overlap_constraints(df["node_id"], df["ancestor_id"])
 
-    def _add_boundary_constraints(self, solver: GurobiSolver, index: int) -> None:
+    def _add_boundary_constraints(self, solver: BaseSolver, index: int) -> None:
         """
         Enforce to solution nodes from the boundary (in time) already selected from adjacent batches.
 

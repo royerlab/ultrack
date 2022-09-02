@@ -72,16 +72,19 @@ class HeuristicSolver(BaseSolver):
             indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
         )
 
+        indices = np.asarray(indices)
         size = len(indices)
         self._forward_map = ArrayMap(indices, np.arange(size))
         self._backward_map = indices.copy()
 
-        self._appear_weight = (
-            np.logical_not(is_first_t) * self._config.appear_weight
-        ).astype(np.float32)
-        self._disappear_weight = (
-            np.logical_not(is_last_t) * self._config.disappear_weight
-        ).astype(np.float32)
+        self._appear_weight = np.asarray(
+            np.logical_not(is_first_t) * self._config.appear_weight,
+            dtype=np.float32,
+        )
+        self._disappear_weight = np.asarray(
+            np.logical_not(is_last_t) * self._config.disappear_weight,
+            dtype=np.float32,
+        )
 
         self._forbidden = np.zeros(size, dtype=bool)
         self._in_count = np.zeros(size, dtype=np.uint8)
@@ -110,7 +113,9 @@ class HeuristicSolver(BaseSolver):
 
         self._assert_same_length(weights=weights, sources=sources, targets=targets)
 
-        self._weights = self._config.apply_link_function(weights).astype(np.float32)
+        self._weights = np.asarray(
+            self._config.apply_link_function(weights), np.float32
+        )
         self._out_edge = self._forward_map[np.asarray(sources)]
         self._in_edge = self._forward_map[np.asarray(targets)]
 
@@ -150,6 +155,9 @@ class HeuristicSolver(BaseSolver):
         indices : ArrayLike
             Nodes indices.
         """
+        if len(indices) == 0:
+            return
+
         indices = self._forward_map[np.asarray(indices)]
         for i in indices:
             self._forbid_overlap(i)
