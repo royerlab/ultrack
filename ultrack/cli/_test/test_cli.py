@@ -41,6 +41,9 @@ class TestCommandLine:
             # batch index with overwrite should trigger warning
             _run_command(["track", "-cfg", instance_config_path, "-ow", "-b", "0"])
 
+    def test_summary(self, instance_config_path: str, tmp_path: Path) -> None:
+        _run_command(["data_summary", "-cfg", instance_config_path, "-o", tmp_path])
+
     def test_ctc_export(self, instance_config_path: str, tmp_path: Path) -> None:
         _run_command(
             [
