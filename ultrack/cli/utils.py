@@ -1,4 +1,5 @@
 import warnings
+from pathlib import Path
 from typing import Any, Callable, Optional, Tuple
 
 import click
@@ -60,6 +61,19 @@ def overwrite_option() -> Callable:
             type=bool,
             help="Enables overwriting existing data.",
             is_eager=True,
+        )(f)
+
+    return decorator
+
+
+def output_directory_option(help: str) -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--output-directory",
+            "-o",
+            required=True,
+            type=click.Path(path_type=Path),
+            help=help,
         )(f)
 
     return decorator

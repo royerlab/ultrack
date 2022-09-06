@@ -1,5 +1,7 @@
 import logging
+import shutil
 import warnings
+from pathlib import Path
 from queue import Queue
 from typing import Callable, Dict, List, Sequence, Tuple, Union
 
@@ -277,3 +279,17 @@ def large_chunk_size(
         )
 
     return chunks
+
+
+def maybe_overwrite_path(path: Path, overwrite: bool) -> None:
+    """Validates existance of path (or dir) and overwrites it if requested."""
+    if path.exists():
+        if overwrite:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        else:
+            raise ValueError(
+                f"{path} already exists. Set `--overwrite` option to overwrite it."
+            )

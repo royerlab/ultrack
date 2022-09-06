@@ -20,6 +20,7 @@ from ultrack.core.export.utils import (
     add_track_ids_to_forest,
     estimate_drift,
     export_segmentation_generic,
+    maybe_overwrite_path,
     solution_dataframe_from_sql,
     tracks_forest,
 )
@@ -238,18 +239,7 @@ def _validate_masks_path(output_dir: Path, overwrite: bool) -> None:
                 path.unlink()
         else:
             raise ValueError(
-                f"{output_dir}'s segmentation masks on already exists. Set `overwrite` option to overwrite it."
-            )
-
-
-def _validate_tracks_path(tracks_path: Path, overwrite: bool) -> None:
-    """Validates existance of tracks path"""
-    if tracks_path.exists():
-        if overwrite:
-            tracks_path.unlink()
-        else:
-            raise ValueError(
-                f"{tracks_path} already exists. Set `overwrite` option to overwrite it."
+                f"{output_dir}'s segmentation masks on already exists. Set `--overwrite` option to overwrite it."
             )
 
 
@@ -316,7 +306,7 @@ def to_ctc(
     tracks_path = output_dir / "res_track.txt"
 
     _validate_masks_path(output_dir, overwrite)
-    _validate_tracks_path(tracks_path, overwrite)
+    maybe_overwrite_path(tracks_path, overwrite)
 
     df = solution_dataframe_from_sql(data_config.database_path)
 

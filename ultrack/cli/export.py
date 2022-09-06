@@ -2,20 +2,23 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
+import zarr
 from tifffile import imread
 
-from ultrack.cli.utils import config_option, overwrite_option, tuple_callback
+from ultrack.cli.utils import (
+    config_option,
+    output_directory_option,
+    overwrite_option,
+    tuple_callback,
+)
 from ultrack.config import MainConfig
-from ultrack.core.export.ctc import to_ctc
+from ultrack.core.export import to_ctc, to_tracks_layer, tracks_to_zarr
+from ultrack.core.export.utils import maybe_overwrite_path
 
 
 @click.command("ctc")
-@click.option(
-    "--output-directory",
-    "-o",
-    required=True,
-    type=click.Path(path_type=Path),
-    help="Output directory to save segmentation masks and lineage graph (e.g. 01_RES).",
+@output_directory_option(
+    "Output directory to save segmentation and lineage graph (e.g. 01_RES)."
 )
 @config_option()
 @overwrite_option()
@@ -68,9 +71,40 @@ def ctc_cli(
     )
 
 
+@click.command("zarr-napari")
+@output_directory_option(
+    "Output directory to save segmentation masks and tracks table (e.g. results)."
+)
+@config_option()
+@overwrite_option()
+def zarr_napari_cli(
+    output_directory: Path,
+    config: MainConfig,
+    overwrite: bool,
+) -> None:
+    """
+    Exports segments to zarr and tracks to napari tabular format
+    (.csv for tracklets, parent relationship is lost).
+    """
+    tracks_path = output_directory / "tracks.csv"
+    maybe_overwrite_path(tracks_path, overwrite)
+
+    segm_path = output_directory / "segments.zarr"
+    maybe_overwrite_path(segm_path, overwrite)
+
+    output_directory.mkdir(exist_ok=True)
+
+    tracks, _ = to_tracks_layer(config.data_config)
+    tracks.to_csv(tracks_path, index=False)
+
+    store = zarr.DirectoryStore(segm_path)
+    tracks_to_zarr(config.data_config, tracks, store=store)
+
+
 @click.group("export")
 def export_cli() -> None:
     """Exports tracking and segmentation results to selected format."""
 
 
 export_cli.add_command(ctc_cli)
+export_cli.add_command(zarr_napari_cli)

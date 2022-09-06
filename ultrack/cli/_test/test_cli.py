@@ -55,6 +55,20 @@ class TestCommandLine:
             ]
         )
 
+    def test_zarr_napari_export(
+        self, instance_config_path: str, tmp_path: Path
+    ) -> None:
+        _run_command(
+            [
+                "export",
+                "zarr-napari",
+                "-cfg",
+                instance_config_path,
+                "-o",
+                str(tmp_path / "results"),
+            ]
+        )
+
     @pytest.mark.parametrize("mode", ["all", "links", "solutions"])
     def test_clear_database(self, instance_config_path: str, mode: str) -> None:
         _run_command(
