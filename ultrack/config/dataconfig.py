@@ -15,10 +15,11 @@ class DatabaseChoices(Enum):
 
 class DataConfig(BaseModel):
     working_dir: Path = Path(".")
-    database: DatabaseChoices = DatabaseChoices.sqlite
+    database: DatabaseChoices = "sqlite"
 
     class Config:
         validate_assignment = True
+        use_enum_values = True
 
     @validator("working_dir")
     def validate_working_dir_writeable(cls, value: Path) -> Path:
@@ -38,7 +39,7 @@ class DataConfig(BaseModel):
     @property
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
-        if self.database == DatabaseChoices.sqlite:
+        if self.database == "sqlite":
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
         else:
             raise NotImplementedError(

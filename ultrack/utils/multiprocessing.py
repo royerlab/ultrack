@@ -8,7 +8,6 @@ import fasteners
 from tqdm import tqdm
 
 from ultrack.config.config import DataConfig
-from ultrack.config.dataconfig import DatabaseChoices
 
 
 def multiprocessing_apply(
@@ -46,7 +45,7 @@ def multiprocessing_sqlite_lock(
     """Write lock for writing on `sqlite` with multiprocessing. No lock otherwise."""
 
     lock = None
-    if data_config.database == DatabaseChoices.sqlite:
+    if data_config.database == "sqlite":
         identifier = uuid.uuid4().hex
         lock = fasteners.InterProcessLock(
             path=data_config.working_dir / f"{identifier}.lock"

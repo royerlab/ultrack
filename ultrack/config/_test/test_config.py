@@ -6,7 +6,6 @@ import toml
 from pydantic import ValidationError
 
 from ultrack.config import load_config
-from ultrack.config.trackingconfig import LinkFunctionChoices
 
 
 def _assert_input_in_target(input: Dict, target: Dict) -> None:
@@ -20,10 +19,6 @@ def _assert_input_in_target(input: Dict, target: Dict) -> None:
 
 def _format_config(config: Dict) -> None:
     """Formats dictionary config according to Config transforms."""
-    config["tracking"]["link_function"] = getattr(
-        LinkFunctionChoices, config["tracking"]["link_function"]
-    )
-
     config["data_config"] = config.pop("data")
     config["reader_config"] = config.pop("reader")
     config["segmentation_config"] = config.pop("segmentation")

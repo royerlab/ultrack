@@ -22,15 +22,18 @@ class TrackingConfig(BaseModel):
     time_limit: int = 36000
     method: int = -1
     n_threads: int = 0
-    link_function: LinkFunctionChoices = LinkFunctionChoices.power
+    link_function: LinkFunctionChoices = "power"
     power: float = 1
     bias: float = -0.005
 
+    class Config:
+        use_enum_values = True
+
     @property
     def apply_link_function(self) -> Callable[[np.ndarray], np.ndarray]:
-        if self.link_function == LinkFunctionChoices.identity:
+        if self.link_function == "identity":
             return lambda x: x + self.bias
-        elif self.link_function == LinkFunctionChoices.power:
+        elif self.link_function == "power":
             return lambda x: np.power(x, self.power) + self.bias
         else:
             raise NotImplementedError
