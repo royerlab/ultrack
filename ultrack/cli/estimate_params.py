@@ -9,7 +9,11 @@ from napari.viewer import ViewerModel
 from rich import print
 from rich.table import Table
 
-from ultrack.cli.utils import layer_key_option, napari_reader_option
+from ultrack.cli.utils import (
+    layer_key_option,
+    napari_reader_option,
+    output_directory_option,
+)
 from ultrack.utils.estimation import estimate_parameters_from_labels
 
 
@@ -55,12 +59,9 @@ def _plot_column_over_time(df: pd.DataFrame, column: str, output_dir: Path) -> N
     show_default=True,
     help="Indicates if data is a timelapse.",
 )
-@click.option(
-    "--output-directory",
-    "-o",
+@output_directory_option(
     default=".",
     show_default=True,
-    type=click.Path(path_type=Path),
     help="Plots output directory",
 )
 def estimate_params_cli(
@@ -85,6 +86,8 @@ def estimate_params_cli(
 
     covariables = {"area", "distance"}
     covariables = list(covariables.intersection(df.columns))
+
+    output_directory.mkdir(exist_ok=True)
 
     for col in covariables:
         _plot_column_over_time(df, col, output_directory)

@@ -33,7 +33,7 @@ def to_tracks_layer(
     if data_dim == 4:
         columns = ["track_id", "t", "z", "y", "x"]
     elif data_dim == 3:
-        columns["track_id", "t", "y", "x"]
+        columns = ["track_id", "t", "y", "x"]
     else:
         raise ValueError(
             f"Expected dataset with 3 or 4 dimensions, T(Z)YX. Found {data_dim}."

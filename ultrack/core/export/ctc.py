@@ -220,7 +220,7 @@ def select_tracks_from_first_frame(
         if node.contains(det.centroid):
             # add the whole tree to the selection
             track_id = df.loc[node.id, "track_id"]
-            selected_track_ids.add(connected_component(graph, track_id))
+            selected_track_ids.update(connected_component(graph, track_id))
 
     if stitch_tracks:
         selected_df = stitch_tracks_df(graph, df, selected_track_ids)
@@ -326,7 +326,10 @@ def to_ctc(
             )
 
         df = select_tracks_from_first_frame(
-            data_config, first_frame, df, stitch_tracks=False
+            data_config,
+            first_frame,
+            df,
+            stitch_tracks=stitch_tracks,
         )
 
     # convert to CTC format and write output
@@ -336,5 +339,7 @@ def to_ctc(
     LOG.info(f"CTC tracking data:\n{tracks_df}")
 
     export_segmentation_generic(
-        data_config, df, _write_tiff_buffer(scale=scale, output_dir=output_dir)
+        data_config,
+        df,
+        _write_tiff_buffer(scale=scale, output_dir=output_dir),
     )

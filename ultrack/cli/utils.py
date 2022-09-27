@@ -66,14 +66,17 @@ def overwrite_option() -> Callable:
     return decorator
 
 
-def output_directory_option(help: str) -> Callable:
+def output_directory_option(**kwargs) -> Callable:
+
+    if "required" not in kwargs and "default" not in kwargs:
+        kwargs["required"] = True
+
     def decorator(f: Callable) -> Callable:
         return click.option(
             "--output-directory",
             "-o",
-            required=True,
             type=click.Path(path_type=Path),
-            help=help,
+            **kwargs,
         )(f)
 
     return decorator

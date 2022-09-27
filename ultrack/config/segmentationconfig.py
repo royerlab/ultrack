@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict
 
 import higra as hg
-from pydantic import BaseModel, ValidationError, validator
+from pydantic import BaseModel, ValidationError, root_validator, validator
 
 NAME_TO_WS_HIER = {
     "area": hg.watershed_hierarchy_by_area,
@@ -33,6 +33,16 @@ class SegmentationConfig(BaseModel):
             )
 
         return NAME_TO_WS_HIER[value]
+
+    @root_validator
+    def area_validator(cls, values: Dict) -> Dict:
+        """Checks if min and max area are compatible."""
+        if values["min_area"] > values["max_area"]:
+            ValidationError(
+                "`min_area` must be lower than `max_area`."
+                f"Found min_area={values['min_area']}, max_area={values['max_area']}"
+            )
+        return values
 
     def dict(self, *args, **kwargs) -> Dict[str, Any]:
         d = super().dict(*args, **kwargs)

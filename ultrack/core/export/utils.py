@@ -214,6 +214,8 @@ def export_segmentation_generic(
     engine = sqla.create_engine(data_config.database_path)
     shape = data_config.metadata["shape"]
 
+    df_indices = set(df.index)
+
     with Session(engine) as session:
         for t in tqdm(range(shape[0]), "Exporting segmentation masks"):
             buffer = np.zeros(shape[1:], dtype=np.uint16)
@@ -229,6 +231,11 @@ def export_segmentation_generic(
             LOG.info(f"t = {t} containts {len(query)} segments.")
 
             for id, node in query:
+                if id not in df_indices:
+                    # ignoring nodes not present in dataset, used in sparse saving
+                    # executing this with a sql query crashed with big datasets
+                    continue
+
                 track_id = df.loc[id, "track_id"]
                 LOG.info(
                     f"Painting t = {t} node {id} with value {track_id} area {node.area}"

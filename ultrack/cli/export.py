@@ -18,7 +18,7 @@ from ultrack.core.export.utils import maybe_overwrite_path
 
 @click.command("ctc")
 @output_directory_option(
-    "Output directory to save segmentation and lineage graph (e.g. 01_RES)."
+    help="Output directory to save segmentation and lineage graph (e.g. 01_RES)."
 )
 @config_option()
 @overwrite_option()
@@ -73,7 +73,7 @@ def ctc_cli(
 
 @click.command("zarr-napari")
 @output_directory_option(
-    "Output directory to save segmentation masks and tracks table (e.g. results)."
+    help="Output directory to save segmentation masks and tracks table (e.g. results)."
 )
 @config_option()
 @overwrite_option()
