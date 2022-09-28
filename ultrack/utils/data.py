@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
@@ -13,9 +13,12 @@ LOG = logging.getLogger(__name__)
 def make_segmentation_mock_data(
     size: int = 64,
     n_dim: int = 3,
+    rng: Optional[np.random.Generator] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generates mock segmentation dataset producing binary blobs, their contours and labels."""
-    rng = np.random.default_rng(42)
+    if rng is None:
+        rng = np.random.default_rng(42)
+
     blobs = binary_blobs(length=size, n_dim=n_dim, volume_fraction=0.5, seed=rng)
 
     edt = ndi.distance_transform_edt(blobs)
