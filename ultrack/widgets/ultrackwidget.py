@@ -5,6 +5,7 @@ from magicgui.widgets import Container
 
 from ultrack import link, segment, track
 from ultrack.config.config import MainConfig, load_config
+from ultrack.core.database import LinkDB, NodeDB, is_table_empty
 from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.core.export.zarr import tracks_to_zarr
 from ultrack.widgets.datawidget import DataWidget
@@ -23,7 +24,6 @@ class UltrackWidget(Container):
         config = MainConfig()
 
         self._main_config_w = MainConfigWidget(config=config)
-        self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
         self.append(self._main_config_w)
 
         self._data_config_w = DataWidget(config=config.data_config)
@@ -39,8 +39,15 @@ class UltrackWidget(Container):
         self.append(self._tracking_w)
 
         self._setup_signals()
+        self._update_widget_status()
 
     def _setup_signals(self) -> None:
+        self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
+        self._main_config_w._config_loader_w.changed.connect(self._update_widget_status)
+        self._main_config_w._detection_layer_w.changed.connect(
+            self._update_widget_status
+        )
+        self._main_config_w._edge_layer_w.changed.connect(self._update_widget_status)
         self._segmentation_w._segment_btn.changed.connect(self._on_segment)
         self._linking_w._link_btn.changed.connect(self._on_link)
         self._tracking_w._track_btn.changed.connect(self._on_track)
@@ -69,9 +76,11 @@ class UltrackWidget(Container):
             data_config=self._data_config_w.config,
             overwrite=True,
         )
+        self._update_widget_status()
 
     def _on_link(self) -> None:
         link(self._linking_w.config, self._data_config_w.config, overwrite=True)
+        self._update_widget_status()
 
     def _on_track(self) -> None:
         track(self._tracking_w.config, self._data_config_w.config, overwrite=True)
@@ -79,3 +88,12 @@ class UltrackWidget(Container):
         labels = tracks_to_zarr(self._data_config_w.config, tracks)
         self._viewer.add_tracks(tracks, graph=graph)
         self._viewer.add_labels(labels)
+
+    def _update_widget_status(self) -> None:
+        self._segmentation_w._segment_btn.enabled = (
+            self._main_config_w._detection_layer_w.value is not None
+            and self._main_config_w._edge_layer_w.value is not None
+        )
+        data_config = self._data_config_w.config
+        self._linking_w._link_btn.enabled = not is_table_empty(data_config, NodeDB)
+        self._tracking_w._track_btn.enabled = not is_table_empty(data_config, LinkDB)

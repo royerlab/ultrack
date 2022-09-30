@@ -64,3 +64,14 @@ def maximum_time(data_config: DataConfig) -> int:
         raise ValueError(f"Dataset at {data_config.database_path} is empty.")
 
     return max_t
+
+
+def is_table_empty(data_config: DataConfig, table: Base) -> bool:
+    """Checks if table is empty."""
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        is_empty = (
+            sqla.inspect(engine).has_table(table.__tablename__)
+            and session.query(table).first() is None
+        )
+    return is_empty

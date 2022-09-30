@@ -24,7 +24,7 @@ class TrackingWidget(BaseConfigWidget):
                 # increasing number of decimals
                 # reference: https://github.com/napari/magicgui/issues/226
                 spinbox = widget._widget._qwidget
-                spinbox.setDecimals(3)
+                spinbox.setDecimals(4)
 
         self._track_btn = PushButton(text="Track")
         self.append(self._track_btn)
