@@ -1,11 +1,12 @@
 import logging
 from contextlib import nullcontext
-from typing import Optional
+from typing import List, Optional
 
 import fasteners
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
+from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 from sqlalchemy.orm import Session
 from toolz import curry
@@ -13,6 +14,7 @@ from toolz import curry
 from ultrack.config import DataConfig, LinkingConfig
 from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.core.linking.utils import clear_linking_data
+from ultrack.core.segmentation.node import Node
 from ultrack.utils.multiprocessing import (
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
@@ -24,12 +26,31 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 LOG = logging.getLogger(__name__)
 
 
+def _compute_dct(
+    time: int, nodes: List[Node], image: ArrayLike, channel_axis: int
+) -> None:
+    if channel_axis == 0:
+        frame = image[:, time]
+    else:
+        frame = image[time]
+        if channel_axis is not None:
+            # subtracking time dimension
+            channel_axis = channel_axis - 1
+
+    LOG.info(f"Frame with shape {frame.shape}")
+
+    for node in nodes:
+        node.precompute_dct(frame, channel_axis=channel_axis)
+
+
 @curry
 def _process(
     time: int,
     config: LinkingConfig,
     db_path: str,
     write_lock: Optional[fasteners.InterProcessLock] = None,
+    image: Optional[ArrayLike] = None,
+    channel_axis: Optional[int] = None,
 ) -> None:
     """Link nodes from current time to time + 1.
 
@@ -43,6 +64,7 @@ def _process(
         Database path.
     write_lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
+    # TODO
     """
     engine = sqla.create_engine(db_path)
     with Session(engine) as session:
@@ -64,15 +86,25 @@ def _process(
         r=config.max_distance,
     )
 
+    if image is not None:
+        LOG.info("DCT edge weight")
+        LOG.info(f"computing DCT of nodes from t={time}")
+        _compute_dct(time, current_nodes, image, channel_axis)
+        _compute_dct(time + 1, next_nodes, image, channel_axis)
+        weight_func = Node.dct_dot
+    else:
+        LOG.info("IoU edge weight")
+        weight_func = Node.IoU
+
     links = []
     for i, node in enumerate(current_nodes):
         neighborhood = []
         neigh_size = len(neighbors[i])
         for j, neigh_idx in enumerate(neighbors[i]):
             neigh = next_nodes[neigh_idx]
-            iou = node.IoU(neigh)
+            edge_weight = weight_func(node, neigh)
             # assuming neighbors are ordered so size - j will be used as tie breaker
-            neighborhood.append((iou, neigh_size - j, node.id, neigh.id))
+            neighborhood.append((edge_weight, neigh_size - j, node.id, neigh.id))
 
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
         LOG.info(f"Node {node.id} links {neighborhood}")
@@ -94,6 +126,8 @@ def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
     overwrite: bool = False,
+    image: Optional[ArrayLike] = None,
+    channel_axis: Optional[int] = None,
 ) -> None:
     """Links candidate segments (nodes) with their neighbors on the next time.
 
@@ -105,6 +139,8 @@ def link(
         Data configuration parameters.
     overwrite : bool
         Cleans up linking database content before processing.
+    image : ArrayLike
+        # TODO
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
@@ -118,6 +154,8 @@ def link(
             config=linking_config,
             db_path=data_config.database_path,
             write_lock=lock,
+            image=image,
+            channel_axis=channel_axis,
         )
         multiprocessing_apply(
             process, range(max_t), linking_config.n_workers, desc="Linking nodes."
