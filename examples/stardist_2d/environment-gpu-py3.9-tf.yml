@@ -1,0 +1,22 @@
+name: ultrack-stardist
+channels:
+  - conda-forge
+  - rapidsai
+  - gurobi
+  - defaults
+dependencies:
+  - python=3.9
+  - rapidsai::cucim
+  - conda-forge::cupy
+  - conda-forge::cudatoolkit=11.6
+  - conda-forge::cudnn
+  - conda-forge::tensorflow-gpu
+  - gurobi:gurobi
+  - jupyter
+  - pip
+  - zarr
+  - pip:
+    - pyqt5
+    - napari
+    - stardist
+    - csbdeep
