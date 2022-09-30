@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 
 from ultrack.cli.utils import config_option
 from ultrack.config import MainConfig
-from ultrack.core.database import LinkDB, NodeDB
+from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.export.utils import (
+    add_track_ids_to_forest,
+    solution_dataframe_from_sql,
+)
+from ultrack.utils.printing import pretty_print_df
 
 
 def _nodes_count_over_time(database_path: str, fig_path: Path) -> None:
@@ -70,6 +75,36 @@ def _link_stats_over_time(database_path: str, out_dir: Path) -> None:
     print(f"Links count over time saved at {fig_path}")
 
 
+def _solution_summary(database_path: str) -> None:
+    """Computes some statistics from the solution."""
+    df = solution_dataframe_from_sql(database_path)
+    df = add_track_ids_to_forest(df)
+
+    total = len(df)
+    no_parents = (df["parent_id"] == NO_PARENT).sum()
+    divisions = (df.groupby("parent_id").size() > 1).sum() - int(
+        no_parents > 0
+    )  # subtracting NO_PARENTS
+    ends = total - df.index.isin(df["parent_id"]).sum()
+    tracks = len(df["track_id"].unique())
+
+    print("\n")
+    pretty_print_df(
+        pd.DataFrame(
+            [
+                [total],
+                [no_parents],
+                [ends],
+                [divisions],
+                [tracks],
+            ],
+            columns=["count"],
+            index=["segments", "appearance", "disappearance", "division", "tracks"],
+        ),
+        title="Solution summary",
+    )
+
+
 @click.command("data_summary")
 @config_option()
 @click.option(
@@ -92,3 +127,4 @@ def data_summary_cli(
 
     _nodes_count_over_time(database_path, output_directory / "nodes_count.png")
     _link_stats_over_time(database_path, output_directory)
+    _solution_summary(database_path)

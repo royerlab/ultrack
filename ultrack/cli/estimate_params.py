@@ -7,7 +7,6 @@ import pandas as pd
 import seaborn as sns
 from napari.viewer import ViewerModel
 from rich import print
-from rich.table import Table
 
 from ultrack.cli.utils import (
     layer_key_option,
@@ -15,21 +14,7 @@ from ultrack.cli.utils import (
     output_directory_option,
 )
 from ultrack.utils.estimation import estimate_parameters_from_labels
-
-
-def _print_df(df: pd.DataFrame) -> None:
-    """Converts dataframe to rich table and prints it."""
-    table = Table(title="Parameters summary")
-
-    table.add_column("stats")
-    for c in df.columns:
-        table.add_column(c)
-
-    for name, row in df.iterrows():
-        row = [str(value) for value in row]
-        table.add_row(name, *row)
-
-    print(table)
+from ultrack.utils.printing import pretty_print_df
 
 
 def _plot_column_over_time(df: pd.DataFrame, column: str, output_dir: Path) -> None:
@@ -93,4 +78,4 @@ def estimate_params_cli(
         _plot_column_over_time(df, col, output_directory)
 
     summary = df[covariables].describe()
-    _print_df(summary)
+    pretty_print_df(summary, title="Parameter summary", row_name="stats")
