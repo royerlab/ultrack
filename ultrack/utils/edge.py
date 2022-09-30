@@ -24,8 +24,8 @@ LOG = logging.getLogger(__name__)
 def labels_to_edges(
     labels: Sequence[ArrayLike],
     sigma: Optional[Union[Sequence[float], float]] = None,
-    detection_store: Optional[Store] = zarr.MemoryStore(),
-    edges_store: Optional[Store] = zarr.MemoryStore(),
+    detection_store: Optional[Store] = None,
+    edges_store: Optional[Store] = None,
 ) -> Tuple[ArrayLike, ArrayLike]:
     """
     Converts and merges a sequence of labels into ultrack input format (detection and edges)
@@ -47,6 +47,12 @@ def labels_to_edges(
     Tuple[ArrayLike, ArrayLike]
         Detection and edges array.
     """
+
+    if detection_store is None:
+        detection_store = zarr.MemoryStore()
+
+    if edges_store is None:
+        edges_store = zarr.MemoryStore()
 
     shape = labels[0].shape
     for lb in labels:
