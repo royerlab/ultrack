@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Callable, List
 
@@ -56,11 +57,23 @@ def test_ultrack_widget(
     # temporary working dir
     config.data_config.working_dir = tmp_path
 
+    delay = 2  # delay necessary due to thread worker, blocking while loop did not work. I don't know why
+
     widget._segmentation_w._segment_btn.clicked.emit()
+    time.sleep(delay)
+
     widget._linking_w._link_btn.clicked.emit()
+    time.sleep(delay)
+
     widget._tracking_w._track_btn.clicked.emit()
+    time.sleep(delay)
 
     # checking if the whole thing can be run twice --- overwrite is working
     widget._segmentation_w._segment_btn.clicked.emit()
+    time.sleep(delay)
+
     widget._linking_w._link_btn.clicked.emit()
+    time.sleep(delay)
+
     widget._tracking_w._track_btn.clicked.emit()
+    time.sleep(delay)

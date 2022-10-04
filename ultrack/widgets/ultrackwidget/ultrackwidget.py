@@ -1,7 +1,12 @@
+import logging
 from pathlib import Path
+from typing import Dict, Tuple
 
 import napari
+import numpy as np
+import pandas as pd
 from magicgui.widgets import Container
+from napari.qt.threading import thread_worker
 
 from ultrack import link, segment, track
 from ultrack.config.config import MainConfig, load_config
@@ -13,6 +18,9 @@ from ultrack.widgets.ultrackwidget.linkingwidget import LinkingWidget
 from ultrack.widgets.ultrackwidget.mainconfigwidget import MainConfigWidget
 from ultrack.widgets.ultrackwidget.segmentationwidget import SegmentationWidget
 from ultrack.widgets.ultrackwidget.trackingwidget import TrackingWidget
+from ultrack.widgets.utils import wait_cursor
+
+LOG = logging.getLogger(__name__)
 
 
 class UltrackWidget(Container):
@@ -69,6 +77,27 @@ class UltrackWidget(Container):
             self.config = load_config(value)
 
     def _on_segment(self) -> None:
+        segmentation_worker = self._make_segmentation_worker()
+        segmentation_worker.started.connect(self._lock_buttons)
+        segmentation_worker.finished.connect(self._update_widget_status)
+        segmentation_worker.start()
+
+    def _on_link(self) -> None:
+        link_worker = self._make_link_worker()
+        link_worker.started.connect(self._lock_buttons)
+        link_worker.finished.connect(self._update_widget_status)
+        link_worker.start()
+
+    def _on_track(self) -> None:
+        track_worker = self._make_track_worker()
+        track_worker.started.connect(self._lock_buttons)
+        track_worker.returned.connect(self._add_tracking_result)
+        track_worker.finished.connect(self._update_widget_status)
+        track_worker.start()
+
+    @thread_worker
+    @wait_cursor()
+    def _make_segmentation_worker(self) -> None:
         segment(
             detection=self._main_config_w._detection_layer_w.value.data,
             edge=self._main_config_w._edge_layer_w.value.data,
@@ -76,20 +105,36 @@ class UltrackWidget(Container):
             data_config=self._data_config_w.config,
             overwrite=True,
         )
-        self._update_widget_status()
 
-    def _on_link(self) -> None:
+    @thread_worker
+    @wait_cursor()
+    def _make_link_worker(self) -> None:
         link(self._linking_w.config, self._data_config_w.config, overwrite=True)
-        self._update_widget_status()
 
-    def _on_track(self) -> None:
+    @thread_worker
+    @wait_cursor()
+    def _make_track_worker(self) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
         track(self._tracking_w.config, self._data_config_w.config, overwrite=True)
         tracks, graph = to_tracks_layer(self._data_config_w.config)
         labels = tracks_to_zarr(self._data_config_w.config, tracks)
+        return tracks, graph, labels
+
+    @wait_cursor()
+    def _add_tracking_result(
+        self, result: Tuple[pd.DataFrame, Dict, np.ndarray]
+    ) -> None:
+        tracks, graph, labels = result
         self._viewer.add_tracks(tracks, graph=graph)
         self._viewer.add_labels(labels)
 
+    def _lock_buttons(self) -> None:
+        LOG.info("Locking buttons")
+        self._linking_w._link_btn.enabled = False
+        self._tracking_w._track_btn.enabled = False
+        self._segmentation_w._segment_btn.enabled = False
+
     def _update_widget_status(self) -> None:
+        LOG.info("Update widget status")
         self._segmentation_w._segment_btn.enabled = (
             self._main_config_w._detection_layer_w.value is not None
             and self._main_config_w._edge_layer_w.value is not None
