@@ -8,11 +8,11 @@ from ultrack.config.config import MainConfig, load_config
 from ultrack.core.database import LinkDB, NodeDB, is_table_empty
 from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.core.export.zarr import tracks_to_zarr
-from ultrack.widgets.datawidget import DataWidget
-from ultrack.widgets.linkingwidget import LinkingWidget
-from ultrack.widgets.mainconfigwidget import MainConfigWidget
-from ultrack.widgets.segmentationwidget import SegmentationWidget
-from ultrack.widgets.trackingwidget import TrackingWidget
+from ultrack.widgets.ultrackwidget.datawidget import DataWidget
+from ultrack.widgets.ultrackwidget.linkingwidget import LinkingWidget
+from ultrack.widgets.ultrackwidget.mainconfigwidget import MainConfigWidget
+from ultrack.widgets.ultrackwidget.segmentationwidget import SegmentationWidget
+from ultrack.widgets.ultrackwidget.trackingwidget import TrackingWidget
 
 
 class UltrackWidget(Container):

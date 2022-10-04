@@ -1,6 +1,6 @@
 from magicgui.widgets import FileEdit
 
-from ultrack.widgets.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
 
 
 class DataWidget(BaseConfigWidget):

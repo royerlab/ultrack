@@ -1,7 +1,7 @@
 from magicgui.widgets import FloatSpinBox, PushButton, SpinBox
 
 from ultrack.config.config import LinkingConfig
-from ultrack.widgets.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
 
 
 class LinkingWidget(BaseConfigWidget):

@@ -1,7 +1,7 @@
 from magicgui.widgets import FloatSpinBox, PushButton
 
 from ultrack.config.config import TrackingConfig
-from ultrack.widgets.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
 
 
 class TrackingWidget(BaseConfigWidget):
