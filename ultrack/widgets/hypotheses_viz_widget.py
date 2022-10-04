@@ -1,25 +1,34 @@
+import logging
 from pathlib import Path
-from typing import List, Sequence
+from typing import Dict, List, Optional, Sequence
 from warnings import warn
 
 import napari
 import numpy as np
+import pandas as pd
 import sqlalchemy as sqla
-from magicgui.widgets import FileEdit, FloatSlider, PushButton
+from magicgui.widgets import CheckBox, FileEdit, FloatSlider, PushButton
+from napari.layers import Labels
 from sqlalchemy.orm import Session
 
 from ultrack.config import DataConfig, load_config
-from ultrack.core.database import NodeDB
+from ultrack.core.database import LinkDB, NodeDB
 from ultrack.core.segmentation.node import Node
 from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
 
+logging.basicConfig()
+logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
-class SegmVizWidget(BaseConfigWidget):
+LOG = logging.getLogger(__name__)
+
+
+class HypothesesVizWidget(BaseConfigWidget):
     def __init__(self, viewer: napari.Viewer) -> None:
-        super().__init__(DataConfig(), "Segm. Viz.")
+        super().__init__(DataConfig(), "Hypotheses Viz.")
         self._viewer = viewer
-        self._layer_name = "Segm. Hypothesis"
-        self._nodes: List[Node] = []
+        self._segm_layer_name = "Segm. Hypotheses"
+        self._link_layer_name = "Links"
+        self._nodes: Dict[int, Node] = {}
         self._hier_ids: List[int] = []
 
         self._config_loader_w = FileEdit(
@@ -36,6 +45,9 @@ class SegmVizWidget(BaseConfigWidget):
         self._area_threshold_w = FloatSlider(label="Area threshold", min=0, max=0)
         self._area_threshold_w.changed.connect(self._on_threshold_update)
         self.append(self._area_threshold_w)
+
+        self._link_w = CheckBox(text="Show links", value=False)
+        self.append(self._link_w)
 
     def _setup_widgets(self) -> None:
         pass
@@ -69,20 +81,23 @@ class SegmVizWidget(BaseConfigWidget):
             #     .where(NodeDB.t == time)
             # )
 
+        self._nodes = {node.id: node for node in self._nodes}
+
         if len(self._nodes) == 0:
             raise ValueError(f"Could not find segmentations at time {time}")
 
-        area = np.asarray([node.area for node in self._nodes])
+        area = np.asarray([node.area for node in self._nodes.values()])
         self._area_threshold_w.min = area.min()
         self._area_threshold_w.max = area.max()
         self._area_threshold_w.value = np.median(area)
 
     def _on_threshold_update(self, value: float) -> None:
         segmentation = self._get_segmentation(threshold=value)
-        if self._layer_name in self._viewer.layers:
-            self._viewer.layers[self._layer_name].data = segmentation
+        if self._segm_layer_name in self._viewer.layers:
+            self._viewer.layers[self._segm_layer_name].data = segmentation
         else:
-            self._viewer.add_labels(segmentation, name=self._layer_name)
+            layer = self._viewer.add_labels(segmentation, name=self._segm_layer_name)
+            layer.mouse_move_callbacks.append(self._on_mouse_move)
 
     def _get_segmentation(self, threshold: float) -> np.ndarray:
         """
@@ -98,7 +113,7 @@ class SegmVizWidget(BaseConfigWidget):
         seen_hierarchies = set()
 
         buffer = np.zeros(self._shape[1:], dtype=np.uint32)  # ignoring time
-        for node, hier_id in zip(self._nodes, self._hier_ids):
+        for node, hier_id in zip(self._nodes.values(), self._hier_ids):
             if node.area <= threshold or hier_id not in seen_hierarchies:
                 # paint segments larger than threshold on empty regions
                 node.paint_buffer(buffer, node.id, include_time=False)
@@ -117,3 +132,52 @@ class SegmVizWidget(BaseConfigWidget):
             return 0
 
         return self._viewer.dims.point[-self._ndim]
+
+    def _on_mouse_move(self, layer: Optional[Labels], event) -> None:
+        if not self._link_w.value:
+            return
+        self._load_neighbors(layer.get_value(event.position, world=True))
+
+    def _load_neighbors(self, index: int) -> None:
+        if index is None or index <= 0:
+            return
+
+        index = int(index)  # might be numpy array
+
+        LOG.info(f"Loading node index = {index}")
+
+        engine = sqla.create_engine(self.config.database_path, echo=True)
+        with Session(engine) as session:
+            query = session.query(NodeDB.z, NodeDB.y, NodeDB.x, LinkDB.iou).where(
+                LinkDB.target_id == NodeDB.id, LinkDB.source_id == index
+            )
+            df = pd.read_sql(query.statement, session.bind)
+
+        LOG.info(f"Found {len(df)} neighbors")
+
+        if len(df) == 0:
+            return
+
+        node = self._nodes[index]
+        ndim = len(node.centroid)
+        centroids = df[["z", "y", "x"]].values[:, -ndim:]  # removing z if 2D
+
+        vectors = np.tile(self._nodes[index].centroid, (len(df), 2, 1))
+        vectors[:, 1, :] = centroids - vectors[:, 0, :]
+
+        if self._link_layer_name in self._viewer.layers:
+            self._viewer.layers.remove(self._link_layer_name)
+
+        self._viewer.add_vectors(
+            data=vectors,
+            name=self._link_layer_name,
+            features={"weights": df["iou"]},
+            edge_color="weights",
+            opacity=1.0,
+        )
+
+        LOG.info("vectors:\n", vectors)
+
+        self._viewer.layers.selection.active = self._viewer.layers[
+            self._segm_layer_name
+        ]

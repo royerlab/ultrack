@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Dict
 
 import napari
 import numpy as np
@@ -9,25 +9,26 @@ from sqlalchemy.orm import Session
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
 from ultrack.core.segmentation.node import Node
-from ultrack.widgets.segm_vis_widget import SegmVizWidget
+from ultrack.widgets.hypotheses_viz_widget import HypothesesVizWidget
 
 
-def _is_sorted(nodes: List[Node]) -> bool:
+def _is_sorted(nodes: Dict[int, Node]) -> bool:
+    nodes = list(nodes.values())
     return all(nodes[i].area <= nodes[i + 1].area for i in range(len(nodes) - 1))
 
 
-def test_segm_vis_widget(
+def test_hypotheses_viz_widget(
     make_napari_viewer: Callable[[], napari.Viewer],
-    segmentation_database_mock_data: MainConfig,
+    linked_database_mock_data: MainConfig,
     request,
 ) -> None:
     # NOTE: Use "--show-napari-viewer" to show viewer, useful when debugging
 
-    config = segmentation_database_mock_data
+    config = linked_database_mock_data
 
     viewer = make_napari_viewer()
 
-    widget = SegmVizWidget(viewer)
+    widget = HypothesesVizWidget(viewer)
     widget.config = config.data_config
     viewer.window.add_dock_widget(widget)
 
@@ -42,7 +43,7 @@ def test_segm_vis_widget(
     # forcing every node to be drawn
     widget._area_threshold_w.value = widget._area_threshold_w.max
 
-    labels = viewer.layers[widget._layer_name].data
+    labels = viewer.layers[widget._segm_layer_name].data
 
     engine = sqla.create_engine(config.data_config.database_path)
     with Session(engine) as session:
@@ -51,6 +52,13 @@ def test_segm_vis_widget(
     # checking if every node was drawn
     for (node,) in query:
         assert np.all(labels[node.mask_indices()])
+
+    widget._load_neighbors(0)
+    assert widget._link_layer_name not in viewer.layers
+
+    # testing using last `node`
+    widget._load_neighbors(node.id)
+    assert widget._link_layer_name in viewer.layers
 
     if request.config.getoption("--show-napari-viewer"):
         napari.run()
