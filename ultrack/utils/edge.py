@@ -22,7 +22,7 @@ LOG = logging.getLogger(__name__)
 
 
 def labels_to_edges(
-    labels: Sequence[ArrayLike],
+    labels: Union[ArrayLike, Sequence[ArrayLike]],
     sigma: Optional[Union[Sequence[float], float]] = None,
     detection_store: Optional[Store] = None,
     edges_store: Optional[Store] = None,
@@ -32,7 +32,7 @@ def labels_to_edges(
 
     Parameters
     ----------
-    labels : Sequence[ArrayLike]
+    labels : Union[ArrayLike, Sequence[ArrayLike]]
         List of labels with equal shape.
     sigma : Optional[Union[Sequence[float], float]], optional
         Edges smoothing parameter (gaussian blur), edges aren't smoothed if not provided
@@ -53,6 +53,9 @@ def labels_to_edges(
 
     if edges_store is None:
         edges_store = zarr.MemoryStore()
+
+    if not isinstance(labels, Sequence):
+        labels = [labels]
 
     shape = labels[0].shape
     for lb in labels:

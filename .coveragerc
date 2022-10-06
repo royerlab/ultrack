@@ -11,6 +11,7 @@ exclude_lines =
     @(abc\.)?abstractmethod
     @njit
     @jitclass
+    @thread_worker
     _SPEC
     def __repr__
     raise NotImplementedError
