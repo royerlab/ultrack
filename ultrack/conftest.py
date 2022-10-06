@@ -41,7 +41,7 @@ def zarr_dataset_paths(
 
     paths = []
     for src_array, filename in zip(
-        timelapse_mock_data, ("detection.zarr", "edge.zarr", "labels.zarr")
+        timelapse_mock_data, ("detection.zarr", "edges.zarr", "labels.zarr")
     ):
         path = tmp_path / filename
         dst_store = zarr.DirectoryStore(path)

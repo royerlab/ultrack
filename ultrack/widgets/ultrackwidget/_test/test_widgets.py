@@ -69,8 +69,13 @@ def test_ultrack_widget(
     time.sleep(delay)
 
     # checking if the whole thing can be run twice --- overwrite is working
+
     widget._segmentation_w._segment_btn.clicked.emit()
     time.sleep(delay)
+
+    # checking linking with DCT edge weight
+    widget._linking_w._images_w.value = True
+    viewer.layers.selection.select_only(viewer.layers["edges"])
 
     widget._linking_w._link_btn.clicked.emit()
     time.sleep(delay)

@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import fasteners
 import numpy as np
@@ -27,20 +27,17 @@ LOG = logging.getLogger(__name__)
 
 
 def _compute_dct(
-    time: int, nodes: List[Node], image: ArrayLike, channel_axis: int
+    time: int,
+    nodes: List[Node],
+    images: Sequence[ArrayLike],
 ) -> None:
-    if channel_axis == 0:
-        frame = image[:, time]
-    else:
-        frame = image[time]
-        if channel_axis is not None:
-            # subtracking time dimension
-            channel_axis = channel_axis - 1
+    """Precomputes DCT values for the nodes using the frames from the provided time."""
 
-    LOG.info(f"Frame with shape {frame.shape}")
+    frames = [image[time] for image in images]
+    LOG.info(f"Image with shape {[f.shape for f in frames]}")
 
     for node in nodes:
-        node.precompute_dct(frame, channel_axis=channel_axis)
+        node.precompute_dct(frames)
 
 
 @curry
@@ -48,9 +45,8 @@ def _process(
     time: int,
     config: LinkingConfig,
     db_path: str,
+    images: Sequence[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock] = None,
-    image: Optional[ArrayLike] = None,
-    channel_axis: Optional[int] = None,
 ) -> None:
     """Link nodes from current time to time + 1.
 
@@ -62,9 +58,10 @@ def _process(
         Linking configuration parameters.
     db_path : str
         Database path.
+    images : Sequence[ArrayLike]
+        Sequence of images for DCT correlation edge weight, if empty, IoU is used for weighting.
     write_lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
-    # TODO
     """
     engine = sqla.create_engine(db_path)
     with Session(engine) as session:
@@ -86,11 +83,11 @@ def _process(
         r=config.max_distance,
     )
 
-    if image is not None:
+    if len(images) > 0:
         LOG.info("DCT edge weight")
         LOG.info(f"computing DCT of nodes from t={time}")
-        _compute_dct(time, current_nodes, image, channel_axis)
-        _compute_dct(time + 1, next_nodes, image, channel_axis)
+        _compute_dct(time, current_nodes, images)
+        _compute_dct(time + 1, next_nodes, images)
         weight_func = Node.dct_dot
     else:
         LOG.info("IoU edge weight")
@@ -125,9 +122,8 @@ def _process(
 def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
+    images: Sequence[ArrayLike] = tuple(),
     overwrite: bool = False,
-    image: Optional[ArrayLike] = None,
-    channel_axis: Optional[int] = None,
 ) -> None:
     """Links candidate segments (nodes) with their neighbors on the next time.
 
@@ -137,10 +133,10 @@ def link(
         Linking configuration parameters.
     data_config : DataConfig
         Data configuration parameters.
+    images : Sequence[ArrayLike]
+        Optinal sequence of images for DCT correlation edge weight.
     overwrite : bool
         Cleans up linking database content before processing.
-    image : ArrayLike
-        # TODO
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
@@ -154,8 +150,7 @@ def link(
             config=linking_config,
             db_path=data_config.database_path,
             write_lock=lock,
-            image=image,
-            channel_axis=channel_axis,
+            images=images,
         )
         multiprocessing_apply(
             process, range(max_t), linking_config.n_workers, desc="Linking nodes."

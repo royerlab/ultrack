@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import blosc2
 import numpy as np
@@ -125,22 +125,20 @@ class Node(_Node):
             raise NotImplementedError
 
     def precompute_dct(
-        self, image: ArrayLike, size: int = 10, channel_axis: Optional[int] = None
+        self,
+        images: Sequence[ArrayLike],
+        size: int = 10,
     ) -> None:
-        if channel_axis is None:
-            self.dct = self._gray_dct(image, size)
+        if len(images) == 1:
+            self.dct = self._gray_dct(images[0], size)
+
         else:
-            self.dct = np.stack(
-                [
-                    self._gray_dct(np.take(image, i, channel_axis), size)
-                    for i in range(image.shape[channel_axis])
-                ]
-            )
+            self.dct = np.stack(self._gray_dct(image, size) for image in images)
         self.dct /= np.linalg.norm(self.dct)
 
     def _gray_dct(self, image: ArrayLike, size: int) -> None:
         crop = self.roi(image)
-        dct = fft.dctn(crop)[:size, :size]
+        dct = fft.dctn(crop)[(slice(None, size),) * crop.ndim]
         shape_diff = size - np.array(dct.shape)
         if np.any(shape_diff > 0):
             dct = np.pad(dct, tuple((0, max(0, s)) for s in shape_diff))

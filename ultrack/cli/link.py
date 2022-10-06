@@ -1,33 +1,48 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 import click
 from napari.viewer import ViewerModel
 
 from ultrack import link
-from ultrack.cli.utils import config_option, overwrite_option
+from ultrack.cli.utils import config_option, overwrite_option, paths_argument
 from ultrack.config import MainConfig
 
 
 @click.command("link")
+@paths_argument()
 @config_option()
-@overwrite_option()
 @click.option(
-    "--image-path", "-i", default=None, type=click.Path(path_type=Path), help="TODO"
+    "--channel-axis",
+    "-cha",
+    required=False,
+    default=None,
+    type=int,
+    show_default=True,
+    help="Channel axis, only used when input `paths` are provided",
 )
-def link_cli(config: MainConfig, overwrite: bool, image_path: Optional[Path]) -> None:
+@overwrite_option()
+def link_cli(
+    paths: Sequence[Path],
+    config: MainConfig,
+    channel_axis: Optional[int],
+    overwrite: bool,
+) -> None:
     """Links segmentation candidates adjacent in time."""
 
-    # FIXME: temporary solution for testing
-    image = None
-    if image_path is not None:
+    images = tuple()
+    if len(paths) > 0:
         viewer = ViewerModel()
-        image = viewer.open(image_path)[0].data[:2]
+
+        kwargs = {}
+        if channel_axis is not None:
+            kwargs["channel_axis"] = channel_axis
+
+        images = [layer.data for layer in viewer.open(paths, **kwargs)]
 
     link(
         config.linking_config,
         config.data_config,
         overwrite=overwrite,
-        image=image,
-        channel_axis=0,
+        images=images,
     )

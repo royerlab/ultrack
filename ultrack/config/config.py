@@ -1,28 +1,15 @@
 import logging
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 import toml
-from pydantic import BaseModel, Field, ValidationError, validator
+from pydantic import BaseModel, Field
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.segmentationconfig import SegmentationConfig
 from ultrack.config.trackingconfig import TrackingConfig
 
 LOG = logging.getLogger(__name__)
-
-
-class ReaderConfig(BaseModel):
-    reader_plugin: str = "builtins"
-    layer_indices: List[Union[str, int]] = [0, 1]
-
-    @validator("layer_indices", pre=True)
-    def validate_layer_index_length(cls, value: List) -> List:
-        """Checks if layer_index has length 2"""
-        if len(value) != 2:
-            ValidationError(f"`layer_indices` must have length 2. Found {len(value)}.")
-
-        return value
 
 
 class LinkingConfig(BaseModel):
@@ -33,7 +20,6 @@ class LinkingConfig(BaseModel):
 
 class MainConfig(BaseModel):
     data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
-    reader_config: ReaderConfig = Field(default_factory=ReaderConfig, alias="reader")
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"
     )

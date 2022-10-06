@@ -1,30 +1,53 @@
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Sequence
 
 import click
 from napari.viewer import ViewerModel
 
 from ultrack import segment
-from ultrack.cli.utils import config_option, overwrite_option
+from ultrack.cli.utils import (
+    config_option,
+    napari_reader_option,
+    overwrite_option,
+    paths_argument,
+)
 from ultrack.config import MainConfig
 
 
 @click.command("segment")
-@click.argument("input-paths", nargs=-1, type=click.Path(path_type=Path), required=True)
+@paths_argument()
+@napari_reader_option()
 @config_option()
+@click.option(
+    "--detection-layer",
+    "-dl",
+    required=True,
+    type=str,
+    help="Cell detection layer index on napari.",
+)
+@click.option(
+    "--edge-layer",
+    "-el",
+    required=True,
+    type=str,
+    help="Cell edges layer index on napari.",
+)
 @overwrite_option()
 def segmentation_cli(
-    input_paths: Union[Sequence[Path], Path],
+    paths: Sequence[Path],
+    reader_plugin: str,
     config: MainConfig,
+    detection_layer: str,
+    edge_layer: str,
     overwrite: bool,
 ) -> None:
     """Compute candidate segments for tracking model from input data."""
 
     viewer = ViewerModel()
-    viewer.open(path=input_paths, plugin=config.reader_config.reader_plugin)
+    viewer.open(path=paths, plugin=reader_plugin)
 
-    detection = viewer.layers[config.reader_config.layer_indices[0]].data
-    edge = viewer.layers[config.reader_config.layer_indices[1]].data
+    detection = viewer.layers[detection_layer].data
+    edge = viewer.layers[edge_layer].data
 
     segment(
         detection,

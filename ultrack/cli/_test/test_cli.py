@@ -31,10 +31,29 @@ class TestCommandLine:
     def test_segment(
         self, instance_config_path: str, zarr_dataset_paths: List[str]
     ) -> None:
-        _run_command(["segment", "-cfg", instance_config_path] + zarr_dataset_paths)
+        _run_command(
+            [
+                "segment",
+                "-cfg",
+                instance_config_path,
+                "-dl",
+                "detection",
+                "-el",
+                "edges",
+            ]
+            + zarr_dataset_paths
+        )
 
-    def test_link(self, instance_config_path: str) -> None:
+    def test_link_iou(self, instance_config_path: str) -> None:
         _run_command(["link", "-cfg", str(instance_config_path)])
+
+    def test_link_dct(
+        self, instance_config_path: str, zarr_dataset_paths: List[str]
+    ) -> None:
+        # using detection and edges layer to simulate image channel
+        _run_command(
+            ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
+        )
 
     def test_tracking(self, instance_config_path: str) -> None:
         with pytest.warns(UserWarning):
