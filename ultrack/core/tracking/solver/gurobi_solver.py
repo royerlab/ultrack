@@ -1,9 +1,8 @@
 import logging
 
-import gurobipy as gp
+import mip
 import numpy as np
 import pandas as pd
-from gurobipy import GRB
 from numpy.typing import ArrayLike
 
 from ultrack.config.config import TrackingConfig
@@ -31,7 +30,7 @@ class GurobiSolver(BaseSolver):
 
     def reset(self) -> None:
         """Sets model to an empty state."""
-        self._model = gp.Model()
+        self._model = mip.Model(sense=mip.MAXIMIZE)
         self._nodes = {}
         self._edges = {}
         self._appearances = {}
@@ -42,11 +41,10 @@ class GurobiSolver(BaseSolver):
 
     def _setup_model_parameters(self) -> None:
         """Sets model parameters from configuration file."""
-        self._model.ModelSense = GRB.MAXIMIZE
-        self._model.Params.TimeLimit = self._config.time_limit
-        self._model.Params.Threads = self._config.n_threads
-        self._model.Params.Method = self._config.method
-        self._model.Params.MIPGap = self._config.solution_gap
+        self._model.max_seconds = self._config.time_limit
+        self._model.threads = self._config.n_threads
+        self._model.lp_method = self._config.method
+        self._model.max_mip_gap = self._config.solution_gap
 
     def add_nodes(
         self, indices: ArrayLike, is_first_t: ArrayLike, is_last_t: ArrayLike
@@ -76,15 +74,15 @@ class GurobiSolver(BaseSolver):
         disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
 
         indices = indices.tolist()
-        self._nodes = self._model.addVars(indices, vtype=GRB.BINARY)
+        self._nodes = self._model.addVars(indices, vtype=mip.BINARY)
         self._appearances = self._model.addVars(
-            indices, vtype=GRB.BINARY, obj=appear_weight.tolist()
+            indices, vtype=mip.BINARY, obj=appear_weight.tolist()
         )
         self._disappearances = self._model.addVars(
-            indices, vtype=GRB.BINARY, obj=disappear_weight.tolist()
+            indices, vtype=mip.BINARY, obj=disappear_weight.tolist()
         )
         self._divisions = self._model.addVars(
-            indices, vtype=GRB.BINARY, obj=self._config.division_weight
+            indices, vtype=mip.BINARY, obj=self._config.division_weight
         )
 
     def add_edges(
@@ -112,7 +110,7 @@ class GurobiSolver(BaseSolver):
 
         variables = {(s, t): w for s, t, w in zip(sources, targets, weights)}
         self._edges = self._model.addVars(
-            variables.keys(), obj=variables, vtype=GRB.BINARY
+            variables.keys(), obj=variables, vtype=mip.BINARY
         )
 
     def set_standard_constraints(self) -> None:
@@ -123,20 +121,20 @@ class GurobiSolver(BaseSolver):
         """
 
         # single incoming node
-        self._model.addConstrs(
+        self._model.add_constr(
             self._edges.sum("*", i) + self._appearances[i] == self._nodes[i]
             for i in self._nodes.keys()
         )
 
         # flow conservation
-        self._model.addConstrs(
+        self._model.add_constr(
             self._nodes[i] + self._divisions[i]
             == self._edges.sum(i, "*") + self._disappearances[i]
             for i in self._nodes.keys()
         )
 
         # divisions
-        self._model.addConstrs(
+        self._model.add_constr(
             self._nodes[i] >= self._divisions[i] for i in self._nodes.keys()
         )
 
@@ -150,7 +148,7 @@ class GurobiSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        self._model.addConstrs(
+        self._model.add_constr(
             self._nodes[sources[i]] + self._nodes[targets[i]] <= 1
             for i in range(len(sources))
         )
@@ -163,7 +161,7 @@ class GurobiSolver(BaseSolver):
         indices : ArrayLike
             Nodes indices.
         """
-        self._model.addConstrs(self._nodes[i] >= 1 for i in indices)
+        self._model.add_constr(self._nodes[i] >= 1 for i in indices)
 
     def _set_solution_guess(self) -> None:
         # TODO
@@ -182,11 +180,9 @@ class GurobiSolver(BaseSolver):
         pd.DataFrame
             Dataframe indexed by nodes as indices and their parent (NA if orphan).
         """
-        if not (
-            self._model.status == GRB.OPTIMAL or self._model.status == GRB.TIME_LIMIT
-        ):
+        if self._model.status != mip.OptimizationStatus.OPTIMAL:
             raise ValueError(
-                "Gurobi solver must be optimized before returning solution."
+                f"Solver must be optimized before returning solution. It had status {self._model.status}"
             )
 
         nodes = [k for k, var in self._nodes.items() if var.X > 0.5]

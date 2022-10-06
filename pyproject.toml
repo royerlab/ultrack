@@ -23,6 +23,7 @@ seaborn = "^0.11.2"
 imagecodecs = "^2022.8.8"
 scikit-image = "^0.19.3"
 blosc2 = "^0.4.1"
+mip = "^1.14.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

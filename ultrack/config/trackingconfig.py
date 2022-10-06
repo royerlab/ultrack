@@ -20,7 +20,7 @@ class TrackingConfig(BaseModel):
     overlap_size: int = 1
     solution_gap: float = 0.001
     time_limit: int = 36000
-    method: int = -1
+    method: int = 0
     n_threads: int = 0
     link_function: LinkFunctionChoices = "power"
     power: float = 1
