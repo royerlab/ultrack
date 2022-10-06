@@ -16,13 +16,13 @@ zarr = "^2.12.0"
 napari = "^0.4.15"
 pillow = "<9.2.0"  # tox wans't working for 9.2.0
 numba = "^0.56.0"
-blosc = "^1.10.6"
 tensorstore = "0.1.16"
 SQLAlchemy = "^1.4.40"
 gurobipy = "^9.5.2"
 seaborn = "^0.11.2"
 imagecodecs = "^2022.8.8"
 scikit-image = "^0.19.3"
+blosc2 = "^0.4.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

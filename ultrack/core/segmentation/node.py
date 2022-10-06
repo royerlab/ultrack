@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Optional, Tuple, Union
 
-import blosc
+import blosc2
 import numpy as np
 import tensorstore as ts
 import zarr
@@ -214,9 +214,9 @@ class Node(_Node):
     def __getstate__(self) -> Dict:
         d = self.__dict__.copy()
         d["_parent"] = None
-        d["mask"] = blosc.pack_array(self.mask)
+        d["mask"] = blosc2.pack_array(self.mask)
         return d
 
     def __setstate__(self, d: Dict) -> None:
-        d["mask"] = blosc.unpack_array(d["mask"])
+        d["mask"] = blosc2.unpack_array(d["mask"])
         self.__dict__ = d
