@@ -1,12 +1,14 @@
 import logging
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Sequence, Tuple
 
 import napari
 import numpy as np
 import pandas as pd
 from magicgui.widgets import Container
+from napari.layers import Image, Labels
 from napari.qt.threading import thread_worker
+from numpy.typing import ArrayLike
 
 from ultrack import link, segment, track
 from ultrack.config.config import MainConfig, load_config
@@ -83,7 +85,19 @@ class UltrackWidget(Container):
         segmentation_worker.start()
 
     def _on_link(self) -> None:
-        link_worker = self._make_link_worker()
+        if self._linking_w._images_w.value:
+            for layer in self._viewer.layers.selection:
+                if not isinstance(layer, (Image, Labels)):
+                    raise ValueError(
+                        f"Selected layers must be Image or Labels, {layer} not valid."
+                    )
+            images = tuple(layer.data for layer in self._viewer.layers.selection)
+        else:
+            images = tuple()
+
+        LOG.info(f"Using {images} for linking")
+
+        link_worker = self._make_link_worker(images=images)
         link_worker.started.connect(self._lock_buttons)
         link_worker.finished.connect(self._update_widget_status)
         link_worker.start()
@@ -108,8 +122,13 @@ class UltrackWidget(Container):
 
     @thread_worker
     @wait_cursor()
-    def _make_link_worker(self) -> None:
-        link(self._linking_w.config, self._data_config_w.config, overwrite=True)
+    def _make_link_worker(self, images: Sequence[ArrayLike]) -> None:
+        link(
+            self._linking_w.config,
+            self._data_config_w.config,
+            images=images,
+            overwrite=True,
+        )
 
     @thread_worker
     @wait_cursor()

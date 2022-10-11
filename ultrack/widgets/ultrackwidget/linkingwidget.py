@@ -1,4 +1,4 @@
-from magicgui.widgets import FloatSpinBox, PushButton, SpinBox
+from magicgui.widgets import CheckBox, FloatSpinBox, PushButton, SpinBox
 
 from ultrack.config.config import LinkingConfig
 from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
@@ -7,6 +7,13 @@ from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
 class LinkingWidget(BaseConfigWidget):
     def __init__(self, config: LinkingConfig):
         super().__init__(label="Linking", config=config)
+        self._images_w = CheckBox(
+            label="Use selected layers",
+            value=False,
+            tooltip="When checked, the selected layers are used to compute edge weights with "
+            "discrete cosine transform, otherwise the IoU of the segments are used.",
+        )
+        self.append(self._images_w)
 
     def _setup_widgets(self) -> None:
         self._attr_to_widget = {

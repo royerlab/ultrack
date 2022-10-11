@@ -20,7 +20,6 @@ def _assert_input_in_target(input: Dict, target: Dict) -> None:
 def _format_config(config: Dict) -> None:
     """Formats dictionary config according to Config transforms."""
     config["data_config"] = config.pop("data")
-    config["reader_config"] = config.pop("reader")
     config["segmentation_config"] = config.pop("segmentation")
     config["linking_config"] = config.pop("linking")
     config["tracking_config"] = config.pop("tracking")

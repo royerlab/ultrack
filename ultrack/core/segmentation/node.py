@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import blosc2
 import numpy as np
@@ -7,6 +7,7 @@ import tensorstore as ts
 import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
+from scipy import fft
 
 from ultrack.core.segmentation.vendored.node import Node as _Node
 
@@ -123,6 +124,29 @@ class Node(_Node):
         else:
             raise NotImplementedError
 
+    def precompute_dct(
+        self,
+        images: Sequence[ArrayLike],
+        size: int = 10,
+    ) -> None:
+        if len(images) == 1:
+            self.dct = self._gray_dct(images[0], size)
+
+        else:
+            self.dct = np.stack(self._gray_dct(image, size) for image in images)
+        self.dct /= np.linalg.norm(self.dct)
+
+    def _gray_dct(self, image: ArrayLike, size: int) -> None:
+        crop = self.roi(image)
+        dct = fft.dctn(crop)[(slice(None, size),) * crop.ndim]
+        shape_diff = size - np.array(dct.shape)
+        if np.any(shape_diff > 0):
+            dct = np.pad(dct, tuple((0, max(0, s)) for s in shape_diff))
+        return dct
+
+    def dct_dot(self, other: "Node") -> float:
+        return np.sum(self.dct * other.dct)
+
     def distance(self, other: "Node") -> float:
         return np.sqrt(np.square(self.centroid - other.centroid).sum())
 
@@ -143,6 +167,9 @@ class Node(_Node):
         bbox = self.bbox
         ndim = self.mask.ndim
         return tuple(slice(bbox[i], bbox[i + ndim]) for i in range(ndim))
+
+    def roi(self, image: Union[zarr.Array, np.ndarray]) -> np.ndarray:
+        return image[self.slice]
 
     def masked_roi(self, image: Union[zarr.Array, np.ndarray]) -> np.ndarray:
         crop = image[self.slice].copy()

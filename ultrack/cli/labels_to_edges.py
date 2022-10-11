@@ -9,13 +9,14 @@ from ultrack.cli.utils import (
     napari_reader_option,
     output_directory_option,
     overwrite_option,
+    paths_argument,
 )
 from ultrack.core.export.utils import maybe_overwrite_path
 from ultrack.utils.edge import labels_to_edges
 
 
 @click.command("labels_to_edges")
-@click.argument("paths", nargs=-1, type=click.Path(path_type=Path))
+@paths_argument()
 @output_directory_option(help="`detection.zarr` and `edges.zarr` output directory.")
 @napari_reader_option()
 @click.option(

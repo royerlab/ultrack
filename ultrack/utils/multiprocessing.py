@@ -56,4 +56,4 @@ def multiprocessing_sqlite_lock(
 
     finally:
         if lock is not None:
-            Path(lock.path.decode("ascii")).unlink()
+            Path(lock.path.decode("ascii")).unlink(missing_ok=True)

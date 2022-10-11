@@ -34,7 +34,6 @@ def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
     """Generates a mock configuration content dictionary."""
     content = {
         "data": {},
-        "reader": {},
         "segmentation": {
             "threshold": 0.5,
             "max_area": 7500,

@@ -12,6 +12,7 @@ from ultrack.cli.utils import (
     layer_key_option,
     napari_reader_option,
     output_directory_option,
+    paths_argument,
 )
 from ultrack.utils.estimation import estimate_parameters_from_labels
 from ultrack.utils.printing import pretty_print_df
@@ -32,7 +33,7 @@ def _plot_column_over_time(df: pd.DataFrame, column: str, output_dir: Path) -> N
 
 
 @click.command("estimate_params")
-@click.argument("paths", nargs=-1, type=click.Path(path_type=Path))
+@paths_argument()
 @napari_reader_option()
 @layer_key_option()
 @click.option(

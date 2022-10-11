@@ -8,6 +8,18 @@ from toolz import curry
 from ultrack.config import MainConfig, load_config
 
 
+def paths_argument(**kwargs) -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.argument(
+            "paths",
+            nargs=-1,
+            type=click.Path(path_type=Path),
+            **kwargs,
+        )(f)
+
+    return decorator
+
+
 def _config_callback(ctx: click.Context, opt: click.Option, value: str) -> MainConfig:
     return load_config(value)
 
