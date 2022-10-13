@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import sqlalchemy as sqla
 from sqlalchemy import (
@@ -11,6 +12,7 @@ from sqlalchemy import (
     PickleType,
     func,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DataConfig
@@ -68,6 +70,11 @@ def maximum_time(data_config: DataConfig) -> int:
 
 def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     """Checks if table is empty."""
+    url = make_url(data_config.database_path)
+    if data_config.database == "sqlite" and not Path(url.database).exists():
+        # avoids creating a database with create_engine call
+        return True
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         is_empty = (

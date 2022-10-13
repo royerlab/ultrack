@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable, Dict
 
 import napari
@@ -20,11 +21,13 @@ def _is_sorted(nodes: Dict[int, Node]) -> bool:
 def test_hypotheses_viz_widget(
     make_napari_viewer: Callable[[], napari.Viewer],
     linked_database_mock_data: MainConfig,
+    tmp_path: Path,
     request,
 ) -> None:
     # NOTE: Use "--show-napari-viewer" to show viewer, useful when debugging
 
     config = linked_database_mock_data
+    config.data_config.working_dir = tmp_path
 
     viewer = make_napari_viewer()
 
