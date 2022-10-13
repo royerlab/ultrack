@@ -89,7 +89,7 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array, zarr.Array]:
 @pytest.fixture
 def segmentation_database_mock_data(
     config_instance: MainConfig,
-    timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> MainConfig:
     detection, edge, _ = timelapse_mock_data
     segment(

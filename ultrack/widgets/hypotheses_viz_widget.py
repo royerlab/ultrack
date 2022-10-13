@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 from warnings import warn
 
@@ -7,14 +6,13 @@ import napari
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
-from magicgui.widgets import CheckBox, FileEdit, FloatSlider, PushButton
+from magicgui.widgets import CheckBox, FloatSlider, PushButton
 from napari.layers import Labels
 from sqlalchemy.orm import Session
 
-from ultrack.config import DataConfig, load_config
 from ultrack.core.database import LinkDB, NodeDB
 from ultrack.core.segmentation.node import Node
-from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets._generic_data_widget import GenericDataWidget
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -22,21 +20,13 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 LOG = logging.getLogger(__name__)
 
 
-class HypothesesVizWidget(BaseConfigWidget):
+class HypothesesVizWidget(GenericDataWidget):
     def __init__(self, viewer: napari.Viewer) -> None:
-        super().__init__(DataConfig(), "Hypotheses Viz.")
-        self._viewer = viewer
+        super().__init__(viewer, "Hypotheses Viz.")
         self._segm_layer_name = "Segm. Hypotheses"
         self._link_layer_name = "Links"
         self._nodes: Dict[int, Node] = {}
         self._hier_ids: List[int] = []
-
-        self._config_loader_w = FileEdit(
-            filter="*toml",
-            label="Config. Path",
-            value=None,
-        )
-        self.append(self._config_loader_w)
 
         self._load_btn = PushButton(text="Load Segm.")
         self._load_btn.changed.connect(self._on_load_segm)
@@ -49,16 +39,7 @@ class HypothesesVizWidget(BaseConfigWidget):
         self._link_w = CheckBox(text="Show links", value=False)
         self.append(self._link_w)
 
-    def _setup_widgets(self) -> None:
-        pass
-
-    def _on_config_loaded(self, value: Path) -> None:
-        if value.exists() and value.is_file():
-            self.config = load_config(value).data_config
-
-    @BaseConfigWidget.config.setter
-    def config(self, value: DataConfig) -> None:
-        BaseConfigWidget.config.fset(self, value)
+    def _on_config_changed(self) -> None:
         self._ndim = len(self._shape)
 
     @property

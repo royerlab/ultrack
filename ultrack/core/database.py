@@ -1,3 +1,4 @@
+import enum
 import logging
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
+    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -25,6 +27,13 @@ Base = declarative_base()
 LOG = logging.getLogger(__name__)
 
 
+class NodeAnnotation(enum.Enum):
+    UNKNOWN = 0
+    CORRECT = 1
+    UNDERSEGMENTED = 2
+    OVERSEGMENTED = 2
+
+
 class NodeDB(Base):
     __tablename__ = "nodes"
     t = Column(Integer, primary_key=True)
@@ -38,6 +47,7 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean)
     pickle = Column(PickleType)
+    annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
 
 
 class OverlapDB(Base):
@@ -78,7 +88,7 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         is_empty = (
-            sqla.inspect(engine).has_table(table.__tablename__)
-            and session.query(table).first() is None
+            not sqla.inspect(engine).has_table(table.__tablename__)
+            or session.query(table).first() is None
         )
     return is_empty
