@@ -10,7 +10,11 @@ from ultrack.config.config import MainConfig, load_config
 from ultrack.core.linking.processing import link
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.tracking.processing import track
-from ultrack.utils.data import make_config_content, make_segmentation_mock_data
+from ultrack.utils.data import (
+    make_cell_division_mock_data,
+    make_config_content,
+    make_segmentation_mock_data,
+)
 
 
 @pytest.fixture
@@ -89,7 +93,7 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array, zarr.Array]:
 @pytest.fixture
 def segmentation_database_mock_data(
     config_instance: MainConfig,
-    timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> MainConfig:
     detection, edge, _ = timelapse_mock_data
     segment(
@@ -117,3 +121,27 @@ def tracked_database_mock_data(
     config = linked_database_mock_data
     track(config.tracking_config, config.data_config)
     return config
+
+
+@pytest.fixture
+def cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    return make_cell_division_mock_data()
+
+
+@pytest.fixture(scope="function")
+def tracked_cell_division_mock_data(
+    cell_division_mock_data: Tuple[np.ndarray, np.ndarray, np.ndarray],
+    config_instance: MainConfig,
+) -> MainConfig:
+    detection, edges, _ = cell_division_mock_data
+
+    segment(
+        detection,
+        edges,
+        config_instance.segmentation_config,
+        config_instance.data_config,
+    )
+    link(config_instance.linking_config, config_instance.data_config)
+    track(config_instance.tracking_config, config_instance.data_config)
+
+    return config_instance

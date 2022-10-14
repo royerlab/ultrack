@@ -133,7 +133,7 @@ class Node(_Node):
             self.dct = self._gray_dct(images[0], size)
 
         else:
-            self.dct = np.stack(self._gray_dct(image, size) for image in images)
+            self.dct = np.stack([self._gray_dct(image, size) for image in images])
         self.dct /= np.linalg.norm(self.dct)
 
     def _gray_dct(self, image: ArrayLike, size: int) -> None:

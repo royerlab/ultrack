@@ -3,6 +3,7 @@ name = "ultrack"
 version = "0.1.0"
 description = ""
 authors = ["Jordao Bragantini <jordao.bragantini@czbiohub.org>"]
+include = ["ultrack/napari.yaml"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -35,6 +36,9 @@ asv = "^0.5.1"
 
 [tool.poetry.scripts]
 ultrack = "ultrack.cli.main:main"
+
+[tool.poetry.plugins."napari.manifest"]
+ultrack = "ultrack:napari.yaml"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

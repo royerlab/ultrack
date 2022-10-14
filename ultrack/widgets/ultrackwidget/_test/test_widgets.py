@@ -32,6 +32,9 @@ def test_ultrack_widget(
     config = MainConfig()
     config.segmentation_config.threshold = 0.65
 
+    # temporary working dir
+    config.data_config.working_dir = tmp_path
+
     widget.config = config
     assert widget._segmentation_w._attr_to_widget["threshold"].value == 0.65
     assert widget._segmentation_w.config.threshold == 0.65
@@ -50,14 +53,10 @@ def test_ultrack_widget(
         == hg.watershed_hierarchy_by_dynamics
     )
     # test save config
-    tmp_path.mkdir(exist_ok=True)
     widget._main_config_w._config_loader_w.value = tmp_path / "config.toml"
     widget._main_config_w._save_config_btn.clicked.emit()
 
-    # temporary working dir
-    config.data_config.working_dir = tmp_path
-
-    delay = 2  # delay necessary due to thread worker, blocking while loop did not work. I don't know why
+    delay = 4  # delay necessary due to thread worker, blocking while loop did not work. I don't know why
 
     widget._segmentation_w._segment_btn.clicked.emit()
     time.sleep(delay)
@@ -69,7 +68,6 @@ def test_ultrack_widget(
     time.sleep(delay)
 
     # checking if the whole thing can be run twice --- overwrite is working
-
     widget._segmentation_w._segment_btn.clicked.emit()
     time.sleep(delay)
 

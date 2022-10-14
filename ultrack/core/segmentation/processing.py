@@ -11,7 +11,14 @@ from numpy.typing import ArrayLike
 from toolz import curry
 
 from ultrack.config import DataConfig, SegmentationConfig
-from ultrack.core.database import NO_PARENT, Base, NodeDB, OverlapDB
+from ultrack.core.database import (
+    NO_PARENT,
+    Base,
+    DivisionAnnotation,
+    NodeAnnotation,
+    NodeDB,
+    OverlapDB,
+)
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk, clear_segmentation_data
 from ultrack.utils.multiprocessing import (
@@ -122,6 +129,8 @@ def _process(
                     "area": node.area,
                     "parent_id": NO_PARENT,
                     "pickle": pickle.dumps(node),
+                    "annotation": NodeAnnotation.UNKNOWN.name,
+                    "division": DivisionAnnotation.UNKNOWN.name,
                 }
             )
             index += 1

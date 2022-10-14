@@ -1,0 +1,61 @@
+name: ultrack
+display_name: ultrack
+contributions:
+  commands:
+#     - id: ultrack.get_reader
+#       python_name: ultrack._reader:napari_get_reader
+#       title: Open data with ultrack
+#     - id: ultrack.write_multiple
+#       python_name: ultrack._writer:write_multiple
+#       title: Save multi-layer data with ultrack
+#     - id: ultrack.write_single_image
+#       python_name: ultrack._writer:write_single_image
+#       title: Save image data with ultrack
+
+    - id: ultrack.main_widget
+      python_name: ultrack.widgets:UltrackWidget
+      title: Ultrack
+
+    - id: ultrack.labels_to_edges_widget
+      python_name: ultrack.widgets:LabelsToEdgesWidget
+      title: Convert labels into edges map
+
+    - id: ultrack.hypotheses_viz_widget
+      python_name: ultrack.widgets:HypothesesVizWidget
+      title: Segmentation hypotheses visualization
+
+    - id: ultrack.node_annotation_widget
+      python_name: ultrack.widgets:NodeAnnotationWidget
+      title: Node annotation
+
+    - id: ultrack.division_annotation_widget
+      python_name: ultrack.widgets:DivisionAnnotationWidget
+      title: Division annotation
+
+#   readers:
+#     - command: ultrack.get_reader
+#       accepts_directories: false
+#       filename_patterns: ['*.npy']
+#   writers:
+#     - command: ultrack.write_multiple
+#       layer_types: ['image*','labels*']
+#       filename_extensions: []
+#     - command: ultrack.write_single_image
+#       layer_types: ['image']
+#       filename_extensions: ['.npy']
+
+  widgets:
+    - command: ultrack.main_widget
+      display_name: Ultrack
+
+    - command: ultrack.labels_to_edges_widget
+      display_name: Labels to edges map
+
+    - command: ultrack.hypotheses_viz_widget
+      display_name: Segmentation hypotheses visualization
+
+    - command: ultrack.node_annotation_widget
+      display_name: Node annotation
+
+    - command: ultrack.division_annotation_widget
+      display_name: Division annotation

@@ -1,16 +1,21 @@
+import enum
 import logging
+from pathlib import Path
+from typing import Any, List, Union
 
 import sqlalchemy as sqla
 from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
+    Enum,
     Float,
     ForeignKey,
     Integer,
     PickleType,
     func,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DataConfig
@@ -21,6 +26,19 @@ NO_PARENT = -1
 Base = declarative_base()
 
 LOG = logging.getLogger(__name__)
+
+
+class NodeAnnotation(enum.IntEnum):
+    UNKNOWN = 0
+    CORRECT = 1
+    UNDERSEGMENTED = 2
+    OVERSEGMENTED = 3
+
+
+class DivisionAnnotation(enum.IntEnum):
+    UNKNOWN = 0
+    TRUE = 1
+    FALSE = 2
 
 
 class NodeDB(Base):
@@ -36,6 +54,8 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean)
     pickle = Column(PickleType)
+    annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
+    division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)
 
 
 class OverlapDB(Base):
@@ -68,10 +88,62 @@ def maximum_time(data_config: DataConfig) -> int:
 
 def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     """Checks if table is empty."""
+    url = make_url(data_config.database_path)
+    if data_config.database == "sqlite" and not Path(url.database).exists():
+        # avoids creating a database with create_engine call
+        return True
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         is_empty = (
-            sqla.inspect(engine).has_table(table.__tablename__)
-            and session.query(table).first() is None
+            not sqla.inspect(engine).has_table(table.__tablename__)
+            or session.query(table).first() is None
         )
     return is_empty
+
+
+def set_node_values(
+    data_config: DataConfig,
+    node_id: int,
+    **kwargs,
+) -> None:
+    """Set arbitrary values to a node in the database given its `node_id`.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    node_id : int
+        Node database index.
+    annot : NodeAnnotation
+        Node annotation.
+    """
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
+        session.execute(stmt)
+        session.commit()
+
+
+def get_node_values(
+    data_config: DataConfig, node_id: int, values: Union[Column, List[Column]]
+) -> Any:
+    """Get the annotation of `node_id`.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    node_id : int
+        Node database index.
+    values : List[Column]
+        List of columns to be queried.
+    """
+    if not isinstance(values, List):
+        values = [values]
+
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
+
+    return annotation

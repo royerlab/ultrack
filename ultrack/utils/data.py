@@ -3,8 +3,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
+import skimage.morphology as morph
 from skimage.data import binary_blobs
-from skimage.morphology import h_maxima
 from skimage.segmentation import find_boundaries, relabel_sequential, watershed
 
 LOG = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def make_segmentation_mock_data(
     blobs = binary_blobs(length=size, n_dim=n_dim, volume_fraction=0.5, seed=rng)
 
     edt = ndi.distance_transform_edt(blobs)
-    markers, _ = ndi.label(h_maxima(edt, 2))
+    markers, _ = ndi.label(morph.h_maxima(edt, 2))
     labels = watershed(-edt, markers, mask=blobs)
     contours = find_boundaries(labels)
     labels, _, _ = relabel_sequential(labels)
@@ -72,3 +72,43 @@ def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
     LOG.info(content)
 
     return content
+
+
+def make_cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Short timelapse of a sphere "dividing" into two.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        Detection, edges, labels maps.
+    """
+    cells = np.zeros((5, 64, 64, 64), dtype=bool)
+    ball = morph.ball(radius=5, dtype=bool)
+
+    cells[(0,) + tuple(slice(27, 27 + s) for s in ball.shape)] |= ball
+
+    cells[(1,) + tuple(slice(24, 24 + s) for s in ball.shape)] |= ball  # \
+    cells[(1,) + tuple(slice(30, 30 + s) for s in ball.shape)] |= ball  # --- division
+
+    cells[(2,) + tuple(slice(22, 22 + s) for s in ball.shape)] |= ball
+    cells[(2,) + tuple(slice(32, 32 + s) for s in ball.shape)] |= ball
+
+    cells[(3,) + tuple(slice(20, 20 + s) for s in ball.shape)] |= ball
+    cells[(3,) + tuple(slice(35, 35 + s) for s in ball.shape)] |= ball  # \
+    cells[(3,) + tuple(slice(29, 29 + s) for s in ball.shape)] |= ball  # --- division
+
+    cells[(4,) + tuple(slice(18, 18 + s) for s in ball.shape)] |= ball
+    cells[(4,) + tuple(slice(37, 37 + s) for s in ball.shape)] |= ball
+    cells[(4,) + tuple(slice(27, 27 + s) for s in ball.shape)] |= ball
+
+    edges = np.zeros_like(cells, dtype=np.float32)
+    labels = np.zeros_like(cells, dtype=np.int32)
+
+    for t in range(cells.shape[0]):
+        edt = ndi.distance_transform_edt(cells[t])
+        markers, _ = ndi.label(morph.h_maxima(edt, 2))
+        label = watershed(-edt, markers, mask=cells[t])
+        edges[t] = find_boundaries(label)
+        labels[t] = label
+
+    return cells, edges, labels
