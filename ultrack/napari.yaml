@@ -24,6 +24,14 @@ contributions:
       python_name: ultrack.widgets:HypothesesVizWidget
       title: Segmentation hypotheses visualization
 
+    - id: ultrack.node_annotation_widget
+      python_name: ultrack.widgets:NodeAnnotationWidget
+      title: Node annotation
+
+    - id: ultrack.division_annotation_widget
+      python_name: ultrack.widgets:DivisionAnnotationWidget
+      title: Division annotation
+
 #   readers:
 #     - command: ultrack.get_reader
 #       accepts_directories: false
@@ -39,7 +47,15 @@ contributions:
   widgets:
     - command: ultrack.main_widget
       display_name: Ultrack
+
     - command: ultrack.labels_to_edges_widget
       display_name: Labels to edges map
+
     - command: ultrack.hypotheses_viz_widget
       display_name: Segmentation hypotheses visualization
+
+    - command: ultrack.node_annotation_widget
+      display_name: Node annotation
+
+    - command: ultrack.division_annotation_widget
+      display_name: Division annotation

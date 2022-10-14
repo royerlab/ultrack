@@ -1,6 +1,7 @@
 import enum
 import logging
 from pathlib import Path
+from typing import Any, List, Union
 
 import sqlalchemy as sqla
 from sqlalchemy import (
@@ -34,6 +35,12 @@ class NodeAnnotation(enum.IntEnum):
     OVERSEGMENTED = 3
 
 
+class DivisionAnnotation(enum.IntEnum):
+    UNKNOWN = 0
+    TRUE = 1
+    FALSE = 2
+
+
 class NodeDB(Base):
     __tablename__ = "nodes"
     t = Column(Integer, primary_key=True)
@@ -48,6 +55,7 @@ class NodeDB(Base):
     selected = Column(Boolean)
     pickle = Column(PickleType)
     annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
+    division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)
 
 
 class OverlapDB(Base):
@@ -94,10 +102,12 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     return is_empty
 
 
-def set_node_annotation(
-    data_config: DataConfig, node_id: int, annot: NodeAnnotation
+def set_node_values(
+    data_config: DataConfig,
+    node_id: int,
+    **kwargs,
 ) -> None:
-    """Set annotation of a node in the database given its `node_id`.
+    """Set arbitrary values to a node in the database given its `node_id`.
 
     Parameters
     ----------
@@ -110,12 +120,14 @@ def set_node_annotation(
     """
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(annotation=annot)
+        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
         session.execute(stmt)
         session.commit()
 
 
-def get_node_annotation(data_config: DataConfig, node_id: int) -> NodeAnnotation:
+def get_node_values(
+    data_config: DataConfig, node_id: int, values: Union[Column, List[Column]]
+) -> Any:
     """Get the annotation of `node_id`.
 
     Parameters
@@ -124,11 +136,14 @@ def get_node_annotation(data_config: DataConfig, node_id: int) -> NodeAnnotation
         Data configuration parameters.
     node_id : int
         Node database index.
+    values : List[Column]
+        List of columns to be queried.
     """
+    if not isinstance(values, List):
+        values = [values]
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        annotation = (
-            session.query(NodeDB.annotation).where(NodeDB.id == node_id).first()[0]
-        )
+        annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
 
     return annotation
