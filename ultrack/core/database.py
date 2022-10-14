@@ -27,11 +27,11 @@ Base = declarative_base()
 LOG = logging.getLogger(__name__)
 
 
-class NodeAnnotation(enum.Enum):
+class NodeAnnotation(enum.IntEnum):
     UNKNOWN = 0
     CORRECT = 1
     UNDERSEGMENTED = 2
-    OVERSEGMENTED = 2
+    OVERSEGMENTED = 3
 
 
 class NodeDB(Base):
@@ -92,3 +92,43 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
             or session.query(table).first() is None
         )
     return is_empty
+
+
+def set_node_annotation(
+    data_config: DataConfig, node_id: int, annot: NodeAnnotation
+) -> None:
+    """Set annotation of a node in the database given its `node_id`.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    node_id : int
+        Node database index.
+    annot : NodeAnnotation
+        Node annotation.
+    """
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(annotation=annot)
+        session.execute(stmt)
+        session.commit()
+
+
+def get_node_annotation(data_config: DataConfig, node_id: int) -> NodeAnnotation:
+    """Get the annotation of `node_id`.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    node_id : int
+        Node database index.
+    """
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        annotation = (
+            session.query(NodeDB.annotation).where(NodeDB.id == node_id).first()[0]
+        )
+
+    return annotation
