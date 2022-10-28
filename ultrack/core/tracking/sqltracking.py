@@ -115,10 +115,15 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
+        start_time = max(start_time, 0)
+        end_time = min(end_time, self._max_t)
+
+        LOG.info(f"Batch {index}, nodes with t between {start_time} and {end_time}")
+
         solver.add_nodes(
             df["id"],
-            df["t"] == max(start_time, 0),
-            df["t"] == min(end_time, self._max_t),
+            df["t"] == start_time,
+            df["t"] == end_time,
         )
 
     def _add_edges(self, solver: BaseSolver, index: int) -> None:
@@ -136,10 +141,12 @@ class SQLTracking:
             query = (
                 session.query(LinkDB)
                 .join(NodeDB, NodeDB.id == LinkDB.source_id)
-                .where(NodeDB.t.between(start_time, end_time))
+                .where(NodeDB.t.between(start_time, end_time - 1))
                 # subtracting one because we're using source_id as reference
             )
             df = pd.read_sql(query.statement, session.bind)
+
+        LOG.info(f"Batch {index}, edges with source nodes with t between {start_time} and {end_time - 1}")
 
         solver.add_edges(df["source_id"], df["target_id"], df["iou"])
 
