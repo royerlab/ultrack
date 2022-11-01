@@ -16,6 +16,7 @@ from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.node import Node
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
@@ -123,6 +124,7 @@ def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
     images: Sequence[ArrayLike] = tuple(),
+    batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
     """Links candidate segments (nodes) with their neighbors on the next time.
@@ -135,12 +137,16 @@ def link(
         Data configuration parameters.
     images : Sequence[ArrayLike]
         Optinal sequence of images for DCT correlation edge weight.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
         Cleans up linking database content before processing.
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
     max_t = maximum_time(data_config)
+    time_points = batch_index_range(max_t, linking_config.n_workers, batch_index)
+    LOG.info(f"Linking time points {time_points}")
 
     if overwrite:
         clear_linking_data(data_config.database_path)
@@ -153,5 +159,5 @@ def link(
             images=images,
         )
         multiprocessing_apply(
-            process, range(max_t), linking_config.n_workers, desc="Linking nodes."
+            process, time_points, linking_config.n_workers, desc="Linking nodes."
         )

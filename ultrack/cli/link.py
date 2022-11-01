@@ -5,7 +5,12 @@ import click
 from napari.viewer import ViewerModel
 
 from ultrack import link
-from ultrack.cli.utils import config_option, overwrite_option, paths_argument
+from ultrack.cli.utils import (
+    batch_index_option,
+    config_option,
+    overwrite_option,
+    paths_argument,
+)
 from ultrack.config import MainConfig
 
 
@@ -21,11 +26,13 @@ from ultrack.config import MainConfig
     show_default=True,
     help="Channel axis, only used when input `paths` are provided",
 )
+@batch_index_option()
 @overwrite_option()
 def link_cli(
     paths: Sequence[Path],
     config: MainConfig,
     channel_axis: Optional[int],
+    batch_index: Optional[int],
     overwrite: bool,
 ) -> None:
     """Links segmentation candidates adjacent in time."""
@@ -43,6 +50,7 @@ def link_cli(
     link(
         config.linking_config,
         config.data_config,
-        overwrite=overwrite,
         images=images,
+        batch_index=batch_index,
+        overwrite=overwrite,
     )

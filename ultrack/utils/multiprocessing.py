@@ -31,7 +31,7 @@ def multiprocessing_apply(
         Description to tqdm progress bar, by default None
     """
     length = len(sequence)
-    if n_workers > 1:
+    if n_workers > 1 and length > 1:
         with mp.Pool(min(n_workers, length)) as pool:
             list(tqdm(pool.imap(func, sequence), desc=desc, total=length))
     else:
@@ -58,3 +58,29 @@ def multiprocessing_sqlite_lock(
     finally:
         if lock is not None:
             Path(lock.path.decode("ascii")).unlink(missing_ok=True)
+
+
+def batch_index_range(
+    total_size: int, n_workers: int, batch_index: Optional[int]
+) -> Sequence[int]:
+    """Compute the range of the given `batch_index`, if None the whole `total_size` range is returned.
+
+    Parameters
+    ----------
+    total_size : int
+        Total size of the processing range.
+    n_workers : int
+        Number of workers per batch, processing window size.
+    batch_index : Optional[int]
+        Batch processing window index.
+
+    Returns
+    -------
+    Sequence[int]
+        Processing range of the given index.
+    """
+    if batch_index is None:
+        return range(total_size)
+
+    start = list(range(0, total_size, n_workers))[batch_index]
+    return range(start, min(start + n_workers, total_size))
