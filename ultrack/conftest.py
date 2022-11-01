@@ -5,8 +5,10 @@ import numpy as np
 import pytest
 import toml
 import zarr
+from testing.postgresql import Postgresql
 
 from ultrack.config.config import MainConfig, load_config
+from ultrack.config.dataconfig import DatabaseChoices
 from ultrack.core.linking.processing import link
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.tracking.processing import track
@@ -22,7 +24,18 @@ def config_content(tmp_path: Path, request) -> Dict[str, Any]:
     kwargs = {"data.working_dir": str(tmp_path)}
     if hasattr(request, "param"):
         kwargs.update(request.param)
-    return make_config_content(kwargs)
+
+    # if postgresql create dummy server and close when done
+    is_postgresql = kwargs.get("data.database") == DatabaseChoices.postgresql.value
+
+    if is_postgresql:
+        postgresql = Postgresql()
+        kwargs["data.address"] = postgresql.url().split("//")[1]
+
+    yield make_config_content(kwargs)
+
+    if is_postgresql:
+        postgresql.stop()
 
 
 @pytest.fixture

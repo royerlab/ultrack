@@ -1,21 +1,23 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import toml
-from pydantic import BaseModel, ValidationError, validator
+from pydantic import BaseModel, root_validator, validator
 
 LOG = logging.getLogger(__name__)
 
 
 class DatabaseChoices(Enum):
     sqlite = "sqlite"
+    postgresql = "postgresql"
 
 
 class DataConfig(BaseModel):
     working_dir: Path = Path(".")
     database: DatabaseChoices = "sqlite"
+    address: Optional[str] = None
 
     class Config:
         validate_assignment = True
@@ -32,15 +34,34 @@ class DataConfig(BaseModel):
             file_handle.close()
             tmp_path.unlink()
         except OSError:
-            ValidationError(f"Working directory {value} isn't writable.")
+            raise ValueError(f"Working directory {value} isn't writable.")
 
         return value
+
+    @root_validator
+    def validate_postgresql_parameters(cls, values: Dict) -> Dict:
+        """Validates postgresql parameters"""
+
+        if (
+            values["database"] == DatabaseChoices.postgresql.value
+            and "address" not in values
+        ):
+            raise ValueError(
+                "`data.address` must be defined when `data.database` = `postgresql`."
+                "For example: postgres@localhost:12345/example"
+            )
+
+        return values
 
     @property
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
-        if self.database == "sqlite":
+        if self.database == DatabaseChoices.sqlite.value:
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
+
+        elif self.database == DatabaseChoices.postgresql.value:
+            return f"postgresql://{self.address}"
+
         else:
             raise NotImplementedError(
                 f"Dataset type {self.database} support not implemented."
