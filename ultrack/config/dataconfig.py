@@ -1,4 +1,5 @@
 import logging
+import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -29,7 +30,7 @@ class DataConfig(BaseModel):
 
         value.mkdir(exist_ok=True)
         try:
-            tmp_path = value / ".write_test"
+            tmp_path = value / f".write_test_{uuid.uuid4().hex}"
             file_handle = open(tmp_path, "w")
             file_handle.close()
             tmp_path.unlink()
