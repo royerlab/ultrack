@@ -88,6 +88,7 @@ class Hierarchy:
         if not status:
             self._cache.clear()
             self.props._cache.clear()
+            self._nodes.clear()
 
     @staticmethod
     def _filter_contour_strength(
