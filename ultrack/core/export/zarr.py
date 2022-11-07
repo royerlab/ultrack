@@ -6,7 +6,8 @@ import zarr
 from zarr.storage import Store
 
 from ultrack.config.dataconfig import DataConfig
-from ultrack.core.export.utils import export_segmentation_generic, large_chunk_size
+from ultrack.core.export.utils import export_segmentation_generic
+from ultrack.utils import large_chunk_size
 
 
 def tracks_to_zarr(

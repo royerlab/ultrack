@@ -2,65 +2,20 @@ import logging
 import shutil
 import warnings
 from pathlib import Path
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from numba import njit, typed, types
 from sqlalchemy.orm import Session
-from tqdm import tqdm
+from toolz import curry
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.utils.multiprocessing import multiprocessing_apply
 
 LOG = logging.getLogger(__name__)
-
-
-def spatial_drift(df: pd.DataFrame, lag: int = 1) -> pd.Series:
-    """Helper function to compute the drift of a dataframe.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Ordered dataframe with columns `t`, `z`, `y`, and `x`.
-    lag : int, optional
-        `t` lag, by default 1
-
-    Returns
-    -------
-    pd.Series
-        Drift values, invalid values are 0.
-    """
-    df = df.sort_values("t")
-    drift = np.sqrt(
-        np.square(df[["z", "y", "x"]] - df[["z", "y", "x"]].shift(periods=lag)).sum(
-            axis=1
-        )
-    )
-    drift.values[:lag] = 0.0
-    return drift
-
-
-def estimate_drift(df: pd.DataFrame, quantile: float = 0.99) -> float:
-    """Compute a estimate of the tracks drift.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Tracks dataframe, must have `track_id` column.
-    quantile : float, optional
-        Drift quantile, by default 0.99
-
-    Returns
-    -------
-    float
-        Drift from the given quantile.
-    """
-    distances = df.groupby("track_id").apply(spatial_drift)
-    robust_max_distance = np.quantile(distances, quantile)
-    LOG.info(f"{quantile} quantile spatial drift distance of {robust_max_distance}")
-    return robust_max_distance
 
 
 @njit
@@ -223,6 +178,60 @@ def solution_dataframe_from_sql(
     return df
 
 
+@curry
+def _query_and_export_data_to_frame(
+    time: int,
+    database_path: str,
+    shape: Tuple[int],
+    df: pd.DataFrame,
+    export_func: Callable[[int, np.ndarray], None],
+) -> None:
+    """Queries segmentation data from database and paints it according to their respective `df` `track_id` column.
+
+    Parameters
+    ----------
+    time : int
+        Frame time point to paint.
+    database_path : str
+        Database path.
+    shape : Tuple[int]
+        Frame shape.
+    df : pd.DataFrame
+        Tracks dataframe.
+    export_func : Callable[[int, np.ndarray], None]
+        Export function, it receives as input a time index `t` and its respective uint16 labeled buffer.
+    """
+    node_indices = set(df[df["t"] == time].index)
+
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        buffer = np.zeros(shape, dtype=np.uint16)
+        query = list(
+            session.query(NodeDB.id, NodeDB.pickle).where(
+                NodeDB.t == time, NodeDB.selected
+            )
+        )
+
+        if len(query) == 0:
+            warnings.warn(f"Segmentation mask from t = {time} is empty.")
+
+        LOG.info(f"t = {time} containts {len(query)} segments.")
+
+        for id, node in query:
+            if id not in node_indices:
+                # ignoring nodes not present in dataset, used when exporting a subset of data
+                # filtering through a sql query crashed with big datasets
+                continue
+
+            track_id = df.loc[id, "track_id"]
+            LOG.info(
+                f"Painting t = {time} node {id} with value {track_id} area {node.area}"
+            )
+            node.paint_buffer(buffer, value=track_id, include_time=False)
+
+        export_func(time, buffer)
+
+
 def export_segmentation_generic(
     data_config: DataConfig,
     df: pd.DataFrame,
@@ -246,81 +255,19 @@ def export_segmentation_generic(
 
     LOG.info(f"Exporting segmentation masks with {export_func}")
 
-    engine = sqla.create_engine(data_config.database_path)
     shape = data_config.metadata["shape"]
 
-    df_indices = set(df.index)
-
-    with Session(engine) as session:
-        for t in tqdm(range(shape[0]), "Exporting segmentation masks"):
-            buffer = np.zeros(shape[1:], dtype=np.uint16)
-            query = list(
-                session.query(NodeDB.id, NodeDB.pickle).where(
-                    NodeDB.t == t, NodeDB.selected
-                )
-            )
-
-            if len(query) == 0:
-                warnings.warn(f"Segmentation mask from t = {t} is empty.")
-
-            LOG.info(f"t = {t} containts {len(query)} segments.")
-
-            for id, node in query:
-                if id not in df_indices:
-                    # ignoring nodes not present in dataset, used in sparse saving
-                    # executing this with a sql query crashed with big datasets
-                    continue
-
-                track_id = df.loc[id, "track_id"]
-                LOG.info(
-                    f"Painting t = {t} node {id} with value {track_id} area {node.area}"
-                )
-                node.paint_buffer(buffer, value=track_id, include_time=False)
-
-            export_func(t, buffer)
-
-
-def large_chunk_size(
-    shape: Tuple[int],
-    dtype: Union[str, np.dtype],
-    max_size: int = 2147483647,
-) -> Tuple[int]:
-    """
-    Computes a large chunk size for a given `shape` and `dtype`.
-    Large chunks improves the performance on Elastic Storage Systems (ESS).
-    Leading dimension (time) will always be chunked as 1.
-
-    Parameters
-    ----------
-    shape : Tuple[int]
-        Input data shape.
-    dtype : Union[str, np.dtype]
-        Input data type.
-    max_size : int, optional
-        Reference maximum size, by default 2147483647
-
-    Returns
-    -------
-    Tuple[int]
-        Suggested chunk size.
-    """
-
-    if not isinstance(dtype, np.dtype):
-        dtype = np.dtype(dtype)
-
-    plane_shape = np.minimum(shape[-2:], 32768)
-
-    if len(shape) == 3:
-        chunks = (1, *plane_shape)
-    elif len(shape) == 4:
-        depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
-        chunks = (1, depth, *plane_shape)
-    else:
-        raise NotImplementedError(
-            f"Large chunk size only implemented for 2,3-D + time arrays. Found {len(shape) - 1} + time."
-        )
-
-    return chunks
+    multiprocessing_apply(
+        _query_and_export_data_to_frame(
+            database_path=data_config.database_path,
+            shape=shape[1:],
+            df=df,
+            export_func=export_func,
+        ),
+        sequence=range(shape[0]),
+        n_workers=data_config.n_workers,
+        desc="Exporting segmentation masks",
+    )
 
 
 def maybe_overwrite_path(path: Path, overwrite: bool) -> None:

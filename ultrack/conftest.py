@@ -61,7 +61,7 @@ def zarr_dataset_paths(
         timelapse_mock_data, ("detection.zarr", "edges.zarr", "labels.zarr")
     ):
         path = tmp_path / filename
-        dst_store = zarr.DirectoryStore(path)
+        dst_store = zarr.NestedDirectoryStore(path)
         zarr.copy_store(src_array.store, dst_store)
         paths.append(str(path))
 

@@ -97,7 +97,7 @@ def zarr_napari_cli(
     tracks, _ = to_tracks_layer(config.data_config)
     tracks.to_csv(tracks_path, index=False)
 
-    store = zarr.DirectoryStore(segm_path)
+    store = zarr.NestedDirectoryStore(segm_path)
     tracks_to_zarr(config.data_config, tracks, store=store)
 
 

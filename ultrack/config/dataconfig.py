@@ -19,6 +19,7 @@ class DataConfig(BaseModel):
     working_dir: Path = Path(".")
     database: DatabaseChoices = "sqlite"
     address: Optional[str] = None
+    n_workers: int = 1
 
     class Config:
         validate_assignment = True
