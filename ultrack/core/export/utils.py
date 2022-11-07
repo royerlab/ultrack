@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
+from numba import njit, typed, types
 from sqlalchemy.orm import Session
 from tqdm import tqdm
 
@@ -62,6 +63,57 @@ def estimate_drift(df: pd.DataFrame, quantile: float = 0.99) -> float:
     return robust_max_distance
 
 
+@njit
+def _fast_path_transverse(
+    node: int,
+    track_id: int,
+    queue: List[Tuple[int, int]],
+    forest: Dict[int, Tuple[int]],
+) -> List[int]:
+    """Transverse a path in the forest directed graph and add path (track) split into queue.
+
+    Parameters
+    ----------
+    node : int
+        Source path node.
+    track_id : int
+        Reference track id for path split.
+    queue : List[Tuple[int, int]]
+        Source nodes and path (track) id reference queue.
+    forest : Dict[int, Tuple[int]]
+        Directed graph (tree) of paths relationships.
+
+    Returns
+    -------
+    List[int]
+        Sequence of nodes in the path.
+    """
+    path = typed.List.empty_list(types.int64)
+
+    while True:
+        path.append(node)
+
+        children = forest.get(node)
+        if children is None:
+            # end of track
+            break
+
+        elif len(children) == 1:
+            node = children[0]
+
+        elif len(children) == 2:
+            queue.append((children[1], track_id))
+            queue.append((children[0], track_id))
+            break
+
+        else:
+            raise RuntimeError(
+                "Something is wrong. Found node with more than two children when parsing tracks."
+            )
+
+    return path
+
+
 def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     """Adds `track_id` and `parent_track_id` columns to forest `df`.
     Each maximal path receveis a unique `track_id`.
@@ -79,9 +131,9 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     df.index = df.index.astype(int)
     df["parent_id"] = df["parent_id"].astype(int)
 
-    forest = {
-        parent_id: group.index.tolist() for parent_id, group in df.groupby("parent_id")
-    }
+    forest = typed.Dict.empty(types.int64, types.ListType(types.int64))
+    for parent_id, group in df.groupby("parent_id"):
+        forest[parent_id] = typed.List(group.index)
     roots = forest.pop(NO_PARENT)
 
     df["track_id"] = NO_PARENT
@@ -89,33 +141,12 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
 
     track_id = 1
     for root in roots:
-        queue = []
+        queue = typed.List.empty_list(types.Tuple((types.int64, types.int64)))
         queue.append((root, NO_PARENT))
 
         while queue:
             node, parent_track_id = queue.pop()
-            path = []
-
-            while True:
-                path.append(node)
-
-                children = forest.get(node, [])
-                if len(children) == 0:
-                    # end of track
-                    break
-
-                elif len(children) == 1:
-                    node = children[0]
-
-                elif len(children) == 2:
-                    queue.append((children[1], track_id))
-                    queue.append((children[0], track_id))
-                    break
-
-                else:
-                    raise RuntimeError(
-                        f"Something is wrong. Found {len(children)} children when parsing tracks, expected 0, 1, or 2."
-                    )
+            path = _fast_path_transverse(node, track_id, queue, forest)
 
             df.loc[path, "track_id"] = track_id
             df.loc[path, "parent_track_id"] = parent_track_id
