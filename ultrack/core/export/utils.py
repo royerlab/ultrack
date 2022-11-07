@@ -2,7 +2,6 @@ import logging
 import shutil
 import warnings
 from pathlib import Path
-from queue import Queue
 from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
@@ -77,26 +76,28 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Inplace modified input dataframe with additional columns.
     """
+    df.index = df.index.astype(int)
+    df["parent_id"] = df["parent_id"].astype(int)
+
     forest = {
         parent_id: group.index.tolist() for parent_id, group in df.groupby("parent_id")
     }
-
-    roots = df.index[df["parent_id"] == NO_PARENT]
+    roots = forest.pop(NO_PARENT)
 
     df["track_id"] = NO_PARENT
     df["parent_track_id"] = NO_PARENT
 
     track_id = 1
     for root in roots:
-        queue = Queue()
-        queue.put((root, NO_PARENT))
+        queue = []
+        queue.append((root, NO_PARENT))
 
-        while not queue.empty():
-            node, parent_track_id = queue.get()
+        while queue:
+            node, parent_track_id = queue.pop()
+            path = []
 
             while True:
-                df.loc[node, "track_id"] = track_id
-                df.loc[node, "parent_track_id"] = parent_track_id
+                path.append(node)
 
                 children = forest.get(node, [])
                 if len(children) == 0:
@@ -107,14 +108,17 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
                     node = children[0]
 
                 elif len(children) == 2:
-                    queue.put((children[0], track_id))
-                    queue.put((children[1], track_id))
+                    queue.append((children[1], track_id))
+                    queue.append((children[0], track_id))
                     break
 
                 else:
                     raise RuntimeError(
                         f"Something is wrong. Found {len(children)} children when parsing tracks, expected 0, 1, or 2."
                     )
+
+            df.loc[path, "track_id"] = track_id
+            df.loc[path, "parent_track_id"] = parent_track_id
 
             track_id += 1
 
