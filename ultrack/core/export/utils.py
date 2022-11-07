@@ -108,6 +108,11 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
 
             track_id += 1
 
+    unlabeled_tracks = df["track_id"] == NO_PARENT
+    assert not np.any(
+        unlabeled_tracks
+    ), f"Something went wrong. Found unlabeled tracks\n{df[unlabeled_tracks]}"
+
     return df
 
 
