@@ -146,12 +146,14 @@ class SQLTracking:
             )
             df = pd.read_sql(query.statement, session.bind)
 
-        LOG.info(f"Batch {index}, edges with source nodes with t between {start_time} and {end_time - 1}")
+        LOG.info(
+            f"Batch {index}, edges with source nodes with t between {start_time} and {end_time - 1}"
+        )
 
         solver.add_edges(df["source_id"], df["target_id"], df["iou"])
 
     def _add_overlap_constraints(self, solver: BaseSolver, index: int) -> None:
-        """Adds overlap and standard biological contraints.
+        """Adds overlaping segmentation constrainsts
 
         Parameters
         ----------
@@ -210,22 +212,40 @@ class SQLTracking:
         solution["node_id"] = solution.index
 
         start_time, end_time = self._window_limits(index, False)
-        stmt = (
-            sqla.update(NodeDB)
-            .where(
-                NodeDB.t.between(start_time, end_time),
-                NodeDB.id == sqla.bindparam("node_id"),
-            )
-            .values(parent_id=sqla.bindparam("parent_id"), selected=True)
-        )
 
         engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
+            general_stmt = (
+                sqla.update(NodeDB)
+                .where(
+                    NodeDB.t.between(start_time, end_time),
+                    NodeDB.id == sqla.bindparam("node_id"),
+                )
+                .values(parent_id=sqla.bindparam("parent_id"), selected=True)
+            )
             session.execute(
-                stmt,
+                general_stmt,
                 solution[["node_id", "parent_id"]].to_dict("records"),
                 execution_options={"synchronize_session": False},
             )
+
+            # condition isn't necessary but avoids a useless operation
+            if start_time > 0:
+                # insert nodes from start time - 1 without their parent
+                start_stmt = (
+                    sqla.update(NodeDB)
+                    .where(
+                        NodeDB.t == start_time - 1,
+                        NodeDB.id == sqla.bindparam("node_id"),
+                    )
+                    .values(selected=True)
+                )
+                session.execute(
+                    start_stmt,
+                    solution[["node_id"]].to_dict("records"),
+                    execution_options={"syncronize_session": False},
+                )
+
             session.commit()
 
     def reset_solution(self) -> None:

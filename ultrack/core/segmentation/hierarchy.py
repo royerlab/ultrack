@@ -54,7 +54,7 @@ def create_hierarchies(
         or binary_detection.dtype == bool
     )
 
-    labels = measure.label(binary_detection, connectivity=1)
+    labels = measure.label(binary_detection, connectivity=1).astype(np.int32)
 
     if "min_area" in kwargs:
         labels = morphology.remove_small_objects(labels, min_size=kwargs["min_area"])

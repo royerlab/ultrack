@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 import click
 from napari.viewer import ViewerModel
 
 from ultrack import segment
 from ultrack.cli.utils import (
+    batch_index_option,
     config_option,
     napari_reader_option,
     overwrite_option,
@@ -32,6 +33,7 @@ from ultrack.config import MainConfig
     type=str,
     help="Cell edges layer index on napari.",
 )
+@batch_index_option()
 @overwrite_option()
 def segmentation_cli(
     paths: Sequence[Path],
@@ -39,6 +41,7 @@ def segmentation_cli(
     config: MainConfig,
     detection_layer: str,
     edge_layer: str,
+    batch_index: Optional[int],
     overwrite: bool,
 ) -> None:
     """Compute candidate segments for tracking model from input data."""
@@ -54,5 +57,6 @@ def segmentation_cli(
         edge,
         config.segmentation_config,
         config.data_config,
+        batch_index=batch_index,
         overwrite=overwrite,
     )

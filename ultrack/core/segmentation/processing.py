@@ -22,6 +22,7 @@ from ultrack.core.database import (
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk, clear_segmentation_data
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
@@ -181,6 +182,7 @@ def segment(
     segmentation_config: SegmentationConfig,
     data_config: DataConfig,
     max_segments_per_time: int = 1_000_000,
+    batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
     """Add candidate segmentation (nodes) from `detection` and `edge` to database.
@@ -197,6 +199,8 @@ def segment(
         Data configuration parameters.
     max_segments_per_time : int
         Upper bound of segments per time point.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
         Cleans up segmentation, linking, and tracking database content before processing.
     """
@@ -213,16 +217,20 @@ def segment(
     LOG.info(f"Detection array with shape {detection.shape}")
     LOG.info(f"Edge array with shape {edge.shape}")
 
-    engine = sqla.create_engine(data_config.database_path)
-    Base.metadata.create_all(engine)
+    length = detection.shape[0]
+    time_points = batch_index_range(length, segmentation_config.n_workers, batch_index)
+    LOG.info(f"Segmenting time points {time_points}")
 
-    if overwrite:
-        clear_segmentation_data(data_config.database_path)
+    if batch_index is None or batch_index == 0:
+        engine = sqla.create_engine(data_config.database_path)
+        Base.metadata.create_all(engine)
 
-    data_config.metadata_add({"shape": detection.shape})
+        data_config.metadata_add({"shape": detection.shape})
+
+        if overwrite:
+            clear_segmentation_data(data_config.database_path)
 
     with multiprocessing_sqlite_lock(data_config) as lock:
-
         process = _process(
             detection=detection,
             edge=edge,
@@ -232,10 +240,9 @@ def segment(
             max_segments_per_time=max_segments_per_time,
         )
 
-        length = detection.shape[0]
         multiprocessing_apply(
             process,
-            range(length),
+            time_points,
             segmentation_config.n_workers,
             desc="Adding nodes to database",
         )

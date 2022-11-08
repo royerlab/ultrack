@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
-from ultrack.config.dataconfig import DataConfig
+from ultrack.config.dataconfig import DatabaseChoices, DataConfig
 
 # constant value to indicate it has no parent
 NO_PARENT = -1
@@ -89,7 +89,10 @@ def maximum_time(data_config: DataConfig) -> int:
 def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     """Checks if table is empty."""
     url = make_url(data_config.database_path)
-    if data_config.database == "sqlite" and not Path(url.database).exists():
+    if (
+        data_config.database == DatabaseChoices.sqlite.value
+        and not Path(url.database).exists()
+    ):
         # avoids creating a database with create_engine call
         return True
 

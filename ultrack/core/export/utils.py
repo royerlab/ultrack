@@ -2,65 +2,139 @@ import logging
 import shutil
 import warnings
 from pathlib import Path
-from queue import Queue
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
+from numba import njit, typed, types
 from sqlalchemy.orm import Session
-from tqdm import tqdm
+from toolz import curry
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.utils.multiprocessing import multiprocessing_apply
 
 LOG = logging.getLogger(__name__)
 
 
-def spatial_drift(df: pd.DataFrame, lag: int = 1) -> pd.Series:
-    """Helper function to compute the drift of a dataframe.
+@njit
+def _fast_path_transverse(
+    node: int,
+    track_id: int,
+    queue: List[Tuple[int, int]],
+    forest: Dict[int, Tuple[int]],
+) -> List[int]:
+    """Transverse a path in the forest directed graph and add path (track) split into queue.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Ordered dataframe with columns `t`, `z`, `y`, and `x`.
-    lag : int, optional
-        `t` lag, by default 1
+    node : int
+        Source path node.
+    track_id : int
+        Reference track id for path split.
+    queue : List[Tuple[int, int]]
+        Source nodes and path (track) id reference queue.
+    forest : Dict[int, Tuple[int]]
+        Directed graph (tree) of paths relationships.
 
     Returns
     -------
-    pd.Series
-        Drift values, invalid values are 0.
+    List[int]
+        Sequence of nodes in the path.
     """
-    df = df.sort_values("t")
-    drift = np.sqrt(
-        np.square(df[["z", "y", "x"]] - df[["z", "y", "x"]].shift(periods=lag)).sum(
-            axis=1
-        )
-    )
-    drift.values[:lag] = 0.0
-    return drift
+    path = typed.List.empty_list(types.int64)
+
+    while True:
+        path.append(node)
+
+        children = forest.get(node)
+        if children is None:
+            # end of track
+            break
+
+        elif len(children) == 1:
+            node = children[0]
+
+        elif len(children) == 2:
+            queue.append((children[1], track_id))
+            queue.append((children[0], track_id))
+            break
+
+        else:
+            raise RuntimeError(
+                "Something is wrong. Found node with more than two children when parsing tracks."
+            )
+
+    return path
 
 
-def estimate_drift(df: pd.DataFrame, quantile: float = 0.99) -> float:
-    """Compute a estimate of the tracks drift.
+@njit
+def _fast_forest_transverse(
+    roots: List[int],
+    forest: Dict[int, List[int]],
+) -> Tuple[List[List[int]], List[int], List[int], List[int]]:
+    """Transverse the tracks forest graph creating a distinc id to each path.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Tracks dataframe, must have `track_id` column.
-    quantile : float, optional
-        Drift quantile, by default 0.99
+    roots : List[int]
+        Forest roots.
+    forest : Dict[int, List[int]]
+        Graph (forest).
 
     Returns
     -------
-    float
-        Drift from the given quantile.
+    Tuple[List[List[int]], List[int], List[int], List[int]]
+        Sequence of paths, their respective track_id, parent_track_id and length.
     """
-    distances = df.groupby("track_id").apply(spatial_drift)
-    robust_max_distance = np.quantile(distances, quantile)
-    LOG.info(f"{quantile} quantile spatial drift distance of {robust_max_distance}")
-    return robust_max_distance
+    track_id = 1
+    paths = []
+    track_ids = []  # equivalent to arange
+    parent_track_ids = []
+    lengths = []
+
+    for root in roots:
+        queue = [(root, NO_PARENT)]
+
+        while queue:
+            node, parent_track_id = queue.pop()
+            path = _fast_path_transverse(node, track_id, queue, forest)
+            paths.append(path)
+            track_ids.append(track_id)
+            parent_track_ids.append(parent_track_id)
+            lengths.append(len(path))
+            track_id += 1
+
+    return paths, track_ids, parent_track_ids, lengths
+
+
+@njit
+def _create_tracks_forest(
+    node_ids: np.ndarray, parent_ids: np.ndarray
+) -> Dict[int, List[int]]:
+    """Creates the forest graph of track lineages
+
+    Parameters
+    ----------
+    node_ids : np.ndarray
+        Nodes indices.
+    parent_ids : np.ndarray
+        Parent indices.
+
+    Returns
+    -------
+    Dict[int, List[int]]
+        Forest graph where parent maps to their children (parent -> children)
+    """
+    forest = {}
+    for parent in parent_ids:
+        forest[parent] = typed.List.empty_list(types.int64)
+
+    for i in range(len(parent_ids)):
+        forest[parent_ids[i]].append(node_ids[i])
+
+    return forest
 
 
 def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
@@ -77,46 +151,25 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Inplace modified input dataframe with additional columns.
     """
-    forest = {
-        parent_id: group.index.tolist() for parent_id, group in df.groupby("parent_id")
-    }
+    df.index = df.index.astype(int)
+    df["parent_id"] = df["parent_id"].astype(int)
 
-    roots = df.index[df["parent_id"] == NO_PARENT]
+    forest = _create_tracks_forest(df.index.values, df["parent_id"].values)
+    roots = forest.pop(NO_PARENT)
 
     df["track_id"] = NO_PARENT
     df["parent_track_id"] = NO_PARENT
 
-    track_id = 1
-    for root in roots:
-        queue = Queue()
-        queue.put((root, NO_PARENT))
+    paths, track_ids, parent_track_ids, lengths = _fast_forest_transverse(roots, forest)
 
-        while not queue.empty():
-            node, parent_track_id = queue.get()
+    paths = np.concatenate(paths)
+    df.loc[paths, "track_id"] = np.repeat(track_ids, lengths)
+    df.loc[paths, "parent_track_id"] = np.repeat(parent_track_ids, lengths)
 
-            while True:
-                df.loc[node, "track_id"] = track_id
-                df.loc[node, "parent_track_id"] = parent_track_id
-
-                children = forest.get(node, [])
-                if len(children) == 0:
-                    # end of track
-                    break
-
-                elif len(children) == 1:
-                    node = children[0]
-
-                elif len(children) == 2:
-                    queue.put((children[0], track_id))
-                    queue.put((children[1], track_id))
-                    break
-
-                else:
-                    raise RuntimeError(
-                        f"Something is wrong. Found {len(children)} children when parsing tracks, expected 0, 1, or 2."
-                    )
-
-            track_id += 1
+    unlabeled_tracks = df["track_id"] == NO_PARENT
+    assert not np.any(
+        unlabeled_tracks
+    ), f"Something went wrong. Found unlabeled tracks\n{df[unlabeled_tracks]}"
 
     return df
 
@@ -188,6 +241,60 @@ def solution_dataframe_from_sql(
     return df
 
 
+@curry
+def _query_and_export_data_to_frame(
+    time: int,
+    database_path: str,
+    shape: Tuple[int],
+    df: pd.DataFrame,
+    export_func: Callable[[int, np.ndarray], None],
+) -> None:
+    """Queries segmentation data from database and paints it according to their respective `df` `track_id` column.
+
+    Parameters
+    ----------
+    time : int
+        Frame time point to paint.
+    database_path : str
+        Database path.
+    shape : Tuple[int]
+        Frame shape.
+    df : pd.DataFrame
+        Tracks dataframe.
+    export_func : Callable[[int, np.ndarray], None]
+        Export function, it receives as input a time index `t` and its respective uint16 labeled buffer.
+    """
+    node_indices = set(df[df["t"] == time].index)
+
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        buffer = np.zeros(shape, dtype=np.uint16)
+        query = list(
+            session.query(NodeDB.id, NodeDB.pickle).where(
+                NodeDB.t == time, NodeDB.selected
+            )
+        )
+
+        if len(query) == 0:
+            warnings.warn(f"Segmentation mask from t = {time} is empty.")
+
+        LOG.info(f"t = {time} containts {len(query)} segments.")
+
+        for id, node in query:
+            if id not in node_indices:
+                # ignoring nodes not present in dataset, used when exporting a subset of data
+                # filtering through a sql query crashed with big datasets
+                continue
+
+            track_id = df.loc[id, "track_id"]
+            LOG.info(
+                f"Painting t = {time} node {id} with value {track_id} area {node.area}"
+            )
+            node.paint_buffer(buffer, value=track_id, include_time=False)
+
+        export_func(time, buffer)
+
+
 def export_segmentation_generic(
     data_config: DataConfig,
     df: pd.DataFrame,
@@ -211,81 +318,19 @@ def export_segmentation_generic(
 
     LOG.info(f"Exporting segmentation masks with {export_func}")
 
-    engine = sqla.create_engine(data_config.database_path)
     shape = data_config.metadata["shape"]
 
-    df_indices = set(df.index)
-
-    with Session(engine) as session:
-        for t in tqdm(range(shape[0]), "Exporting segmentation masks"):
-            buffer = np.zeros(shape[1:], dtype=np.uint16)
-            query = list(
-                session.query(NodeDB.id, NodeDB.pickle).where(
-                    NodeDB.t == t, NodeDB.selected
-                )
-            )
-
-            if len(query) == 0:
-                warnings.warn(f"Segmentation mask from t = {t} is empty.")
-
-            LOG.info(f"t = {t} containts {len(query)} segments.")
-
-            for id, node in query:
-                if id not in df_indices:
-                    # ignoring nodes not present in dataset, used in sparse saving
-                    # executing this with a sql query crashed with big datasets
-                    continue
-
-                track_id = df.loc[id, "track_id"]
-                LOG.info(
-                    f"Painting t = {t} node {id} with value {track_id} area {node.area}"
-                )
-                node.paint_buffer(buffer, value=track_id, include_time=False)
-
-            export_func(t, buffer)
-
-
-def large_chunk_size(
-    shape: Tuple[int],
-    dtype: Union[str, np.dtype],
-    max_size: int = 2147483647,
-) -> Tuple[int]:
-    """
-    Computes a large chunk size for a given `shape` and `dtype`.
-    Large chunks improves the performance on Elastic Storage Systems (ESS).
-    Leading dimension (time) will always be chunked as 1.
-
-    Parameters
-    ----------
-    shape : Tuple[int]
-        Input data shape.
-    dtype : Union[str, np.dtype]
-        Input data type.
-    max_size : int, optional
-        Reference maximum size, by default 2147483647
-
-    Returns
-    -------
-    Tuple[int]
-        Suggested chunk size.
-    """
-
-    if not isinstance(dtype, np.dtype):
-        dtype = np.dtype(dtype)
-
-    plane_shape = np.minimum(shape[-2:], 32768)
-
-    if len(shape) == 3:
-        chunks = (1, *plane_shape)
-    elif len(shape) == 4:
-        depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
-        chunks = (1, depth, *plane_shape)
-    else:
-        raise NotImplementedError(
-            f"Large chunk size only implemented for 2,3-D + time arrays. Found {len(shape) - 1} + time."
-        )
-
-    return chunks
+    multiprocessing_apply(
+        _query_and_export_data_to_frame(
+            database_path=data_config.database_path,
+            shape=shape[1:],
+            df=df,
+            export_func=export_func,
+        ),
+        sequence=range(shape[0]),
+        n_workers=data_config.n_workers,
+        desc="Exporting segmentation masks",
+    )
 
 
 def maybe_overwrite_path(path: Path, overwrite: bool) -> None:

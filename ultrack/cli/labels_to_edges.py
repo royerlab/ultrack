@@ -50,6 +50,6 @@ def labels_to_edges_cli(
     labels_to_edges(
         [layer.data for layer in viewer.layers],
         sigma=sigma,
-        detection_store=zarr.DirectoryStore(detection_path),
-        edges_store=zarr.DirectoryStore(edges_path),
+        detection_store=zarr.NestedDirectoryStore(detection_path),
+        edges_store=zarr.NestedDirectoryStore(edges_path),
     )
