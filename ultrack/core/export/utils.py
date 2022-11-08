@@ -69,6 +69,74 @@ def _fast_path_transverse(
     return path
 
 
+@njit
+def _fast_forest_transverse(
+    roots: List[int],
+    forest: Dict[int, List[int]],
+) -> Tuple[List[List[int]], List[int], List[int], List[int]]:
+    """Transverse the tracks forest graph creating a distinc id to each path.
+
+    Parameters
+    ----------
+    roots : List[int]
+        Forest roots.
+    forest : Dict[int, List[int]]
+        Graph (forest).
+
+    Returns
+    -------
+    Tuple[List[List[int]], List[int], List[int], List[int]]
+        Sequence of paths, their respective track_id, parent_track_id and length.
+    """
+    track_id = 1
+    paths = []
+    track_ids = []  # equivalent to arange
+    parent_track_ids = []
+    lengths = []
+
+    for root in roots:
+        queue = [(root, NO_PARENT)]
+
+        while queue:
+            node, parent_track_id = queue.pop()
+            path = _fast_path_transverse(node, track_id, queue, forest)
+            paths.append(path)
+            track_ids.append(track_id)
+            parent_track_ids.append(parent_track_id)
+            lengths.append(len(path))
+            track_id += 1
+
+    return paths, track_ids, parent_track_ids, lengths
+
+
+@njit
+def _create_tracks_forest(
+    node_ids: np.ndarray, parent_ids: np.ndarray
+) -> Dict[int, List[int]]:
+    """Creates the forest graph of track lineages
+
+    Parameters
+    ----------
+    node_ids : np.ndarray
+        Nodes indices.
+    parent_ids : np.ndarray
+        Parent indices.
+
+    Returns
+    -------
+    Dict[int, List[int]]
+        Forest graph where parent maps to their children (parent -> children)
+    """
+    forest = {}
+    for parent in parent_ids:
+        forest[parent] = typed.List.empty_list(types.int64)
+
+    for i in range(len(parent_ids)):
+        forest[parent_ids[i]].append(node_ids[i])
+
+    return forest
+
+
 def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     """Adds `track_id` and `parent_track_id` columns to forest `df`.
     Each maximal path receveis a unique `track_id`.
@@ -86,27 +154,17 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     df.index = df.index.astype(int)
     df["parent_id"] = df["parent_id"].astype(int)
 
-    forest = typed.Dict.empty(types.int64, types.ListType(types.int64))
-    for parent_id, group in df.groupby("parent_id"):
-        forest[parent_id] = typed.List(group.index)
+    forest = _create_tracks_forest(df.index.values, df["parent_id"].values)
     roots = forest.pop(NO_PARENT)
 
     df["track_id"] = NO_PARENT
     df["parent_track_id"] = NO_PARENT
 
-    track_id = 1
-    for root in roots:
-        queue = typed.List.empty_list(types.Tuple((types.int64, types.int64)))
-        queue.append((root, NO_PARENT))
+    paths, track_ids, parent_track_ids, lengths = _fast_forest_transverse(roots, forest)
 
-        while queue:
-            node, parent_track_id = queue.pop()
-            path = _fast_path_transverse(node, track_id, queue, forest)
-
-            df.loc[path, "track_id"] = track_id
-            df.loc[path, "parent_track_id"] = parent_track_id
-
-            track_id += 1
+    paths = np.concatenate(paths)
+    df.loc[paths, "track_id"] = np.repeat(track_ids, lengths)
+    df.loc[paths, "parent_track_id"] = np.repeat(parent_track_ids, lengths)
 
     unlabeled_tracks = df["track_id"] == NO_PARENT
     assert not np.any(
