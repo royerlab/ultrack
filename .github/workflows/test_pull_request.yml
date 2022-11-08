@@ -65,6 +65,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install setuptools tox tox-gh-actions
+          poetry install
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
