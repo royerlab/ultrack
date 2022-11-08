@@ -47,6 +47,9 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: "pip"
 
+      - name: Set up poetry
+        uses: Gr1N/setup-poetry@v7
+
       - uses: tlambert03/setup-qt-libs@v1
 
       # strategy borrowed from vispy for installing opengl libs on windows
