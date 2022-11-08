@@ -39,6 +39,10 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
+      - name: Set up poetry
+        uses: Gr1N/setup-poetry@v7
+        run: poetry lock
+
       - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python }}
@@ -46,9 +50,6 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: "pip"
-
-      - name: Set up poetry
-        uses: Gr1N/setup-poetry@v7
 
       - uses: tlambert03/setup-qt-libs@v1
 
