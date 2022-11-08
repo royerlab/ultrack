@@ -148,7 +148,7 @@ def link(
     time_points = batch_index_range(max_t, linking_config.n_workers, batch_index)
     LOG.info(f"Linking time points {time_points}")
 
-    if overwrite:
+    if overwrite and (batch_index is None or batch_index == 0):
         clear_linking_data(data_config.database_path)
 
     with multiprocessing_sqlite_lock(data_config) as lock:

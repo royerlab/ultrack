@@ -221,13 +221,14 @@ def segment(
     time_points = batch_index_range(length, segmentation_config.n_workers, batch_index)
     LOG.info(f"Segmenting time points {time_points}")
 
-    engine = sqla.create_engine(data_config.database_path)
-    Base.metadata.create_all(engine)
+    if batch_index is None or batch_index == 0:
+        engine = sqla.create_engine(data_config.database_path)
+        Base.metadata.create_all(engine)
 
-    if overwrite:
-        clear_segmentation_data(data_config.database_path)
+        data_config.metadata_add({"shape": detection.shape})
 
-    data_config.metadata_add({"shape": detection.shape})
+        if overwrite:
+            clear_segmentation_data(data_config.database_path)
 
     with multiprocessing_sqlite_lock(data_config) as lock:
         process = _process(

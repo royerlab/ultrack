@@ -29,7 +29,7 @@ def track(
     """
     tracker = SQLTracking(tracking_config, data_config)
 
-    if overwrite:
+    if overwrite and (batch_index is None or batch_index == 0):
         tracker.reset_solution()
 
     if isinstance(batch_index, int):
