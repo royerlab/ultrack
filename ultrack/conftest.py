@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -29,6 +30,9 @@ def config_content(tmp_path: Path, request) -> Dict[str, Any]:
     is_postgresql = kwargs.get("data.database") == DatabaseChoices.postgresql.value
 
     if is_postgresql:
+        if platform.system() == "Windows":
+            pytest.skip("Skipping postgresql testing on Windows")
+
         postgresql = Postgresql()
         kwargs["data.address"] = postgresql.url().split("//")[1]
 
