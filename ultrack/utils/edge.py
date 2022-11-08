@@ -16,7 +16,7 @@ except ImportError:
     import scipy.ndimage as ndi
     from skimage.segmentation import find_boundaries
 
-from ultrack.core.export.utils import large_chunk_size
+from ultrack.utils.data import large_chunk_size
 
 LOG = logging.getLogger(__name__)
 

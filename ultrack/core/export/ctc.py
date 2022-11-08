@@ -18,12 +18,12 @@ from ultrack.config import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
-    estimate_drift,
     export_segmentation_generic,
     maybe_overwrite_path,
     solution_dataframe_from_sql,
     tracks_forest,
 )
+from ultrack.utils.estimation import estimate_drift
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)

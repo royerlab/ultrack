@@ -9,20 +9,20 @@ from ultrack.config.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
 from ultrack.core.tracking.sqltracking import SQLTracking
 
-_TEST_PARAMS = (
-    {
-        "segmentation.n_workers": 4,
-        "linking.n_workers": 4,
-        "tracking.appear_weight": -0.25,
-        "tracking.disappear_weight": -0.5,
-        "tracking.division_weight": -0.25,
-        "tracking.window_size": 5,
-        "tracking.overlap_size": 2,
-    },
-    {
-        "length": 10,
-    },
-)
+_CONFIG_PARAMS = {
+    "segmentation.n_workers": 4,
+    "linking.n_workers": 4,
+    "tracking.appear_weight": -0.25,
+    "tracking.disappear_weight": -0.5,
+    "tracking.division_weight": -0.25,
+    "tracking.window_size": 5,
+    "tracking.overlap_size": 2,
+}
+
+_TEST_PARAMS = [
+    ({"data.database": "sqlite", **_CONFIG_PARAMS}, {"length": 10}),
+    ({"data.database": "postgresql", **_CONFIG_PARAMS}, {"length": 10}),
+]
 
 
 def _validate_tracking_solution(config: MainConfig):
@@ -52,7 +52,7 @@ def _validate_tracking_solution(config: MainConfig):
 
 @pytest.mark.parametrize(
     "config_content,timelapse_mock_data",
-    [_TEST_PARAMS],
+    _TEST_PARAMS,
     indirect=True,
 )
 def test_sql_tracking(
@@ -67,7 +67,7 @@ def test_sql_tracking(
 
 @pytest.mark.parametrize(
     "config_content,timelapse_mock_data",
-    [_TEST_PARAMS],
+    _TEST_PARAMS,
     indirect=True,
 )
 def test_batch_sql_tracking(
@@ -75,11 +75,11 @@ def test_batch_sql_tracking(
 ) -> None:
     config = linked_database_mock_data
 
-    track(config.tracking_config, config.data_config, indices=0)
-    track(config.tracking_config, config.data_config, indices=1)
+    track(config.tracking_config, config.data_config, batch_index=0)
+    track(config.tracking_config, config.data_config, batch_index=1)
 
     with pytest.raises(ValueError):
-        track(config.tracking_config, config.data_config, indices=2)
+        track(config.tracking_config, config.data_config, batch_index=2)
 
     _validate_tracking_solution(config)
 
@@ -88,9 +88,15 @@ def test_batch_sql_tracking(
     "config_content",
     [
         {
+            "data.database": "sqlite",
             "segmentation.n_workers": 4,
             "linking.n_workers": 4,
-        }
+        },
+        {
+            "data.database": "postgresql",
+            "segmentation.n_workers": 4,
+            "linking.n_workers": 4,
+        },
     ],
     indirect=True,
 )
