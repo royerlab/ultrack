@@ -46,7 +46,5 @@ def tracks_to_zarr(
         chunks = large_chunk_size(shape, dtype=np.uint16)
 
     array = zarr.zeros(shape, dtype=np.uint16, store=store, chunks=chunks)
-    export_segmentation_generic(
-        data_config, tracks_df, lambda t, buffer: array.__setitem__(t, buffer)
-    )
+    export_segmentation_generic(data_config, tracks_df, array.__setitem__)
     return array
