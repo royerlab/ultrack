@@ -8,6 +8,7 @@ from ultrack import link
 from ultrack.cli.utils import (
     batch_index_option,
     config_option,
+    napari_reader_option,
     overwrite_option,
     paths_argument,
 )
@@ -16,6 +17,7 @@ from ultrack.config import MainConfig
 
 @click.command("link")
 @paths_argument()
+@napari_reader_option()
 @config_option()
 @click.option(
     "--channel-axis",
@@ -30,6 +32,7 @@ from ultrack.config import MainConfig
 @overwrite_option()
 def link_cli(
     paths: Sequence[Path],
+    reader_plugin: str,
     config: MainConfig,
     channel_axis: Optional[int],
     batch_index: Optional[int],
@@ -45,7 +48,9 @@ def link_cli(
         if channel_axis is not None:
             kwargs["channel_axis"] = channel_axis
 
-        images = [layer.data for layer in viewer.open(paths, **kwargs)]
+        images = [
+            layer.data for layer in viewer.open(paths, **kwargs, plugin=reader_plugin)
+        ]
 
     link(
         config.linking_config,
