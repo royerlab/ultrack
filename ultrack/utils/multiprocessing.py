@@ -32,7 +32,8 @@ def multiprocessing_apply(
     """
     length = len(sequence)
     if n_workers > 1 and length > 1:
-        with mp.Pool(min(n_workers, length)) as pool:
+        ctx = mp.get_context("spawn")
+        with ctx.Pool(min(n_workers, length)) as pool:
             list(tqdm(pool.imap(func, sequence), desc=desc, total=length))
     else:
         for t in tqdm(sequence, desc=desc):
