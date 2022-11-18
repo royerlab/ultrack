@@ -43,8 +43,8 @@ def tracks_to_zarr(
         store = zarr.MemoryStore()
 
     if chunks is None:
-        chunks = large_chunk_size(shape, dtype=np.uint16)
+        chunks = large_chunk_size(shape, dtype=np.int32)
 
-    array = zarr.zeros(shape, dtype=np.uint16, store=store, chunks=chunks)
+    array = zarr.zeros(shape, dtype=np.int32, store=store, chunks=chunks)
     export_segmentation_generic(data_config, tracks_df, array.__setitem__)
     return array

@@ -1,11 +1,3 @@
-import os
-
-if os.environ.get("ULTRACK_DEBUG", False):
-    import logging
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
 import click
 
 from ultrack.cli.clear_database import clear_database_cli
