@@ -1,3 +1,11 @@
+import os
+
+if os.environ.get("ULTRACK_DEBUG", False):
+    import logging
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
 from ultrack.core.export.ctc import to_ctc
 from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.core.export.zarr import tracks_to_zarr
