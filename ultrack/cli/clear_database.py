@@ -2,8 +2,8 @@ import click
 
 from ultrack.cli.utils import config_option
 from ultrack.config.config import MainConfig
+from ultrack.core.database import clear_all_data
 from ultrack.core.linking.utils import clear_linking_data
-from ultrack.core.segmentation.utils import clear_all_data
 from ultrack.core.tracking.sqltracking import SQLTracking
 
 

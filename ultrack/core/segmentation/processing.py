@@ -18,9 +18,10 @@ from ultrack.core.database import (
     NodeAnnotation,
     NodeDB,
     OverlapDB,
+    clear_all_data,
 )
 from ultrack.core.segmentation.hierarchy import create_hierarchies
-from ultrack.core.segmentation.utils import check_array_chunk, clear_all_data
+from ultrack.core.segmentation.utils import check_array_chunk
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,

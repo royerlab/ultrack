@@ -1,8 +1,13 @@
 import pytest
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import LinkDB, NodeDB, OverlapDB, is_table_empty
-from ultrack.core.segmentation.utils import clear_all_data
+from ultrack.core.database import (
+    LinkDB,
+    NodeDB,
+    OverlapDB,
+    clear_all_data,
+    is_table_empty,
+)
 
 
 @pytest.mark.parametrize(
