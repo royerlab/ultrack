@@ -91,7 +91,7 @@ class TestCommandLine:
             ]
         )
 
-    @pytest.mark.parametrize("mode", ["all", "links", "solutions"])
+    @pytest.mark.parametrize("mode", ["solutions", "links", "all"])
     def test_clear_database(self, instance_config_path: str, mode: str) -> None:
         _run_command(
             [

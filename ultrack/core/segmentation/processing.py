@@ -20,7 +20,7 @@ from ultrack.core.database import (
     OverlapDB,
 )
 from ultrack.core.segmentation.hierarchy import create_hierarchies
-from ultrack.core.segmentation.utils import check_array_chunk, clear_segmentation_data
+from ultrack.core.segmentation.utils import check_array_chunk, clear_all_data
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,
@@ -79,7 +79,7 @@ def _process(
         Path to database including type prefix.
     max_segments_per_time : int
         Upper bound of segments per time point.
-    lock : Optional[fasteners.Lock], optional
+    lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
     np.random.seed(42)  # necessary because of watershed tie-zones
@@ -174,6 +174,7 @@ def _process(
             overlaps.to_sql(
                 name=OverlapDB.__tablename__, con=conn, if_exists="append", index=False
             )
+        LOG.info(f"DONE with time {time}.")
 
 
 def segment(
@@ -223,12 +224,12 @@ def segment(
 
     if batch_index is None or batch_index == 0:
         engine = sqla.create_engine(data_config.database_path)
-        Base.metadata.create_all(engine)
-
-        data_config.metadata_add({"shape": detection.shape})
 
         if overwrite:
-            clear_segmentation_data(data_config.database_path)
+            clear_all_data(data_config.database_path)
+
+        Base.metadata.create_all(engine)
+        data_config.metadata_add({"shape": detection.shape})
 
     with multiprocessing_sqlite_lock(data_config) as lock:
         process = _process(

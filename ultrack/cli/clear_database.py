@@ -3,7 +3,7 @@ import click
 from ultrack.cli.utils import config_option
 from ultrack.config.config import MainConfig
 from ultrack.core.linking.utils import clear_linking_data
-from ultrack.core.segmentation.utils import clear_segmentation_data
+from ultrack.core.segmentation.utils import clear_all_data
 from ultrack.core.tracking.sqltracking import SQLTracking
 
 
@@ -15,7 +15,7 @@ def clear_database_cli(mode: str, config: MainConfig) -> None:
 
     database_path = config.data_config.database_path
     if mode == "all":
-        clear_segmentation_data(database_path)
+        clear_all_data(database_path)
     elif mode == "links":
         clear_linking_data(database_path)
     elif mode == "solutions":
