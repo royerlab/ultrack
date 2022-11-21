@@ -75,13 +75,14 @@ def _process(
     next_pos = np.asarray([n.centroid for n in next_nodes])
 
     # finds neighbors nodes within the radius
-    # and connect the pairs with highest IoU
+    # and connect the pairs with highest edge weight
     current_kdtree = KDTree(current_pos)
-    next_kdtree = KDTree(next_pos)
 
-    neighbors = current_kdtree.query_ball_tree(
-        next_kdtree,
-        r=config.max_distance,
+    distances, neighbors = current_kdtree.query(
+        next_pos,
+        # twice as expected because we select the nearest with highest edge weight
+        k=2 * config.max_neighbors,
+        distance_upper_bound=config.max_distance,
     )
 
     if len(images) > 0:
@@ -94,15 +95,22 @@ def _process(
         LOG.info("IoU edge weight")
         weight_func = Node.IoU
 
+    distance_w = config.distance_weight
     links = []
-    for i, node in enumerate(current_nodes):
+
+    for i, node in enumerate(next_nodes):
+        valid = np.logical_not(np.isinf(distances[i]))
+        valid_neighbors = neighbors[i, valid]
+        neigh_distances = distances[i, valid]
+
         neighborhood = []
-        neigh_size = len(neighbors[i])
-        for j, neigh_idx in enumerate(neighbors[i]):
-            neigh = next_nodes[neigh_idx]
-            edge_weight = weight_func(node, neigh)
-            # assuming neighbors are ordered so size - j will be used as tie breaker
-            neighborhood.append((edge_weight, neigh_size - j, node.id, neigh.id))
+        for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
+            neigh = current_nodes[neigh_idx]
+            edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
+            # using dist as a tie-breaker
+            neighborhood.append(
+                (edge_weight, -neigh_dist, neigh.id, node.id)
+            )  # current, next
 
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
         LOG.info(f"Node {node.id} links {neighborhood}")
