@@ -375,8 +375,12 @@ def filter_nodes_in_margin(
     """
 
     # ignoring time
-    upper_lim = np.asarray(data_config.metadata["shape"][1:]) - margin
-    lower_lim = np.full_like(upper_lim, margin)
+    upper_lim = np.asarray(data_config.metadata["shape"][1:])
+    upper_lim[-2:] -= margin  # only for y, x coordinates
+
+    lower_lim = np.zeros_like(upper_lim)
+    lower_lim[-2:] += margin  # only for y, x coordinates
+
     limits = np.concatenate((lower_lim, upper_lim))
 
     LOG.info(f"Using limits {limits} from {margin}")
@@ -388,13 +392,9 @@ def filter_nodes_in_margin(
         for node_id in tqdm(df.index, "Filtering nodes in margin"):
             (node,) = session.query(NodeDB.pickle).where(NodeDB.id == node_id).first()
             if not intersects(node.bbox, limits):
-                print("NOT", node.bbox, lower_lim, upper_lim)
                 removed_ids.add(node_id)
-            else:
-                print("valid", node.bbox, lower_lim, upper_lim)
 
     LOG.info(f"Nodes removed due to margin {removed_ids}")
-    print(f"Nodes {removed_ids} removed due to margin")
 
     df = df.drop(removed_ids)
     df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
