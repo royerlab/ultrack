@@ -23,6 +23,7 @@ from ultrack.core.export.utils import (
     solution_dataframe_from_sql,
     tracks_forest,
 )
+from ultrack.core.segmentation.node import intersects
 from ultrack.utils.estimation import estimate_drift
 
 logging.basicConfig()
@@ -274,6 +275,7 @@ def _write_tiff_buffer(
 def to_ctc(
     output_dir: Path,
     data_config: DataConfig,
+    margin: int = 0,
     scale: Optional[Tuple[float]] = None,
     first_frame: Optional[ArrayLike] = None,
     stitch_tracks: bool = False,
@@ -285,11 +287,13 @@ def to_ctc(
     Parameters
     ----------
     output_dir : Path
-        Output directory to save segmentation masks and lineage graph.
+        Output directory to save segmentation masks and lineage graph
     data_config : DataConfig
         Data configuration parameters.
     scale : Optional[Tuple[float]], optional
         Optional scaling of output segmentation masks, by default None
+    margin : int
+        Margin used to filter out nodes and splitting their tracklets
     first_frame : Optional[ArrayLike], optional
         Optional first frame detection mask to select a subset of tracks (e.g. Fluo-N3DL-DRO), by default None
     stitch_tracks: bool, optional
@@ -312,6 +316,9 @@ def to_ctc(
 
     if len(df) == 0:
         raise ValueError("Solution is empty.")
+
+    if margin > 0:
+        df = filter_nodes_in_margin(data_config, df, margin)
 
     df = add_track_ids_to_forest(df)
 
@@ -343,3 +350,53 @@ def to_ctc(
         df,
         _write_tiff_buffer(scale=scale, output_dir=output_dir),
     )
+
+
+def filter_nodes_in_margin(
+    data_config: DataConfig,
+    df: pd.DataFrame,
+    margin: int,
+) -> pd.DataFrame:
+    """Filter out nodes inside the margin.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    df : pd.DataFrame
+        Tracks dataframe.
+    margin : int
+        Margin used for filtering.
+
+    Returns
+    -------
+    pd.DataFrame
+        Tracks dataframe without nodes inside margin.
+    """
+
+    # ignoring time
+    upper_lim = np.asarray(data_config.metadata["shape"][1:]) - margin
+    lower_lim = np.full_like(upper_lim, margin)
+    limits = np.concatenate((lower_lim, upper_lim))
+
+    LOG.info(f"Using limits {limits} from {margin}")
+
+    removed_ids = set()
+
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        for node_id in tqdm(df.index, "Filtering nodes in margin"):
+            (node,) = session.query(NodeDB.pickle).where(NodeDB.id == node_id).first()
+            if not intersects(node.bbox, limits):
+                print("NOT", node.bbox, lower_lim, upper_lim)
+                removed_ids.add(node_id)
+            else:
+                print("valid", node.bbox, lower_lim, upper_lim)
+
+    LOG.info(f"Nodes removed due to margin {removed_ids}")
+    print(f"Nodes {removed_ids} removed due to margin")
+
+    df = df.drop(removed_ids)
+    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
+
+    return df

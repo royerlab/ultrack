@@ -72,6 +72,8 @@ class TestCommandLine:
                 instance_config_path,
                 "-s",
                 "1,1,1",
+                "-ma",
+                "5",
                 "-o",
                 str(tmp_path / "01_RES"),
             ]
