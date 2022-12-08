@@ -12,7 +12,7 @@ from ultrack.config.config import MainConfig, load_config
 from ultrack.config.dataconfig import DatabaseChoices
 from ultrack.core.linking.processing import link
 from ultrack.core.segmentation.processing import segment
-from ultrack.core.tracking.processing import track
+from ultrack.core.solve.processing import solve
 from ultrack.utils.data import (
     make_cell_division_mock_data,
     make_config_content,
@@ -136,7 +136,7 @@ def tracked_database_mock_data(
     linked_database_mock_data: MainConfig,
 ) -> MainConfig:
     config = linked_database_mock_data
-    track(config.tracking_config, config.data_config)
+    solve(config.tracking_config, config.data_config)
     return config
 
 
@@ -159,6 +159,6 @@ def tracked_cell_division_mock_data(
         config_instance.data_config,
     )
     link(config_instance.linking_config, config_instance.data_config)
-    track(config_instance.tracking_config, config_instance.data_config)
+    solve(config_instance.tracking_config, config_instance.data_config)
 
     return config_instance

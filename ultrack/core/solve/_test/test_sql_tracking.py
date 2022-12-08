@@ -4,10 +4,10 @@ import pytest
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from ultrack import track
+from ultrack import solve
 from ultrack.config.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
-from ultrack.core.tracking.sqltracking import SQLTracking
+from ultrack.core.solve.sqltracking import SQLTracking
 
 _CONFIG_PARAMS = {
     "segmentation.n_workers": 4,
@@ -60,7 +60,7 @@ def test_sql_tracking(
 ) -> None:
     config = linked_database_mock_data
 
-    track(config.tracking_config, config.data_config)
+    solve(config.tracking_config, config.data_config)
 
     _validate_tracking_solution(config)
 
@@ -75,11 +75,11 @@ def test_batch_sql_tracking(
 ) -> None:
     config = linked_database_mock_data
 
-    track(config.tracking_config, config.data_config, batch_index=0)
-    track(config.tracking_config, config.data_config, batch_index=1)
+    solve(config.tracking_config, config.data_config, batch_index=0)
+    solve(config.tracking_config, config.data_config, batch_index=1)
 
     with pytest.raises(ValueError):
-        track(config.tracking_config, config.data_config, batch_index=2)
+        solve(config.tracking_config, config.data_config, batch_index=2)
 
     _validate_tracking_solution(config)
 

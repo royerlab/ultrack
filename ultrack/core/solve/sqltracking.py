@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.trackingconfig import TrackingConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
-from ultrack.core.tracking.solver import GurobiSolver
-from ultrack.core.tracking.solver.base_solver import BaseSolver
+from ultrack.core.solve.solver import GurobiSolver
+from ultrack.core.solve.solver.base_solver import BaseSolver
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -59,7 +59,7 @@ class SQLTracking:
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
             )
 
-        LOG.info(f"Tracking batch {index}")
+        LOG.info(f"Solving ILP batch {index}")
         solver = GurobiSolver(self._tracking_config)
 
         self._add_nodes(solver=solver, index=index)

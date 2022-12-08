@@ -10,7 +10,7 @@ from napari.layers import Image, Labels
 from napari.qt.threading import thread_worker
 from numpy.typing import ArrayLike
 
-from ultrack import link, segment, track
+from ultrack import link, segment, solve
 from ultrack.config.config import MainConfig, load_config
 from ultrack.core.database import LinkDB, NodeDB, is_table_empty
 from ultrack.core.export.tracks_layer import to_tracks_layer
@@ -133,7 +133,7 @@ class UltrackWidget(Container):
     @thread_worker
     @wait_cursor()
     def _make_track_worker(self) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-        track(self._tracking_w.config, self._data_config_w.config, overwrite=True)
+        solve(self._tracking_w.config, self._data_config_w.config, overwrite=True)
         tracks, graph = to_tracks_layer(self._data_config_w.config)
         labels = tracks_to_zarr(self._data_config_w.config, tracks)
         return tracks, graph, labels

@@ -23,7 +23,7 @@ from ultrack.core.database import NodeDB, OverlapDB
 )
 def test_multiprocessing_segment(
     config_instance: MainConfig,
-    timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
     detection, edges, _ = timelapse_mock_data
 

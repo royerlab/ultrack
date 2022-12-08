@@ -8,7 +8,7 @@ from numpy.typing import ArrayLike
 
 from ultrack.config.config import TrackingConfig
 from ultrack.core.database import NO_PARENT
-from ultrack.core.tracking.solver.base_solver import BaseSolver
+from ultrack.core.solve.solver.base_solver import BaseSolver
 
 LOG = logging.getLogger(__name__)
 
