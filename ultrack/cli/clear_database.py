@@ -4,7 +4,7 @@ from ultrack.cli.utils import config_option
 from ultrack.config.config import MainConfig
 from ultrack.core.database import clear_all_data
 from ultrack.core.linking.utils import clear_linking_data
-from ultrack.core.tracking.sqltracking import SQLTracking
+from ultrack.core.solve.sqltracking import SQLTracking
 
 
 @click.command("clear_database")

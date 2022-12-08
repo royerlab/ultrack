@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 
 from ultrack.config.config import MainConfig
-from ultrack.core.tracking.solver.base_solver import BaseSolver
-from ultrack.core.tracking.solver.gurobi_solver import GurobiSolver
-from ultrack.core.tracking.solver.heuristic.heuristic_solver import HeuristicSolver
+from ultrack.core.solve.solver.base_solver import BaseSolver
+from ultrack.core.solve.solver.gurobi_solver import GurobiSolver
+from ultrack.core.solve.solver.heuristic.heuristic_solver import HeuristicSolver
 
 
 @pytest.mark.parametrize(

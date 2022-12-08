@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from ultrack.config import TrackingConfig
-from ultrack.core.tracking.solver import GurobiSolver, HeuristicSolver
+from ultrack.core.solve.solver import GurobiSolver, HeuristicSolver
 
 
 class SolverSuite:

@@ -2,7 +2,7 @@ import numba
 import numpy as np
 from numba.experimental import jitclass
 
-from ultrack.core.tracking.solver.heuristic._heap import Heap, Policy
+from ultrack.core.solve.solver.heuristic._heap import Heap, Policy
 
 _SPEC = {
     "_objective": numba.float64,
