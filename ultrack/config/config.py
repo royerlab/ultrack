@@ -16,6 +16,7 @@ class LinkingConfig(BaseModel):
     n_workers: int = 1
     max_neighbors: int = 10
     max_distance: float = 15.0
+    distance_weight: float = 0.0
 
 
 class MainConfig(BaseModel):

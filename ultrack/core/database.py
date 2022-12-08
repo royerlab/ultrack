@@ -150,3 +150,10 @@ def get_node_values(
         annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
 
     return annotation
+
+
+def clear_all_data(database_path: str) -> None:
+    """Clears all data from database"""
+    LOG.info("Clearing all databases.")
+    engine = sqla.create_engine(database_path)
+    Base.metadata.drop_all(engine)

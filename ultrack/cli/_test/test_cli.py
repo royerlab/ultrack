@@ -55,10 +55,10 @@ class TestCommandLine:
             ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
         )
 
-    def test_tracking(self, instance_config_path: str) -> None:
+    def test_solve(self, instance_config_path: str) -> None:
         with pytest.warns(UserWarning):
             # batch index with overwrite should trigger warning
-            _run_command(["track", "-cfg", instance_config_path, "-ow", "-b", "0"])
+            _run_command(["solve", "-cfg", instance_config_path, "-ow", "-b", "0"])
 
     def test_summary(self, instance_config_path: str, tmp_path: Path) -> None:
         _run_command(["data_summary", "-cfg", instance_config_path, "-o", tmp_path])
@@ -72,6 +72,8 @@ class TestCommandLine:
                 instance_config_path,
                 "-s",
                 "1,1,1",
+                "-ma",
+                "5",
                 "-o",
                 str(tmp_path / "01_RES"),
             ]
@@ -91,7 +93,7 @@ class TestCommandLine:
             ]
         )
 
-    @pytest.mark.parametrize("mode", ["all", "links", "solutions"])
+    @pytest.mark.parametrize("mode", ["solutions", "links", "all"])
     def test_clear_database(self, instance_config_path: str, mode: str) -> None:
         _run_command(
             [

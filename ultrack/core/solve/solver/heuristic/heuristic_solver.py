@@ -8,8 +8,8 @@ from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
 from ultrack.core.database import NO_PARENT
-from ultrack.core.tracking.solver.base_solver import BaseSolver
-from ultrack.core.tracking.solver.heuristic._numba_heuristic_solver import (
+from ultrack.core.solve.solver.base_solver import BaseSolver
+from ultrack.core.solve.solver.heuristic._numba_heuristic_solver import (
     NumbaHeuristicSolver,
 )
 

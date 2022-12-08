@@ -23,6 +23,14 @@ from ultrack.core.export.utils import maybe_overwrite_path
 @config_option()
 @overwrite_option()
 @click.option(
+    "--margin",
+    "-ma",
+    default=0,
+    type=int,
+    show_default=True,
+    help="Ignored margin on xy-plane.",
+)
+@click.option(
     "--scale",
     "-s",
     default=None,
@@ -49,6 +57,7 @@ from ultrack.core.export.utils import maybe_overwrite_path
 def ctc_cli(
     output_directory: Path,
     config: MainConfig,
+    margin: int,
     scale: Optional[Tuple[float]],
     first_frame_path: Optional[Path],
     stitch_tracks: bool,
@@ -64,6 +73,7 @@ def ctc_cli(
     to_ctc(
         output_directory,
         config.data_config,
+        margin,
         scale,
         first_frame,
         stitch_tracks,

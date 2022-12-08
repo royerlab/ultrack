@@ -4,7 +4,7 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from ultrack.core.database import LinkDB
-from ultrack.core.tracking.sqltracking import SQLTracking
+from ultrack.core.solve.sqltracking import SQLTracking
 
 LOG = logging.getLogger(__name__)
 

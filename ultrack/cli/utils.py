@@ -134,7 +134,7 @@ def napari_reader_option() -> Callable:
         return click.option(
             "--reader-plugin",
             "-r",
-            default="builtins",
+            default="napari",
             type=str,
             show_default=True,
             help="Napari reader plugin.",
