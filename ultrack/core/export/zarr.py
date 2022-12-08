@@ -27,7 +27,7 @@ def tracks_to_zarr(
     tracks_df : pd.DataFrame
         Tracks dataframe, must have `track_id` column and be indexed by node id.
     store : Optional[Store], optional
-        Zarr storage, if not provided zarr.MemoryStore is used.
+        Zarr storage, if not provided zarr.TempStore is used.
     chunks : Optional[Tuple[int]], optional
         Chunk size, if not provided it chunks time with 1 and the spatial dimensions as big as possible.
 
@@ -40,7 +40,13 @@ def tracks_to_zarr(
     shape = data_config.metadata["shape"]
 
     if store is None:
-        store = zarr.MemoryStore()
+        store = zarr.TempStore()
+
+    elif isinstance(store, zarr.MemoryStore) and data_config.n_workers > 1:
+        raise ValueError(
+            "zarr.MemoryStore and multiple workers are not allowed. "
+            f"Found {data_config.n_workers} workers in `data_config`."
+        )
 
     if chunks is None:
         chunks = large_chunk_size(shape, dtype=np.int32)
