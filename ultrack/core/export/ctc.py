@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 from scipy.ndimage import zoom
 from scipy.spatial import KDTree
 from skimage.measure import regionprops
+from skimage.segmentation import relabel_sequential
 from sqlalchemy.orm import Session
 from tifffile import imwrite
 from toolz import curry
@@ -338,6 +339,10 @@ def to_ctc(
             df,
             stitch_tracks=stitch_tracks,
         )
+
+    df["track_id"], fw, _ = relabel_sequential(df["track_id"].values)
+    fw[NO_PARENT] = NO_PARENT
+    df["parent_track_id"] = fw[df["parent_track_id"].values]
 
     # convert to CTC format and write output
     tracks_df = ctc_compress_forest(df)
