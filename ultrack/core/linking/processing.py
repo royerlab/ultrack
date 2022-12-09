@@ -47,6 +47,7 @@ def _process(
     config: LinkingConfig,
     db_path: str,
     images: Sequence[ArrayLike],
+    scale: Optional[Sequence[float]],
     write_lock: Optional[fasteners.InterProcessLock] = None,
 ) -> None:
     """Link nodes from current time to time + 1.
@@ -61,6 +62,8 @@ def _process(
         Database path.
     images : Sequence[ArrayLike]
         Sequence of images for DCT correlation edge weight, if empty, IoU is used for weighting.
+    scale : Sequence[float]
+        Optional scaling for nodes' distances.
     write_lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
@@ -73,6 +76,12 @@ def _process(
 
     current_pos = np.asarray([n.centroid for n in current_nodes])
     next_pos = np.asarray([n.centroid for n in next_nodes])
+
+    if scale is not None:
+        n_dim = min(current_pos.shape[1], len(scale))
+        scale = scale[-n_dim:]
+        current_pos = current_pos[..., -n_dim:] * scale
+        next_pos = next_pos[..., -n_dim:] * scale
 
     # finds neighbors nodes within the radius
     # and connect the pairs with highest edge weight
@@ -132,6 +141,7 @@ def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
     images: Sequence[ArrayLike] = tuple(),
+    scale: Optional[Sequence[float]] = None,
     batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
@@ -145,6 +155,8 @@ def link(
         Data configuration parameters.
     images : Sequence[ArrayLike]
         Optinal sequence of images for DCT correlation edge weight.
+    scale : Sequence[float]
+        Optional scaling for nodes' distances.
     batch_index : Optional[int], optional
         Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
@@ -165,6 +177,7 @@ def link(
             db_path=data_config.database_path,
             write_lock=lock,
             images=images,
+            scale=scale,
         )
         multiprocessing_apply(
             process, time_points, linking_config.n_workers, desc="Linking nodes."

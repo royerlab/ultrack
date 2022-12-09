@@ -52,6 +52,13 @@ def segmentation_cli(
     detection = viewer.layers[detection_layer].data
     edge = viewer.layers[edge_layer].data
 
+    if batch_index is None or batch_index == 0:
+        # this is not saved inside the `segment` function because this info
+        # isn't available there
+        config.data_config.metadata_add(
+            {"scale": viewer.layers[edge_layer].scale.tolist()}
+        )
+
     segment(
         detection,
         edge,

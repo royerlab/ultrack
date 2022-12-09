@@ -25,7 +25,7 @@ def test_multiprocess_link(
 ) -> None:
     config = segmentation_database_mock_data
 
-    link(config.linking_config, config.data_config)
+    link(config.linking_config, config.data_config, scale=(2, 1, 1))
 
     edges = pd.read_sql_table(
         LinkDB.__tablename__, con=config.data_config.database_path
