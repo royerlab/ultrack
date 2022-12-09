@@ -20,6 +20,8 @@ class BaseConfigWidget(Container):
         self._setup_widgets()
         self.config = config
 
+        self.native.layout().addStretch(0)
+
     @abstractmethod
     def _setup_widgets(self) -> None:
         pass
