@@ -10,9 +10,11 @@ import sqlalchemy as sqla
 from numba import njit, typed, types
 from sqlalchemy.orm import Session
 from toolz import curry
+from tqdm import tqdm
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.core.segmentation.node import Node
 from ultrack.utils.multiprocessing import multiprocessing_apply
 
 LOG = logging.getLogger(__name__)
@@ -345,3 +347,41 @@ def maybe_overwrite_path(path: Path, overwrite: bool) -> None:
             raise ValueError(
                 f"{path} already exists. Set `--overwrite` option to overwrite it."
             )
+
+
+def filter_nodes_generic(
+    data_config: DataConfig,
+    df: pd.DataFrame,
+    condition: Callable[[Node], bool],
+) -> pd.DataFrame:
+    """Filter out nodes where `condition` is true.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    df : pd.DataFrame
+        Tracks dataframe.
+    condition : Callable[[Node], bool]
+        Condition used to evaluate each node.
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered tracks dataframe.
+    """
+    removed_ids = set()
+
+    engine = sqla.create_engine(data_config.database_path)
+    with Session(engine) as session:
+        for node_id in tqdm(df.index, "Filtering nodes"):
+            (node,) = session.query(NodeDB.pickle).where(NodeDB.id == node_id).first()
+            if condition(node):
+                removed_ids.add(node_id)
+
+    LOG.info(f"Removing nodes {removed_ids}")
+
+    df = df.drop(removed_ids)
+    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
+
+    return df
