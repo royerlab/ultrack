@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -20,11 +20,12 @@ from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
     export_segmentation_generic,
+    filter_nodes_generic,
     maybe_overwrite_path,
     solution_dataframe_from_sql,
     tracks_forest,
 )
-from ultrack.core.segmentation.node import intersects
+from ultrack.core.segmentation.node import Node, intersects
 from ultrack.utils.estimation import estimate_drift
 
 logging.basicConfig()
@@ -318,8 +319,26 @@ def to_ctc(
     if len(df) == 0:
         raise ValueError("Solution is empty.")
 
+    condition = None
+    if scale is not None:
+        condition = rescale_size_condition(scale)
+
     if margin > 0:
-        df = filter_nodes_in_margin(data_config, df, margin)
+        if condition is None:
+            condition = margin_filter_condition(data_config, margin)
+        else:
+            # mergin two conditions into one to avoid looping querying the db twice
+            first_cond = condition
+            second_cond = margin_filter_condition(data_config, margin)
+
+            def condition(node: Node) -> bool:
+                return first_cond(node) or second_cond(node)
+
+    if condition is not None:
+        df = filter_nodes_generic(data_config, df, condition)
+
+    if len(df) == 0:
+        raise ValueError("Solution is empty after filtering.")
 
     df = add_track_ids_to_forest(df)
 
@@ -357,28 +376,24 @@ def to_ctc(
     )
 
 
-def filter_nodes_in_margin(
+def margin_filter_condition(
     data_config: DataConfig,
-    df: pd.DataFrame,
     margin: int,
-) -> pd.DataFrame:
-    """Filter out nodes inside the margin.
+) -> Callable[[Node], bool]:
+    """Condition to check if nodes are completely inside margin.
 
     Parameters
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    df : pd.DataFrame
-        Tracks dataframe.
     margin : int
-        Margin used for filtering.
+        yx-axis margin.
 
     Returns
     -------
-    pd.DataFrame
-        Tracks dataframe without nodes inside margin.
+    Callable[[Node], bool]
+        Condition checking if node is completely inside the margins.
     """
-
     # ignoring time
     upper_lim = np.asarray(data_config.metadata["shape"][1:])
     upper_lim[-2:] -= margin  # only for y, x coordinates
@@ -390,18 +405,31 @@ def filter_nodes_in_margin(
 
     LOG.info(f"Using limits {limits} from {margin}")
 
-    removed_ids = set()
+    def condition(node: Node) -> bool:
+        return not intersects(node.bbox, limits)
 
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        for node_id in tqdm(df.index, "Filtering nodes in margin"):
-            (node,) = session.query(NodeDB.pickle).where(NodeDB.id == node_id).first()
-            if not intersects(node.bbox, limits):
-                removed_ids.add(node_id)
+    return condition
 
-    LOG.info(f"Nodes removed due to margin {removed_ids}")
 
-    df = df.drop(removed_ids)
-    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
+def rescale_size_condition(
+    scale: ArrayLike,
+) -> Callable[[Node], bool]:
+    """Condition to check if a node will disappear after scaling.
 
-    return df
+    Parameters
+    ----------
+    scale : ArrayLike
+        Scaling factors.
+
+    Returns
+    -------
+    Callable[[Node], bool]
+        Condition to check if node is valid after scaling.
+    """
+    scale = np.asarray(scale)
+
+    def condition(node: Node) -> bool:
+        ndim = node.mask.ndim
+        return np.any(node.mask.shape * scale[-ndim:] < 1.0)
+
+    return condition
