@@ -27,6 +27,7 @@ blosc2 = "^0.4.1"
 imageio = "<2.22"
 PyQt5 = "^5.15.7"
 psycopg2-binary = "^2.9.5"
+cloudpickle = "^2.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
