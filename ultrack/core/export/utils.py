@@ -386,7 +386,6 @@ def _filter_nodes_by_per_time_point(
     LOG.info(f"Removing nodes {removed_ids} at time {time}")
 
     df = df.drop(removed_ids)
-    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
 
     return df
 
@@ -426,5 +425,8 @@ def filter_nodes_generic(
             desc="Filtering nodes",
         )
     )
+
+    orphan = np.logical_not(df["parent_id"].isin(df.index))
+    df.loc[orphan, "parent_id"] = NO_PARENT
 
     return df
