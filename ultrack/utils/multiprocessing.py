@@ -4,11 +4,23 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence
 
+import cloudpickle
 import fasteners
 from tqdm import tqdm
 
 from ultrack.config.config import DataConfig
 from ultrack.config.dataconfig import DatabaseChoices
+
+"""
+Configures multiprocessing to use multiprocessing for pickling.
+This allows function to be pickled.
+Reference: https://stackoverflow.com/a/69253561/6748803
+"""
+cloudpickle.Pickler.dumps, cloudpickle.Pickler.loads = (
+    cloudpickle.dumps,
+    cloudpickle.loads,
+)
+mp.connection._ForkingPickler = cloudpickle.Pickler
 
 
 def multiprocessing_apply(

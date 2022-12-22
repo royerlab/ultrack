@@ -17,12 +17,28 @@ def _run_command(command_and_args: List[str]) -> None:
 
 
 @pytest.mark.usefixtures("zarr_dataset_paths")
+@pytest.mark.parametrize(
+    "instance_config_path",
+    [
+        {},  # defaults
+        {
+            "segmentation.n_workers": 2,
+            "linking.n_workers": 2,
+            "data.n_workers": 2,
+        },
+    ],
+    indirect=True,
+)
 class TestCommandLine:
     @pytest.fixture(scope="class")
-    def instance_config_path(self) -> str:
+    def instance_config_path(self, request) -> str:
         """Created this fixture so configuration are shared between methods."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            content = make_config_content({"data.working_dir": tmpdir})
+            kwargs = {"data.working_dir": tmpdir}
+            if hasattr(request, "param"):
+                kwargs.update(request.param)
+
+            content = make_config_content(kwargs)
             config_path = f"{tmpdir}/config.toml"
             with open(config_path, mode="w") as f:
                 toml.dump(content, f)
@@ -71,7 +87,7 @@ class TestCommandLine:
                 "-cfg",
                 instance_config_path,
                 "-s",
-                "1,1,1",
+                "0.5,1,1",
                 "-ma",
                 "5",
                 "-o",
