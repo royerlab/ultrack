@@ -2,7 +2,7 @@ import multiprocessing as mp
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence
 
 import fasteners
 from tqdm import tqdm
@@ -16,7 +16,7 @@ def multiprocessing_apply(
     sequence: Sequence[Any],
     n_workers: int,
     desc: Optional[str] = None,
-) -> None:
+) -> List[Any]:
     """Applies `func` for each item in `sequence`.
 
     Parameters
@@ -29,15 +29,19 @@ def multiprocessing_apply(
         Number of workers for multiprocessing.
     desc : Optional[str], optional
         Description to tqdm progress bar, by default None
+
+    Returns
+    -------
+    List[int]
+        List of `func` outputs.
     """
     length = len(sequence)
     if n_workers > 1 and length > 1:
         ctx = mp.get_context("spawn")
         with ctx.Pool(min(n_workers, length)) as pool:
-            list(tqdm(pool.imap(func, sequence), desc=desc, total=length))
+            return list(tqdm(pool.imap(func, sequence), desc=desc, total=length))
     else:
-        for t in tqdm(sequence, desc=desc):
-            func(t)
+        return [func(t) for t in tqdm(sequence, desc=desc)]
 
 
 @contextmanager
