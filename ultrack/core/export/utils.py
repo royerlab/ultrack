@@ -10,7 +10,6 @@ import sqlalchemy as sqla
 from numba import njit, typed, types
 from sqlalchemy.orm import Session
 from toolz import curry
-from tqdm import tqdm
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
@@ -349,6 +348,49 @@ def maybe_overwrite_path(path: Path, overwrite: bool) -> None:
             )
 
 
+@curry
+def _filter_nodes_by_per_time_point(
+    time: int,
+    df: pd.DataFrame,
+    database_path: str,
+    condition: Callable[[Node], bool],
+) -> pd.DataFrame:
+    """Auxiliary function to filter nodes per time point.
+
+    Parameters
+    ----------
+    time : int
+        Time index.
+    df : pd.DataFrame
+        Tracks dataframe.
+    database_path : str
+        Nodes database path.
+    condition : Callable[[Node], bool]
+        Condition used to evaluate each node.
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered dataframe of the given time point.
+    """
+    df = df[df["t"] == time]
+    removed_ids = set()
+
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        nodes = session.query(NodeDB.pickle).where(NodeDB.id.in_(df.index))
+        for (node,) in nodes:
+            if condition(node):
+                removed_ids.add(node.id)
+
+    LOG.info(f"Removing nodes {removed_ids} at time {time}")
+
+    df = df.drop(removed_ids)
+    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
+
+    return df
+
+
 def filter_nodes_generic(
     data_config: DataConfig,
     df: pd.DataFrame,
@@ -370,18 +412,19 @@ def filter_nodes_generic(
     pd.DataFrame
         Filtered tracks dataframe.
     """
-    removed_ids = set()
+    shape = data_config.metadata["shape"]
 
-    engine = sqla.create_engine(data_config.database_path)
-    with Session(engine) as session:
-        for node_id in tqdm(df.index, "Filtering nodes"):
-            (node,) = session.query(NodeDB.pickle).where(NodeDB.id == node_id).first()
-            if condition(node):
-                removed_ids.add(node_id)
-
-    LOG.info(f"Removing nodes {removed_ids}")
-
-    df = df.drop(removed_ids)
-    df.loc[df["parent_id"].isin(removed_ids), "parent_id"] = NO_PARENT
+    df = pd.concat(
+        multiprocessing_apply(
+            _filter_nodes_by_per_time_point(
+                database_path=data_config.database_path,
+                df=df,
+                condition=condition,
+            ),
+            sequence=range(shape[0]),
+            n_workers=data_config.n_workers,
+            desc="Filtering nodes",
+        )
+    )
 
     return df
