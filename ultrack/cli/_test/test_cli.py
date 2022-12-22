@@ -113,7 +113,7 @@ def test_estimate_params(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
     _run_command(["estimate_params", zarr_dataset_paths[2], "-o", str(tmp_path)])
 
 
-def test_labesl_to_edges(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
+def test_labels_to_edges(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
     _run_command(
         ["labels_to_edges", zarr_dataset_paths[2], "-o", str(tmp_path / "output")]
     )

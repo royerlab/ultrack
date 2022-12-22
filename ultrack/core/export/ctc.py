@@ -320,7 +320,7 @@ def to_ctc(
         raise ValueError("Solution is empty.")
 
     condition = None
-    if scale is not None:
+    if scale is not None and not np.all(np.isclose(scale, 1.0)):
         condition = rescale_size_condition(scale)
 
     if margin > 0:
