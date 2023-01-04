@@ -7,7 +7,9 @@ import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
 from scipy.ndimage import zoom
+from scipy.optimize import linear_sum_assignment
 from scipy.spatial import KDTree
+from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
 from skimage.segmentation import relabel_sequential
 from sqlalchemy.orm import Session
@@ -211,19 +213,20 @@ def select_tracks_from_first_frame(
         query = session.query(NodeDB.pickle).where(NodeDB.t == 0, NodeDB.selected)
         starting_nodes = [n for n, in query]
 
-    selected_track_ids = set()
-    centroids = np.asarray([n.centroid for n in starting_nodes])
+    root_centroids = np.asarray([n.centroid for n in starting_nodes])
+    marker_centroids = np.asarray(
+        [n.centroid for n in regionprops(first_frame, cache=False)]
+    )
+    D = cdist(marker_centroids, root_centroids)
 
+    _, root_ids = linear_sum_assignment(D)
+
+    selected_track_ids = set()
     graph = tracks_forest(df)
 
-    for det in tqdm(regionprops(first_frame), "Selecting tracks from first trame"):
-        # select nearest node that contains the reference detection.
-        dist = np.square(centroids - det.centroid).sum(axis=1)
-        node = starting_nodes[np.argmin(dist)]
-        if node.contains(det.centroid):
-            # add the whole tree to the selection
-            track_id = df.loc[node.id, "track_id"]
-            selected_track_ids.update(connected_component(graph, track_id))
+    for root in tqdm(root_ids, "Selecting tracks from first trame"):
+        track_id = df.loc[starting_nodes[root].id, "track_id"]
+        selected_track_ids.update(connected_component(graph, track_id))
 
     if stitch_tracks:
         selected_df = stitch_tracks_df(graph, df, selected_track_ids)
