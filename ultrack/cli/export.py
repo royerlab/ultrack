@@ -48,6 +48,14 @@ from ultrack.core.export.utils import maybe_overwrite_path
     help="Optional first frame path used to select a subset of lineages connected to this reference annotations.",
 )
 @click.option(
+    "--dilation-iters",
+    "-di",
+    default=0,
+    type=int,
+    show_default=True,
+    help="Iterations of radius 1 morphological dilations on labels, applied after scaling.",
+)
+@click.option(
     "--stitch-tracks",
     default=False,
     is_flag=True,
@@ -60,6 +68,7 @@ def ctc_cli(
     margin: int,
     scale: Optional[Tuple[float]],
     first_frame_path: Optional[Path],
+    dilation_iters: int,
     stitch_tracks: bool,
     overwrite: bool,
 ) -> None:
@@ -73,11 +82,12 @@ def ctc_cli(
     to_ctc(
         output_directory,
         config.data_config,
-        margin,
-        scale,
-        first_frame,
-        stitch_tracks,
-        overwrite,
+        margin=margin,
+        scale=scale,
+        first_frame=first_frame,
+        dilation_iters=dilation_iters,
+        stitch_tracks=stitch_tracks,
+        overwrite=overwrite,
     )
 
 
