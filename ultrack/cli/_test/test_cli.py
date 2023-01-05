@@ -90,6 +90,8 @@ class TestCommandLine:
                 "0.5,1,1",
                 "-ma",
                 "5",
+                "-di",
+                "1",
                 "-o",
                 str(tmp_path / "01_RES"),
             ]
