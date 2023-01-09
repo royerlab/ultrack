@@ -282,6 +282,9 @@ def _write_tiff_buffer(
         dilated = grey_dilation(buffer, footprint=footprint)
         np.putmask(buffer, buffer == 0, dilated)
 
+    # reducing mask sizes
+    buffer = buffer.astype(np.min_scalar_type(buffer.max()))
+
     imwrite(output_dir / f"mask{t:03}.tif", buffer)
 
 
