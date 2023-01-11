@@ -283,7 +283,9 @@ def _write_tiff_buffer(
         np.putmask(buffer, buffer == 0, dilated)
 
     # reducing mask sizes
-    buffer = buffer.astype(np.min_scalar_type(buffer.max()))
+    buffer = buffer.astype(
+        np.promote_types(np.min_scalar_type(buffer.max()), np.uint16)
+    )
 
     imwrite(output_dir / f"mask{t:03}.tif", buffer)
 
