@@ -7,6 +7,7 @@ from napari.viewer import ViewerModel
 from ultrack import link
 from ultrack.cli.utils import (
     batch_index_option,
+    channel_axis_option,
     config_option,
     napari_reader_option,
     overwrite_option,
@@ -19,13 +20,8 @@ from ultrack.config import MainConfig
 @paths_argument()
 @napari_reader_option()
 @config_option()
-@click.option(
-    "--channel-axis",
-    "-cha",
-    required=False,
+@channel_axis_option(
     default=None,
-    type=int,
-    show_default=True,
     help="Channel axis, only used when input `paths` are provided",
 )
 @batch_index_option()

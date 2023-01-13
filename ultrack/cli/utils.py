@@ -155,3 +155,18 @@ def layer_key_option() -> Callable:
         )(f)
 
     return decorator
+
+
+def channel_axis_option(default: Optional[int], help: str) -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--channel-axis",
+            "-cha",
+            required=False,
+            type=int,
+            default=default,
+            show_default=True,
+            help=help,
+        )(f)
+
+    return decorator
