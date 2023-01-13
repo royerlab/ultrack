@@ -55,7 +55,7 @@ class NodeDB(Base):
     y_shift = Column(Float, default=0.0)
     x_shift = Column(Float, default=0.0)
     area = Column(Integer)
-    selected = Column(Boolean)
+    selected = Column(Boolean, default=False)
     pickle = Column(PickleType)
     annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
     division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)

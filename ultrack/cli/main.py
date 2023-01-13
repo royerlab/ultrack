@@ -8,6 +8,7 @@ from ultrack.cli.export import export_cli
 from ultrack.cli.labels_to_edges import labels_to_edges_cli
 from ultrack.cli.link import link_cli
 from ultrack.cli.segment import segmentation_cli
+from ultrack.cli.shift import add_shift_cli
 from ultrack.cli.solve import solve_cli
 
 
@@ -16,6 +17,7 @@ def main():
     pass
 
 
+main.add_command(add_shift_cli)
 main.add_command(clear_database_cli)
 main.add_command(config_cli)
 main.add_command(data_summary_cli)
