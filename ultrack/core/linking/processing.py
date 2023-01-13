@@ -69,19 +69,32 @@ def _process(
     """
     engine = sqla.create_engine(db_path)
     with Session(engine) as session:
-        query = session.query(NodeDB.pickle)
+        current_nodes = [
+            n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
+        ]
 
-        current_nodes = [n for n, in query.where(NodeDB.t == time)]
-        next_nodes = [n for n, in query.where(NodeDB.t == time + 1)]
+        query = session.query(
+            NodeDB.pickle,
+            NodeDB.z_shift,
+            NodeDB.y_shift,
+            NodeDB.x_shift,
+        ).where(NodeDB.t == time + 1)
+
+        next_nodes = [row[0] for row in query]
+        next_shift = np.asarray([row[1:] for row in query])
 
     current_pos = np.asarray([n.centroid for n in current_nodes])
-    next_pos = np.asarray([n.centroid for n in next_nodes])
+    next_pos = np.asarray([n.centroid for n in next_nodes], dtype=np.float32)
+
+    n_dim = next_pos.shape[1]
+    next_shift = next_shift[:, -n_dim:]  # matching positions dimensions
+    next_pos += next_shift
 
     if scale is not None:
-        n_dim = min(current_pos.shape[1], len(scale))
-        scale = scale[-n_dim:]
-        current_pos = current_pos[..., -n_dim:] * scale
-        next_pos = next_pos[..., -n_dim:] * scale
+        min_n_dim = min(n_dim, len(scale))
+        scale = scale[-min_n_dim:]
+        current_pos = current_pos[..., -min_n_dim:] * scale
+        next_pos = next_pos[..., -min_n_dim:] * scale
 
     # finds neighbors nodes within the radius
     # and connect the pairs with highest edge weight
@@ -103,6 +116,12 @@ def _process(
     else:
         LOG.info("IoU edge weight")
         weight_func = Node.IoU
+
+    int_next_shift = np.round(next_shift).astype(int)
+    # moving bbox with shift, MUST be after `_compute_dct`
+    for node, shift in zip(next_nodes, int_next_shift):
+        node.bbox[:n_dim] += shift
+        node.bbox[-n_dim:] += shift
 
     distance_w = config.distance_weight
     links = []
