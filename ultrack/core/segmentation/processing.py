@@ -127,10 +127,14 @@ def _process(
                     "z": z,
                     "y": y,
                     "x": x,
-                    "selected": False,
                     "area": node.area,
-                    "parent_id": NO_PARENT,
                     "pickle": pickle.dumps(node),
+                    # DEFAULT
+                    "z_shift": 0.0,
+                    "y_shift": 0.0,
+                    "x_shift": 0.0,
+                    "selected": False,
+                    "parent_id": NO_PARENT,
                     "annotation": NodeAnnotation.UNKNOWN.name,
                     "division": DivisionAnnotation.UNKNOWN.name,
                 }
