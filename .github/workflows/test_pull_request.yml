@@ -14,21 +14,21 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python: ["3.8", "3.9", "3.10"]
-        backend: [pyqt5, pyside2]
+        python: ["3.9", "3.10"]
+        backend: pyqt5
         include:
-          - python: 3.8
+          - python: 3.9
             platform: windows-latest
             backend: pyqt5
-          - python: 3.8
-            platform: windows-latest
-            backend: pyside2
           - python: 3.9
             platform: macos-latest
             backend: pyqt5
           - python: 3.9
             platform: ubuntu-latest
             backend: pyqt6
+          - python: 3.9
+            platform: ubuntu-latest
+            backend: pyside2
           - python: 3.9
             platform: ubuntu-latest
             backend: pyside6
