@@ -71,11 +71,11 @@ def _process(
     time : int
         Current time.
     detection : ArrayLike
-        Detection array of current `time`.
+        Detection array.
     edge : ArrayLike
-        Edge array of current `time`.
-    config : InitConfig
-        Initialization configuration parameters.
+        Edge array.
+    config : SegmentationConfig
+        Segmentation configuration parameters.
     db_path : str
         Path to database including type prefix.
     max_segments_per_time : int
@@ -83,11 +83,15 @@ def _process(
     lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
-    np.random.seed(42)  # necessary because of watershed tie-zones
+    np.random.seed(time)
+
+    edge_map = edge[time]
+    if config.max_noise > 0:
+        edge_map += np.random.uniform(0, config.max_noise, size=edge_map.shape)
 
     hiers = create_hierarchies(
         detection[time] > config.threshold,
-        edge[time],
+        edge_map,
         hierarchy_fun=config.ws_hierarchy,
         max_area=config.max_area,
         min_area=config.min_area,
