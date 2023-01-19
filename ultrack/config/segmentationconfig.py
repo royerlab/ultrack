@@ -16,6 +16,7 @@ class SegmentationConfig(BaseModel):
     max_area: int = 1_000_000
     min_frontier: float = 0.0
     anisotropy_penalization: float = 0.0
+    max_noise: float = 0.0
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
     n_workers: int = 1
 
