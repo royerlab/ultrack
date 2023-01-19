@@ -14,10 +14,22 @@ from ultrack.core.database import NodeDB, OverlapDB
 @pytest.mark.parametrize(
     "config_content,timelapse_mock_data",
     [
-        ({"segmentation.n_workers": 1}, {"length": 4, "size": 128, "n_dim": 2}),
-        ({"segmentation.n_workers": 4}, {"length": 4, "size": 128, "n_dim": 2}),
-        ({"segmentation.n_workers": 1}, {"length": 4, "size": 64, "n_dim": 3}),
-        ({"segmentation.n_workers": 4}, {"length": 4, "size": 64, "n_dim": 3}),
+        (
+            {"segmentation.n_workers": 1, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 128, "n_dim": 2},
+        ),
+        (
+            {"segmentation.n_workers": 4, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 128, "n_dim": 2},
+        ),
+        (
+            {"segmentation.n_workers": 1, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 64, "n_dim": 3},
+        ),
+        (
+            {"segmentation.n_workers": 4, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 64, "n_dim": 3},
+        ),
     ],
     indirect=True,
 )

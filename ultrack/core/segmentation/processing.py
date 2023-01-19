@@ -87,7 +87,10 @@ def _process(
 
     edge_map = edge[time]
     if config.max_noise > 0:
-        edge_map += np.random.uniform(0, config.max_noise, size=edge_map.shape)
+        noise = np.random.uniform(0, config.max_noise, size=edge_map.shape)
+        # promoting edge_map to smallest float
+        noise = noise.astype(np.result_type(edge_map.dtype, np.float16))
+        edge_map = edge_map + noise
 
     hiers = create_hierarchies(
         detection[time] > config.threshold,
