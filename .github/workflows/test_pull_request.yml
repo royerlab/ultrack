@@ -15,7 +15,7 @@ jobs:
       matrix:
         platform: [ubuntu-latest]
         python: ["3.9", "3.10"]
-        backend: pyqt5
+        backend: [pyqt5]
         include:
           - python: 3.9
             platform: windows-latest
