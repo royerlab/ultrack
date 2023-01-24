@@ -6,7 +6,7 @@ authors = ["Jordao Bragantini <jordao.bragantini@czbiohub.org>"]
 include = ["ultrack/napari.yaml"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 click = "^8.1.3"
 rich = "^12.5.1"
 magicgui = "^0.5.1"
