@@ -97,10 +97,18 @@ def ctc_cli(
 )
 @config_option()
 @overwrite_option()
+@click.option(
+    "--include-parents",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="Include parents track id in output tracks dataframe. Required for reconstructing divisions.",
+)
 def zarr_napari_cli(
     output_directory: Path,
     config: MainConfig,
     overwrite: bool,
+    include_parents: bool,
 ) -> None:
     """
     Exports segments to zarr and tracks to napari tabular format
@@ -114,7 +122,7 @@ def zarr_napari_cli(
 
     output_directory.mkdir(exist_ok=True)
 
-    tracks, _ = to_tracks_layer(config.data_config)
+    tracks, _ = to_tracks_layer(config.data_config, include_parents=include_parents)
     tracks.to_csv(tracks_path, index=False)
 
     store = zarr.NestedDirectoryStore(segm_path)

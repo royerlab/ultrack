@@ -7,6 +7,7 @@ from magicgui.widgets import Container, PushButton, create_widget
 from napari.layers import Tracks
 
 from ultrack.utils.tracks import sort_trees_by_length
+from ultrack.widgets.utils import wait_cursor
 
 LOG = logging.getLogger(__name__)
 
@@ -63,7 +64,9 @@ class TrackInspectionWidget(Container):
         if layer is None:
             return
 
-        self._sorted_tracks = sort_trees_by_length(layer.data, layer.graph)
+        with wait_cursor():
+            self._sorted_tracks = sort_trees_by_length(layer.data, layer.graph)
+
         self._current_track_layer = self._viewer.add_tracks(
             np.zeros((2, 4), dtype=float),
             scale=layer.scale[-3:],
