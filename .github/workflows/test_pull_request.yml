@@ -49,6 +49,8 @@ jobs:
 
       - name: Set up poetry
         uses: Gr1N/setup-poetry@v8
+
+      - uses: actions/cache@v2
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: ${{ matrix.python }}-${{ matrix.platform }}-${{ matrix.backend }}-poetry-${{ hashFiles('pyproject.toml') }}
