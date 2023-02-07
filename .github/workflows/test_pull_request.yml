@@ -29,9 +29,10 @@ jobs:
           - python: 3.9
             platform: ubuntu-latest
             backend: pyside2
-          - python: 3.9
+          - python: 3.9  # only this run execute coverage
             platform: ubuntu-latest
             backend: pyside6
+            coverage: true
 
     steps:
       - name: Cancel Previous Runs
@@ -83,4 +84,5 @@ jobs:
           TOXENV: ${{ matrix.toxenv }}
 
       - name: Coverage
+        if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v3
