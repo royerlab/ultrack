@@ -87,7 +87,7 @@ def sort_trees_by_length(
     """
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
-        df.rename(columns={"0", "track_id"}, inplace=True)
+        df.rename(columns={0: "track_id"}, inplace=True)
 
     groups = df.groupby("track_id", as_index=False)
 
