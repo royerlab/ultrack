@@ -50,9 +50,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache-dependency-path: pyproject.toml
-          cache: |
-            pip
-            poetry
+          cache: poetry
 
       - uses: tlambert03/setup-qt-libs@v1
 
