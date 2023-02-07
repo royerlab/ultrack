@@ -152,6 +152,8 @@ def add_track_ids_to_forest(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Inplace modified input dataframe with additional columns.
     """
+    assert df.shape[0] > 0
+
     df.index = df.index.astype(int)
     df["parent_id"] = df["parent_id"].astype(int)
 

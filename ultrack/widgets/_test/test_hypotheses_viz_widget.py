@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
 from ultrack.core.segmentation.node import Node
-from ultrack.widgets.hypotheses_viz_widget import HypothesesVizWidget
+from ultrack.widgets import HypothesesVizWidget
 
 
 def _is_sorted(nodes: Dict[int, Node]) -> bool:
