@@ -12,6 +12,7 @@ from ultrack.core.export.utils import (
 
 def to_tracks_layer(
     data_config: DataConfig,
+    include_parents: bool = False,
 ) -> Tuple[pd.DataFrame, Dict[int, List[int]]]:
     """Exports solution from database to napari tracks layer format.
 
@@ -19,6 +20,8 @@ def to_tracks_layer(
     ----------
     data_config : DataConfig
         Data configuration parameters.
+    include_parents : bool
+        Flag to include parents track id for each track id.
 
     Returns
     -------
@@ -38,5 +41,8 @@ def to_tracks_layer(
         raise ValueError(
             f"Expected dataset with 3 or 4 dimensions, T(Z)YX. Found {data_dim}."
         )
+
+    if include_parents:
+        columns.append("parent_track_id")
 
     return df[columns], graph
