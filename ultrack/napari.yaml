@@ -32,6 +32,10 @@ contributions:
       python_name: ultrack.widgets:DivisionAnnotationWidget
       title: Division annotation
 
+    - id: ultrack.track_inspection
+      python_name: ultrack.widgets:TrackInspectionWidget
+      title: Track inspection
+
 #   readers:
 #     - command: ultrack.get_reader
 #       accepts_directories: false
@@ -59,3 +63,6 @@ contributions:
 
     - command: ultrack.division_annotation_widget
       display_name: Division annotation
+
+    - command: ultrack.track_inspection
+      display_name: Track inspection
