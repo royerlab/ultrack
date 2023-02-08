@@ -135,7 +135,6 @@ def _process(
                     "y": y,
                     "x": x,
                     "area": node.area,
-                    "dynamics": node.dynamics,
                     "pickle": pickle.dumps(node),
                     # DEFAULT
                     "z_shift": 0.0,

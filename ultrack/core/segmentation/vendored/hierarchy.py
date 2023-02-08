@@ -4,11 +4,35 @@ from typing import Any, Callable, List, Optional, Tuple
 import higra as hg
 import numpy as np
 from numpy.typing import ArrayLike
-from skimage import measure, morphology, segmentation
+from skimage import measure, segmentation
 from skimage.measure._regionprops import RegionProperties
 
 from ultrack.core.segmentation.vendored.graph import mask_to_graph
 from ultrack.core.segmentation.vendored.node import Node
+
+
+@hg.argument_helper(hg.CptHierarchy)
+def _filter_large_nodes_from_tree(
+    tree: hg.Tree,
+    altitudes: ArrayLike,
+    size_threshold: int,
+    leaf_graph: hg.UndirectedGraph,
+    canonize_tree=True,
+) -> Tuple[hg.Tree, ArrayLike]:
+    """
+    Filter hierarchy nodes above a given size threshold
+    See `hg.filter_small_nodes_from_tree` documentation for additional information.
+    """
+
+    def non_relevant_functor(tree: hg.Tree, _) -> ArrayLike:
+        area = hg.attribute_area(tree)
+        return area > size_threshold
+
+    print(non_relevant_functor(tree, altitudes).sum())
+
+    return hg.filter_non_relevant_node_from_tree(
+        tree, altitudes, non_relevant_functor, leaf_graph, canonize_tree
+    )
 
 
 def _cached(f: Callable) -> Callable:
@@ -164,6 +188,8 @@ class Hierarchy:
                 tree, alt, graph, weights, self._min_frontier
             )
 
+        tree, alt = _filter_large_nodes_from_tree(tree, alt, self._max_area)
+
         return tree, alt
 
     @property
@@ -228,19 +254,20 @@ class Hierarchy:
         """
         tree = self.tree
         area = self.area
-        dynamics = self.dynamics
         num_leaves = tree.num_leaves()
 
         for i, node_idx in enumerate(
             tree.leaves_to_root_iterator(include_leaves=False)
         ):
             if area[num_leaves + i] > self._max_area:
+                # root is always present, even after max area filtering
+                print(num_leaves, i, node_idx, tree.num_vertices())
+                print("IS ROOT", node_idx == tree.root())
                 continue
             self._nodes[node_idx] = self.create_node(
                 node_idx,
                 self,
                 area=area[num_leaves + i].item(),
-                dynamics=dynamics[num_leaves + i].item(),
             )
 
     def _fix_empty_nodes(self) -> None:
@@ -256,7 +283,6 @@ class Hierarchy:
             root_index,
             self,
             area=self.props.area,
-            dynamics=self.dynamics[root_index],
         )
 
     @property
@@ -308,29 +334,6 @@ def oversegment_components(
             new_labels[c.slice][c.image] = offset
             offset += 1
     return new_labels
-
-
-def create_hierarchies(
-    labels: ArrayLike,
-    boundaries: ArrayLike,
-    cache: bool = False,
-    **kwargs,
-) -> List[Hierarchy]:
-    assert issubclass(labels.dtype.type, np.integer) or labels.dtype == bool
-
-    labels = measure.label(labels, connectivity=1)
-    if "min_area" in kwargs:
-        morphology.remove_small_objects(
-            labels, min_size=kwargs["min_area"], in_place=True
-        )
-
-    if "max_area" in kwargs:
-        labels = oversegment_components(labels, boundaries, kwargs["max_area"])
-
-    return [
-        Hierarchy(c, cache=cache, **kwargs)
-        for c in measure.regionprops(labels, boundaries, cache=cache)
-    ]
 
 
 def to_labels(

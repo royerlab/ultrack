@@ -29,6 +29,7 @@ class Hierarchy(_Hierarchy):
 def create_hierarchies(
     binary_detection: ArrayLike,
     edge: ArrayLike,
+    split_connected_components: bool = False,
     **kwargs,
 ) -> List[Hierarchy]:
     """Computes a collection of hierarchical watersheds inside `binary_detection` mask.
@@ -40,6 +41,9 @@ def create_hierarchies(
 
     edge : ArrayLike
         Fuzzy contour image representing instances boundaries.
+
+    split_connected_components : bool
+        Splits connected components into smaller regions if `max_area` parameter is provided in `kwargs`.
 
     Returns
     -------
@@ -59,7 +63,7 @@ def create_hierarchies(
     if "min_area" in kwargs:
         labels = morphology.remove_small_objects(labels, min_size=kwargs["min_area"])
 
-    if "max_area" in kwargs:
+    if split_connected_components and "max_area" in kwargs:
         labels = oversegment_components(labels, edge, kwargs["max_area"])
 
     return [
