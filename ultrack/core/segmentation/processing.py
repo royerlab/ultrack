@@ -123,7 +123,7 @@ def _process(
                     z=int(z),
                     y=int(y),
                     x=int(x),
-                    area=node.area,
+                    area=int(node.area),
                     pickle=node,
                 )
             )
@@ -156,11 +156,12 @@ def _process(
 
         with lock if lock is not None else nullcontext():
             LOG.info(f"Pushing nodes from hier {h} and time {time} to {db_path}")
-            engine = sqla.create_engine(db_path, hide_parameters=True, echo=True)
+            engine = sqla.create_engine(db_path, hide_parameters=True)
             with Session(engine) as session:
                 session.add_all(nodes)
                 session.add_all(overlaps)
                 session.commit()
+            engine.dispose()  # dispose close sessions (connections)
 
     LOG.info(f"DONE with time {time}.")
 
