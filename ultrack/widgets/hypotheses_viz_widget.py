@@ -157,7 +157,7 @@ class HypothesesVizWidget(GenericDataWidget):
             opacity=1.0,
         )
 
-        LOG.info("vectors:\n", vectors)
+        LOG.info(f"vectors:\n{vectors}")
 
         self._viewer.layers.selection.active = self._viewer.layers[
             self._segm_layer_name

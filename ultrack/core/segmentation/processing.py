@@ -1,25 +1,16 @@
 import logging
-import pickle
 from contextlib import nullcontext
 from typing import Optional
 
 import fasteners
 import numpy as np
-import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
+from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config import DataConfig, SegmentationConfig
-from ultrack.core.database import (
-    NO_PARENT,
-    Base,
-    DivisionAnnotation,
-    NodeAnnotation,
-    NodeDB,
-    OverlapDB,
-    clear_all_data,
-)
+from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk
 from ultrack.utils.multiprocessing import (
@@ -103,13 +94,11 @@ def _process(
 
     LOG.info(f"Computing nodes of time {time}")
 
-    nodes = []
-    overlap_source = []
-    overlap_ancestor = []
     index = 1
     for h, hierarchy in enumerate(hiers):
         hierarchy.cache = True
 
+        nodes = []
         hier_index_map = {}
         for node in hierarchy.nodes:
             node.id = generate_id(index, time, max_segments_per_time)
@@ -126,38 +115,33 @@ def _process(
                 z, y, x = centroid
 
             nodes.append(
-                {
-                    "id": node.id,
-                    "t_node_id": index,
-                    "t_hier_id": h + 1,
-                    "t": time,
-                    "z": z,
-                    "y": y,
-                    "x": x,
-                    "area": node.area,
-                    "pickle": pickle.dumps(node),
-                    # DEFAULT
-                    "z_shift": 0.0,
-                    "y_shift": 0.0,
-                    "x_shift": 0.0,
-                    "selected": False,
-                    "parent_id": NO_PARENT,
-                    "annotation": NodeAnnotation.UNKNOWN.name,
-                    "division": DivisionAnnotation.UNKNOWN.name,
-                }
+                NodeDB(
+                    id=node.id,
+                    t_node_id=index,
+                    t_hier_id=h + 1,
+                    t=time,
+                    z=int(z),
+                    y=int(y),
+                    x=int(x),
+                    area=int(node.area),
+                    pickle=node,
+                )
             )
             index += 1
 
         tree = hierarchy.tree
         # find overlapping segments by iterating through hierarchy (tree)
+        overlaps = []
         for h_index in hier_index_map.keys():
-            overlaps = [
-                hier_index_map[a]
-                for a in tree.ancestors(h_index)
-                if a in hier_index_map and a != h_index  # roots point to it self
-            ]
-            overlap_source += [hier_index_map[h_index]] * len(overlaps)
-            overlap_ancestor += overlaps
+            for a in tree.ancestors(h_index):
+                if a in hier_index_map and a != h_index:
+                    overlaps.append(
+                        OverlapDB(
+                            node_id=hier_index_map[h_index],
+                            ancestor_id=hier_index_map[a],
+                        )
+                    )
+
             LOG.info(
                 f"{len(overlaps)} overlaps found for node {hier_index_map[h_index]}."
             )
@@ -170,23 +154,16 @@ def _process(
                 f"Number of segments exceeds upper bound of {max_segments_per_time} per time."
             )
 
-    nodes = pd.DataFrame(nodes)
-    overlaps = pd.DataFrame(
-        np.asarray([overlap_source, overlap_ancestor]).T,
-        columns=["node_id", "ancestor_id"],
-    )
+        with lock if lock is not None else nullcontext():
+            LOG.info(f"Pushing nodes from hier {h} and time {time} to {db_path}")
+            engine = sqla.create_engine(db_path, hide_parameters=True)
+            with Session(engine) as session:
+                session.add_all(nodes)
+                session.add_all(overlaps)
+                session.commit()
+            engine.dispose()  # dispose close sessions (connections)
 
-    with lock if lock is not None else nullcontext():
-        LOG.info(f"Pushing nodes from time {time} to {db_path}")
-        engine = sqla.create_engine(db_path, hide_parameters=True)
-        with engine.begin() as conn:
-            nodes.to_sql(
-                name=NodeDB.__tablename__, con=conn, if_exists="append", index=False
-            )
-            overlaps.to_sql(
-                name=OverlapDB.__tablename__, con=conn, if_exists="append", index=False
-            )
-        LOG.info(f"DONE with time {time}.")
+    LOG.info(f"DONE with time {time}.")
 
 
 def segment(
