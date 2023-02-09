@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -10,29 +11,7 @@ from skimage.measure._regionprops import RegionProperties
 from ultrack.core.segmentation.vendored.graph import mask_to_graph
 from ultrack.core.segmentation.vendored.node import Node
 
-
-@hg.argument_helper(hg.CptHierarchy)
-def _filter_large_nodes_from_tree(
-    tree: hg.Tree,
-    altitudes: ArrayLike,
-    size_threshold: int,
-    leaf_graph: hg.UndirectedGraph,
-    canonize_tree=True,
-) -> Tuple[hg.Tree, ArrayLike]:
-    """
-    Filter hierarchy nodes above a given size threshold
-    See `hg.filter_small_nodes_from_tree` documentation for additional information.
-    """
-
-    def non_relevant_functor(tree: hg.Tree, _) -> ArrayLike:
-        area = hg.attribute_area(tree)
-        return area > size_threshold
-
-    print(non_relevant_functor(tree, altitudes).sum())
-
-    return hg.filter_non_relevant_node_from_tree(
-        tree, altitudes, non_relevant_functor, leaf_graph, canonize_tree
-    )
+LOG = logging.getLogger(__name__)
 
 
 def _cached(f: Callable) -> Callable:
@@ -152,6 +131,8 @@ class Hierarchy:
         threshold: float,
     ) -> Tuple[hg.Tree, ArrayLike]:
 
+        LOG.info("Filtering hierarchy by contour strength.")
+
         hg.set_attribute(graph, "no_border_vertex_out_degree", None)
         irrelevant_nodes = hg.attribute_contour_strength(tree, weights) < threshold
         hg.set_attribute(graph, "no_border_vertex_out_degree", 6)
@@ -178,17 +159,26 @@ class Hierarchy:
         if image.size < 8:
             raise RuntimeError(f"Region too small. Size of {image.size} found.")
 
+        LOG.info("Creating graph from mask.")
         mask = self.props.image
         graph, weights = mask_to_graph(mask, image, self._anisotropy_pen)
 
+        LOG.info("Constructing hierarchy.")
         tree, alt = self.hierarchy_fun(graph, weights)
+
+        LOG.info("Filtering small nodes of hierarchy.")
         tree, alt = hg.filter_small_nodes_from_tree(tree, alt, self._min_area)
+
         if self._min_frontier > 0.0:
             tree, alt = self._filter_contour_strength(
                 tree, alt, graph, weights, self._min_frontier
             )
 
-        tree, alt = _filter_large_nodes_from_tree(tree, alt, self._max_area)
+        LOG.info("Filtering large nodes of hierarchy.")
+        tree, node_map = hg.simplify_tree(
+            tree, hg.attribute_area(tree) > self._max_area
+        )
+        alt = alt[node_map]
 
         return tree, alt
 
@@ -260,9 +250,6 @@ class Hierarchy:
             tree.leaves_to_root_iterator(include_leaves=False)
         ):
             if area[num_leaves + i] > self._max_area:
-                # root is always present, even after max area filtering
-                print(num_leaves, i, node_idx, tree.num_vertices())
-                print("IS ROOT", node_idx == tree.root())
                 continue
             self._nodes[node_idx] = self.create_node(
                 node_idx,
