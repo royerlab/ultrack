@@ -100,14 +100,17 @@ def sort_trees_by_length(
 
     roots = track_ids[np.isin(track_ids, list(graph.keys()), invert=True)]
     lengths = []
+    num_tracklets = []
     subtrees = []
 
     for root in roots:
         tree_len, ids = _accumulate_length(root, length, forest)
         lengths.append(tree_len)
+        num_tracklets.append(len(ids))
         subtrees.append(ids)
 
-    sorted_trees = sorted(zip(lengths, subtrees), reverse=True)
+    sorted_trees = sorted(zip(lengths, num_tracklets, subtrees), reverse=True)
     return [
-        pd.concat([groups.get_group(i) for i in subtree]) for _, subtree in sorted_trees
+        pd.concat([groups.get_group(i) for i in subtree])
+        for _, _, subtree in sorted_trees
     ]
