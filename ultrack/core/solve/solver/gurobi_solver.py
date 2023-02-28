@@ -73,16 +73,16 @@ class GurobiSolver(BaseSolver):
         LOG.info(f"# {np.sum(is_last_t)} nodes at last `t`.")
 
         appear_weight = np.logical_not(is_first_t) * self._config.appear_weight
-        disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
+        # disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
 
         indices = indices.tolist()
         self._nodes = self._model.addVars(indices, vtype=GRB.BINARY)
         self._appearances = self._model.addVars(
             indices, vtype=GRB.BINARY, obj=appear_weight.tolist()
         )
-        self._disappearances = self._model.addVars(
-            indices, vtype=GRB.BINARY, obj=disappear_weight.tolist()
-        )
+        # self._disappearances = self._model.addVars(
+        #     indices, vtype=GRB.BINARY, obj=disappear_weight.tolist()
+        # )
         self._divisions = self._model.addVars(
             indices, vtype=GRB.BINARY, obj=self._config.division_weight
         )
@@ -121,23 +121,30 @@ class GurobiSolver(BaseSolver):
         - flow conservation (begin and end requires slack variables);
         - divisions only from existing nodes;
         """
+        self._model.update()
 
-        # single incoming node
+        self._model.addConstrs(
+            2 * v <= self._nodes[i] + self._nodes[j]
+            for (i, j), v in self._edges.items()
+        )
+
+        self._model.addConstrs(
+            self._edges.sum(i, "*") <= 2 * self._nodes[i] for i in self._nodes.keys()
+        )
+
+        self._model.addConstrs(
+            self._edges.sum(i, "*") <= 1 + self._divisions[i]
+            for i in self._nodes.keys()
+        )
+
+        self._model.addConstrs(
+            self._edges.sum(i, "*") >= 2 * self._divisions[i]
+            for i in self._nodes.keys()
+        )
+
         self._model.addConstrs(
             self._edges.sum("*", i) + self._appearances[i] == self._nodes[i]
             for i in self._nodes.keys()
-        )
-
-        # flow conservation
-        self._model.addConstrs(
-            self._nodes[i] + self._divisions[i]
-            == self._edges.sum(i, "*") + self._disappearances[i]
-            for i in self._nodes.keys()
-        )
-
-        # divisions
-        self._model.addConstrs(
-            self._nodes[i] >= self._divisions[i] for i in self._nodes.keys()
         )
 
     def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
