@@ -135,6 +135,12 @@ class GurobiSolver(BaseSolver):
             for i in self._nodes
         )
 
+        # EXTRA CONSTRAINT NOT ON THE PAPER
+        self._model.addConstrs(
+            self._edges.sum(i, "*") + self._disappearances[i] <= 1.0
+            for i in self._nodes
+        )
+
     def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
         """Add constraints such that `source` and `target` can't be present in the same solution.
 
@@ -146,7 +152,11 @@ class GurobiSolver(BaseSolver):
             Target nodes indices.
         """
         self._model.addConstrs(
-            self._edges.sum(sources[i], "*") + self._edges.sum(targets[i], "*") <= 1
+            self._edges.sum("*", sources[i])
+            + self._edges.sum("*", targets[i])
+            + self._appearances[sources[i]]
+            + self._appearances[targets[i]]
+            <= 1
             for i in range(len(sources))
         )
 
@@ -159,7 +169,7 @@ class GurobiSolver(BaseSolver):
             Nodes indices.
         """
         self._model.addConstrs(
-            self._edges.sum(i, "*") + self._appearances[i] >= 1 for i in indices
+            self._edges.sum("*", i) + self._appearances[i] >= 1 for i in indices
         )
 
     def _set_solution_guess(self) -> None:
