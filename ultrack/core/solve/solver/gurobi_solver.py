@@ -32,7 +32,7 @@ class GurobiSolver(BaseSolver):
     def reset(self) -> None:
         """Sets model to an empty state."""
         self._model = gp.Model()
-        self._nodes = {}
+        self._nodes = []
         self._edges = {}
         self._appearances = {}
         self._disappearances = {}
@@ -76,7 +76,7 @@ class GurobiSolver(BaseSolver):
         disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
 
         indices = indices.tolist()
-        self._nodes = self._model.addVars(indices, vtype=GRB.BINARY)
+        self._nodes = indices  # self._model.addVars(indices, vtype=GRB.BINARY)
         self._appearances = self._model.addVars(
             indices, vtype=GRB.BINARY, obj=appear_weight.tolist()
         )
@@ -122,22 +122,17 @@ class GurobiSolver(BaseSolver):
         - divisions only from existing nodes;
         """
 
-        # single incoming node
-        self._model.addConstrs(
-            self._edges.sum("*", i) + self._appearances[i] == self._nodes[i]
-            for i in self._nodes.keys()
-        )
-
         # flow conservation
         self._model.addConstrs(
-            self._nodes[i] + self._divisions[i]
+            self._edges.sum("*", i) + self._appearances[i] + self._divisions[i]
             == self._edges.sum(i, "*") + self._disappearances[i]
-            for i in self._nodes.keys()
+            for i in self._nodes
         )
 
         # divisions
         self._model.addConstrs(
-            self._nodes[i] >= self._divisions[i] for i in self._nodes.keys()
+            self._edges.sum("*", i) + self._appearances[i] >= self._divisions[i]
+            for i in self._nodes
         )
 
     def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
@@ -151,7 +146,7 @@ class GurobiSolver(BaseSolver):
             Target nodes indices.
         """
         self._model.addConstrs(
-            self._nodes[sources[i]] + self._nodes[targets[i]] <= 1
+            self._edges.sum(sources[i], "*") + self._edges.sum(targets[i], "*") <= 1
             for i in range(len(sources))
         )
 
@@ -163,7 +158,9 @@ class GurobiSolver(BaseSolver):
         indices : ArrayLike
             Nodes indices.
         """
-        self._model.addConstrs(self._nodes[i] >= 1 for i in indices)
+        self._model.addConstrs(
+            self._edges.sum(i, "*") + self._appearances[i] >= 1 for i in indices
+        )
 
     def _set_solution_guess(self) -> None:
         # TODO
@@ -189,7 +186,12 @@ class GurobiSolver(BaseSolver):
                 "Gurobi solver must be optimized before returning solution."
             )
 
-        nodes = [k for k, var in self._nodes.items() if var.X > 0.5]
+        nodes = set()
+        for k, var in self._edges.items():
+            if var.X > 0.5:
+                nodes.add(k[0])
+                nodes.add(k[1])
+        nodes = list(nodes)
         LOG.info(f"Solution nodes\n{nodes}")
 
         if len(nodes) == 0:

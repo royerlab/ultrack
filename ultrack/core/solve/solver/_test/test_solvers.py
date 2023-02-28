@@ -37,7 +37,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     Graph:
 
-    1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
+    1 - 0.5 - 2 - 0.7 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
               C   1.0       1.0
               |       \\  /
@@ -45,13 +45,13 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     Solution:
 
-    1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
+    1 - 0.5 - 2 - 0.7 - 3 - 0.5 - 4
                 \
                   1.0
                      \
                        6 - 0.7 - 7
 
-    Result: 0.5 + 0.5 + 1.0 + 0.7 - division_weight
+    Result: 0.5 + 0.7 + 0.5 + 1.0 + 0.7 - division_weight
     """
     solver = solver(config_instance.tracking_config)
 
@@ -63,7 +63,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     edges = np.array([[1, 2], [2, 3], [2, 6], [3, 4], [5, 6], [6, 4], [6, 7]])
 
-    weights = np.array([0.5, 0.5, 1.0, 0.5, 0.5, 1.0, 0.7])
+    weights = np.array([0.5, 0.7, 1.0, 0.5, 0.5, 1.0, 0.7])
     solver.add_edges(edges[:, 0], edges[:, 1], weights)
 
     solver.set_standard_constraints()
@@ -86,7 +86,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
     assert np.all(
         expected_solution.loc[solution.index, "parent_id"] == solution["parent_id"]
     )
-    assert np.allclose(
-        objective,
-        weights[expected_edges].sum() + config_instance.tracking_config.division_weight,
+    expected_objective = (
+        weights[expected_edges].sum() + config_instance.tracking_config.division_weight
     )
+    assert np.allclose(expected_objective, objective)
