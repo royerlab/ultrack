@@ -41,7 +41,7 @@ def _accumulate_length(
     forest: Dict[int, List[int]],
 ) -> Tuple[int, List[int]]:
     """
-    Accumulates the length of each root. For each branch the maximum length is considered.
+    Accumulates the length of each root. For each branch the average length is considered.
 
     Parameters
     ----------
@@ -58,12 +58,20 @@ def _accumulate_length(
         Current subtree length and subtree ids.
     """
     subtree = [track_id]
-    max_len = 0
-    for child in forest[track_id]:
+    length = track_length[track_id]
+    children = forest[track_id]
+
+    if not children:
+        return length, subtree
+
+    branch_length = 0
+    for child in children:
         child_length, child_subtree = _accumulate_length(child, track_length, forest)
-        max_len = max(child_length + 1, max_len)
+        branch_length += child_length
         subtree += child_subtree
-    length = track_length[track_id] + max_len
+
+    length += branch_length / len(children) + 1
+
     return length, subtree
 
 
