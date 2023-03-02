@@ -28,3 +28,7 @@ Install the package from github, you must have setup your [SSH keys](https://doc
 ```bash
 pip install git+ssh://git@github.com/royerlab/ultrack.git
 ```
+
+## Usage
+
+Here you can find a usage example: https://github.com/royerlab/ultrack/blob/main/examples/stardist_2d/2d_tracking.ipynb

@@ -76,7 +76,9 @@ class GurobiSolver(BaseSolver):
         disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
 
         indices = indices.tolist()
-        self._nodes = indices  # self._model.addVars(indices, vtype=GRB.BINARY)
+        self._nodes = np.asarray(
+            indices, dtype=np.int64
+        )  # self._model.addVars(indices, vtype=GRB.BINARY)
         self._appearances = self._model.addVars(
             indices, vtype=GRB.BINARY, obj=appear_weight.tolist()
         )
@@ -124,21 +126,14 @@ class GurobiSolver(BaseSolver):
 
         # flow conservation
         self._model.addConstrs(
-            self._edges.sum("*", i) + self._appearances[i] + self._divisions[i]
+            self._incoming_edges(i) + self._divisions[i]
             == self._edges.sum(i, "*") + self._disappearances[i]
             for i in self._nodes
         )
 
         # divisions
         self._model.addConstrs(
-            self._edges.sum("*", i) + self._appearances[i] >= self._divisions[i]
-            for i in self._nodes
-        )
-
-        # EXTRA CONSTRAINT NOT ON THE PAPER
-        self._model.addConstrs(
-            self._edges.sum(i, "*") + self._disappearances[i] <= 1.0
-            for i in self._nodes
+            self._incoming_edges(i) >= self._divisions[i] for i in self._nodes
         )
 
     def add_overlap_constraints(self, sources: ArrayLike, targets: ArrayLike) -> None:
@@ -151,14 +146,34 @@ class GurobiSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        self._model.addConstrs(
-            self._edges.sum("*", sources[i])
-            + self._edges.sum("*", targets[i])
-            + self._appearances[sources[i]]
-            + self._appearances[targets[i]]
-            <= 1
-            for i in range(len(sources))
+        df = pd.DataFrame({"sources": sources, "targets": targets})
+        leaves = df[np.logical_not(df["sources"].isin(df["targets"]))].copy()
+        for leaf, ancestors in leaves.groupby("sources"):
+            expr = self._incoming_edges(leaf) + gp.quicksum(
+                self._incoming_edges(n) for n in ancestors["targets"]
+            )
+            self._model.addConstr(expr <= 1)
+
+        inserted = np.concatenate(
+            (leaves["sources"].to_numpy(), np.unique(leaves["targets"].to_numpy()))
         )
+        lonely_nodes = self._nodes[np.logical_not(np.isin(self._nodes, inserted))]
+        self._model.addConstrs(self._incoming_edges(i) <= 1 for i in lonely_nodes)
+
+    def _incoming_edges(self, node_id: int) -> gp.LinExpr:
+        """Compute expression of incoming edges of the given node.
+
+        Parameters
+        ----------
+        node_id : int
+            Node index.
+
+        Returns
+        -------
+        gp.LinExpr
+            Expression of incoming edges
+        """
+        return self._edges.sum("*", node_id) + self._appearances[node_id]
 
     def enforce_node_to_solution(self, indices: ArrayLike) -> None:
         """Constraints given nodes' variables to 1.

@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import Optional
+from typing import List, Optional
 
 import fasteners
 import numpy as np
@@ -45,6 +45,35 @@ def generate_id(index: int, time: int, max_segments: int) -> int:
     return index + (time + 1) * max_segments
 
 
+def _insert_db(
+    db_path: str, time: int, nodes: List[NodeDB], overlaps: List[OverlapDB]
+) -> None:
+    """
+    Helper function to insert data into database.
+    IMPORTANT: This function resets `nodes` and `overlaps`.
+
+    Parameters
+    ----------
+    db_path : str
+        Database path including URI.
+    time : int
+        Current time.
+    nodes : List[NodeDB]
+        List of nodes to insert.
+    overlaps : List[OverlapDB]
+        List of overlap of nodes to insert.
+    """
+    LOG.info(f"Pushing some nodes from hier time {time} to {db_path}")
+    engine = sqla.create_engine(db_path, hide_parameters=True)
+    with Session(engine) as session:
+        session.add_all(nodes)
+        session.add_all(overlaps)
+        session.commit()
+    engine.dispose()
+    nodes.clear()
+    overlaps.clear()
+
+
 @curry
 def _process(
     time: int,
@@ -53,7 +82,7 @@ def _process(
     config: SegmentationConfig,
     db_path: str,
     max_segments_per_time: int,
-    lock: Optional[fasteners.InterProcessLock] = None,
+    write_lock: Optional[fasteners.InterProcessLock] = None,
 ) -> None:
     """Process `detection` and `edge` of current time and add data to database.
 
@@ -95,10 +124,11 @@ def _process(
     LOG.info(f"Computing nodes of time {time}")
 
     index = 1
+    nodes = []
+    overlaps = []
     for h, hierarchy in enumerate(hiers):
         hierarchy.cache = True
 
-        nodes = []
         hier_index_map = {}
         for node in hierarchy.nodes:
             node.id = generate_id(index, time, max_segments_per_time)
@@ -131,7 +161,6 @@ def _process(
 
         tree = hierarchy.tree
         # find overlapping segments by iterating through hierarchy (tree)
-        overlaps = []
         for h_index in hier_index_map.keys():
             for a in tree.ancestors(h_index):
                 if a in hier_index_map and a != h_index:
@@ -154,14 +183,18 @@ def _process(
                 f"Number of segments exceeds upper bound of {max_segments_per_time} per time."
             )
 
-        with lock if lock is not None else nullcontext():
-            LOG.info(f"Pushing nodes from hier {h} and time {time} to {db_path}")
-            engine = sqla.create_engine(db_path, hide_parameters=True)
-            with Session(engine) as session:
-                session.add_all(nodes)
-                session.add_all(overlaps)
-                session.commit()
-            engine.dispose()  # dispose close sessions (connections)
+        # if lock is None it inserts at every iteration
+        if write_lock is None:
+            _insert_db(db_path, time, nodes, overlaps)
+
+        # otherwise it inserts only when it can acquire the lock
+        elif write_lock.acquire(blocking=False):
+            _insert_db(db_path, time, nodes, overlaps)
+            write_lock.release()
+
+    # pushes any remaning data
+    with write_lock if write_lock is not None else nullcontext():
+        _insert_db(db_path, time, nodes, overlaps)
 
     LOG.info(f"DONE with time {time}.")
 
@@ -226,7 +259,7 @@ def segment(
             edge=edge,
             config=segmentation_config,
             db_path=data_config.database_path,
-            lock=lock,
+            write_lock=lock,
             max_segments_per_time=max_segments_per_time,
         )
 
