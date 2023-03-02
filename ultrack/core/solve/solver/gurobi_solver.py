@@ -150,10 +150,11 @@ class GurobiSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        self._model.addConstrs(
-            self._nodes[sources[i]] + self._nodes[targets[i]] <= 1
-            for i in range(len(sources))
-        )
+        df = pd.DataFrame({"sources": sources, "targets": targets})
+        leaves = df[np.logical_not(df["sources"].isin(df["targets"]))]
+        for leaf, ancestors in leaves.groupby("sources"):
+            expr = self._nodes[leaf] + gp.quicksum(self._nodes[n] for n in ancestors["targets"])
+            self._model.addConstr(expr <= 1)
 
     def enforce_node_to_solution(self, indices: ArrayLike) -> None:
         """Constraints given nodes' variables to 1.
