@@ -44,6 +44,6 @@ class BaseConfigWidget(Container):
 
     @curry
     def set_config(self, key: str, value: Any) -> None:
-        """Updats config attribute and logs it"""
+        """Updates config attribute and logs it"""
         LOG.info(f"Updating {type(self).__name__} {key} with value {value}")
         setattr(self._config, key, value)
