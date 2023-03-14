@@ -116,6 +116,7 @@ class TestCommandLine:
                 instance_config_path,
                 "-o",
                 str(tmp_path / "results"),
+                "--include-parents",
             ]
         )
 
