@@ -271,7 +271,7 @@ def _query_and_export_data_to_frame(
 
     engine = sqla.create_engine(database_path)
     with Session(engine) as session:
-        buffer = np.zeros(shape, dtype=np.uint16)
+        buffer = np.zeros(shape, dtype=int)
         query = list(
             session.query(NodeDB.id, NodeDB.pickle).where(
                 NodeDB.t == time, NodeDB.selected
