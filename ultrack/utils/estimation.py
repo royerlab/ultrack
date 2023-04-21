@@ -32,13 +32,10 @@ def spatial_drift(df: pd.DataFrame, lag: int = 1) -> pd.Series:
         Drift values, invalid values are 0.
     """
     df = df.sort_values("t")
-    drift = np.sqrt(
-        np.square(df[["z", "y", "x"]] - df[["z", "y", "x"]].shift(periods=lag)).sum(
-            axis=1
-        )
-    )
-    drift.values[:lag] = 0.0
-    return drift
+    delta = df[["z", "y", "x"]] - df[["z", "y", "x"]].shift(periods=lag)
+    drift = np.linalg.norm(delta, axis=1)
+    drift[:lag] = 0.0
+    return pd.Series(drift)
 
 
 def estimate_drift(df: pd.DataFrame, quantile: float = 0.99) -> float:
