@@ -5,6 +5,7 @@ import click
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 from rich import print
 
@@ -58,6 +59,7 @@ def estimate_params_cli(
     output_directory: Path,
 ) -> None:
     """Helper command to estimate a few parameters from labeled data."""
+    _initialize_plugins()
 
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin, stack=len(paths) > 1)

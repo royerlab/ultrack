@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 
 import click
 import zarr
+from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 
 from ultrack.cli.utils import (
@@ -43,6 +44,8 @@ def labels_to_edges_cli(
 
     edges_path = output_directory / "edges.zarr"
     maybe_overwrite_path(edges_path, overwrite)
+
+    _initialize_plugins()
 
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)
