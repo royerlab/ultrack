@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import click
+from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 
 from ultrack import link
@@ -38,6 +39,8 @@ def link_cli(
 
     images = tuple()
     if len(paths) > 0:
+        _initialize_plugins()
+
         viewer = ViewerModel()
 
         kwargs = {}
