@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import click
+from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 
 from ultrack import segment
@@ -45,6 +46,7 @@ def segmentation_cli(
     overwrite: bool,
 ) -> None:
     """Compute candidate segments for tracking model from input data."""
+    _initialize_plugins()
 
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)

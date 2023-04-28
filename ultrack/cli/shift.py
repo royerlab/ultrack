@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import click
+from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 
 from ultrack.cli.utils import (
@@ -26,6 +27,7 @@ def add_shift_cli(
     channel_axis: Optional[int],
 ) -> None:
     """Adds coordinates shift (vector field) to segmentation hypotheses."""
+    _initialize_plugins()
 
     viewer = ViewerModel()
 
