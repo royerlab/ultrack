@@ -39,7 +39,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
-              C   1.0       0.9
+              C   1.0      0.95
               |       \\  /
               5 - 0.5 - 6 - 0.7 - 7
 
