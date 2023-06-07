@@ -6,15 +6,15 @@ import pytest
 
 from ultrack.config.config import MainConfig
 from ultrack.core.solve.solver.base_solver import BaseSolver
-from ultrack.core.solve.solver.gurobi_solver import GurobiSolver
 from ultrack.core.solve.solver.heuristic.heuristic_solver import HeuristicSolver
+from ultrack.core.solve.solver.mip_solver import MIPSolver
 
 
 @pytest.mark.parametrize(
     "solver,config_content",
     list(
         product(
-            [GurobiSolver, HeuristicSolver],
+            [MIPSolver, HeuristicSolver],
             [
                 {
                     "tracking.appear_weight": -0.25,
@@ -39,7 +39,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
-              C   1.0       1.0
+              C   1.0      0.95
               |       \\  /
               5 - 0.5 - 6 - 0.7 - 7
 
@@ -63,7 +63,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     edges = np.array([[1, 2], [2, 3], [2, 6], [3, 4], [5, 6], [6, 4], [6, 7]])
 
-    weights = np.array([0.5, 0.5, 1.0, 0.5, 0.5, 1.0, 0.7])
+    weights = np.array([0.5, 0.5, 1.0, 0.5, 0.5, 0.9, 0.7])
     solver.add_edges(edges[:, 0], edges[:, 1], weights)
 
     solver.set_standard_constraints()
