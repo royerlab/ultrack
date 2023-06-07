@@ -16,8 +16,8 @@ try:
     from cucim.skimage.segmentation import find_boundaries
 
 except ImportError as e:
-    LOG.warning(e)
-    LOG.warning("cupy not found, using CPU processing")
+    LOG.info(e)
+    LOG.info("cupy not found, using CPU processing")
     import numpy as xp
     import scipy.ndimage as ndi
     from skimage.segmentation import find_boundaries
