@@ -30,13 +30,13 @@ Configurations have default values, therefore you don't need to set them all fro
         - appear_weight: Penalization weight for appearing cell, should be negative;
         - disappear_weight: Penalization for disappearing cell, should be negative;
         - division_weight: Penalization for dividing cell, should be negative;
-        - dismiss_weight_guess: Threshold (<=) used to provide 0 valued hint to Gurobi;
-        - include_weight_guess: Threshold (>=) used to provide 1 valued hint to Gurobi;
+        - dismiss_weight_guess: Threshold (<=) used to provide 0 valued hint to solver;
+        - include_weight_guess: Threshold (>=) used to provide 1 valued hint to solver;
         - window_size: Time window size for partially solving the tracking ILP;
         - overlap_size: Number of frames used to pad each size when partially solving the tracking ILP;
-        - solution_gap: Gurobi solution gap;
-        - time_limit: Gurobi execution time limit in seconds;
-        - method: Gurobi solver method, (reference)[https://www.gurobi.com/documentation/9.5/refman/method.html];
+        - solution_gap: solver solution gap;
+        - time_limit: solver execution time limit in seconds;
+        - method: solver method, (reference)[https://docs.python-mip.com/en/latest/classes.html#lp-method];
         - n_threads: Number of worker threads;
         - link_function: Function used to transform the edge weights, `identity` or `power`;
         - power: Expoent $\eta$ of power transform, $w_{pq}^\eta$;

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.trackingconfig import TrackingConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
-from ultrack.core.solve.solver import GurobiSolver
+from ultrack.core.solve.solver import MIPSolver
 from ultrack.core.solve.solver.base_solver import BaseSolver
 
 logging.basicConfig()
@@ -60,7 +60,7 @@ class SQLTracking:
             )
 
         LOG.info(f"Solving ILP batch {index}")
-        solver = GurobiSolver(self._tracking_config)
+        solver = MIPSolver(self._tracking_config)
 
         self._add_nodes(solver=solver, index=index)
         self._add_edges(solver=solver, index=index)

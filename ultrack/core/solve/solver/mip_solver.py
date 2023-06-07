@@ -13,12 +13,12 @@ from ultrack.core.solve.solver.base_solver import BaseSolver
 LOG = logging.getLogger(__name__)
 
 
-class GurobiSolver(BaseSolver):
+class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
     ) -> None:
-        """Generic maxflow gurobi solver for cell-tracking ILP.
+        """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
         Parameters
         ----------
@@ -206,7 +206,7 @@ class GurobiSolver(BaseSolver):
         pass
 
     def optimize(self) -> float:
-        """Optimizes gurobi model."""
+        """Optimizes MIP model."""
         self._model.optimize()
         return self._model.objective_value
 
