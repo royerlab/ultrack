@@ -1,11 +1,9 @@
 
 # ULTRACK
 
-Multiple hypothesis cell tracking using ultrametric-contour maps.
+Cell tracking and segmentation software.
 
 ## Installation
-
-Preliminary installation instructions while this repository is private and the package is not in pypi.
 
 Install [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to avoid conflicts between different packages.
 
@@ -23,8 +21,20 @@ And activate it.
 conda activate tracking
 ```
 
-Install the package from github, you must have setup your [SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) and have access to the [ultrack repository](https://github.com/royerlab/ultrack) since the repository is private.
+Install the package from github:
 
 ```bash
-pip install git+ssh://git@github.com/royerlab/ultrack.git
+pip install git+https://github.com/royerlab/ultrack.git
 ```
+
+## Usage
+
+Usage examples can be found [here](examples), including their environment files and their installation instructions.
+
+## Documentation
+
+The `ultrack` library relies on a configuration schema, its description is [here](ultrack/config/README.md).
+
+The segmentation and tracking data are stored in a SQL database, described [here](ultrack/core/README.md).
+
+Helper functions to export to the cell tracking challenge and napari formats are available, [reference](ultrack/core/export).

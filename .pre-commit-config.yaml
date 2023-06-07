@@ -40,7 +40,7 @@ repos:
         args: [--max-line-length, '120',
                --ignore, 'E741,W503,E203',
                --per-file-ignores, '__init__.py:F401 debug_mainwidget.py:E402',
-               --min-python-version, '3.8']
+               --min-python-version, '3.9']
         additional_dependencies: [flake8-typing-imports==1.12.0]
   - repo: https://github.com/psf/black
     rev: 22.3.0

@@ -1,14 +1,17 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
-from scipy.ndimage import zoom
+from scipy.ndimage import generate_binary_structure, grey_dilation, zoom
+from scipy.optimize import linear_sum_assignment
 from scipy.spatial import KDTree
+from scipy.spatial.distance import cdist
 from skimage.measure import regionprops
+from skimage.segmentation import relabel_sequential
 from sqlalchemy.orm import Session
 from tifffile import imwrite
 from toolz import curry
@@ -18,12 +21,14 @@ from ultrack.config import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
-    estimate_drift,
     export_segmentation_generic,
+    filter_nodes_generic,
     maybe_overwrite_path,
     solution_dataframe_from_sql,
     tracks_forest,
 )
+from ultrack.core.segmentation.node import Node, intersects
+from ultrack.utils.estimation import estimate_drift
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -208,19 +213,20 @@ def select_tracks_from_first_frame(
         query = session.query(NodeDB.pickle).where(NodeDB.t == 0, NodeDB.selected)
         starting_nodes = [n for n, in query]
 
-    selected_track_ids = set()
-    centroids = np.asarray([n.centroid for n in starting_nodes])
+    root_centroids = np.asarray([n.centroid for n in starting_nodes])
+    marker_centroids = np.asarray(
+        [n.centroid for n in regionprops(first_frame, cache=False)]
+    )
+    D = cdist(marker_centroids, root_centroids)
 
+    _, root_ids = linear_sum_assignment(D)
+
+    selected_track_ids = set()
     graph = tracks_forest(df)
 
-    for det in tqdm(regionprops(first_frame), "Selecting tracks from first trame"):
-        # select nearest node that contains the reference detection.
-        dist = np.square(centroids - det.centroid).sum(axis=1)
-        node = starting_nodes[np.argmin(dist)]
-        if node.contains(det.centroid):
-            # add the whole tree to the selection
-            track_id = df.loc[node.id, "track_id"]
-            selected_track_ids.update(connected_component(graph, track_id))
+    for root in tqdm(root_ids, "Selecting tracks from first trame"):
+        track_id = df.loc[starting_nodes[root].id, "track_id"]
+        selected_track_ids.update(connected_component(graph, track_id))
 
     if stitch_tracks:
         selected_df = stitch_tracks_df(graph, df, selected_track_ids)
@@ -249,6 +255,7 @@ def _write_tiff_buffer(
     buffer: np.ndarray,
     output_dir: Path,
     scale: Optional[ArrayLike] = None,
+    dilation_iters: int = 0,
 ) -> None:
     """Writes a single tiff stack into `output_dir` / "mask%03d.tif"
 
@@ -262,11 +269,23 @@ def _write_tiff_buffer(
         Output directory.
     scale : Optional[ArrayLike], optional
         Mask rescaling factor, by default None
+    dilation_iters: int
+        Iterations of radius 1 morphological dilations on labels, applied after scaling, by default 0.
     """
     if scale is not None:
         buffer = zoom(
             buffer, scale[-buffer.ndim :], order=0, grid_mode=True, mode="grid-constant"
         )
+
+    footprint = generate_binary_structure(buffer.ndim, 1)
+    for _ in range(dilation_iters):
+        dilated = grey_dilation(buffer, footprint=footprint)
+        np.putmask(buffer, buffer == 0, dilated)
+
+    # reducing mask sizes
+    buffer = buffer.astype(
+        np.promote_types(np.min_scalar_type(buffer.max()), np.uint16)
+    )
 
     imwrite(output_dir / f"mask{t:03}.tif", buffer)
 
@@ -274,8 +293,10 @@ def _write_tiff_buffer(
 def to_ctc(
     output_dir: Path,
     data_config: DataConfig,
+    margin: int = 0,
     scale: Optional[Tuple[float]] = None,
     first_frame: Optional[ArrayLike] = None,
+    dilation_iters: int = 0,
     stitch_tracks: bool = False,
     overwrite: bool = False,
 ) -> None:
@@ -285,13 +306,17 @@ def to_ctc(
     Parameters
     ----------
     output_dir : Path
-        Output directory to save segmentation masks and lineage graph.
+        Output directory to save segmentation masks and lineage graph
     data_config : DataConfig
         Data configuration parameters.
     scale : Optional[Tuple[float]], optional
         Optional scaling of output segmentation masks, by default None
+    margin : int
+        Margin used to filter out nodes and splitting their tracklets
     first_frame : Optional[ArrayLike], optional
         Optional first frame detection mask to select a subset of tracks (e.g. Fluo-N3DL-DRO), by default None
+    dilation_iters: int
+        Iterations of radius 1 morphological dilations on labels, applied after scaling, by default 0.
     stitch_tracks: bool, optional
         Stitches (connects) incomplete tracks nearby tracks on subsequent time point, by default False
     overwrite : bool, optional
@@ -313,6 +338,27 @@ def to_ctc(
     if len(df) == 0:
         raise ValueError("Solution is empty.")
 
+    condition = None
+    if scale is not None and not np.all(np.isclose(scale, 1.0)):
+        condition = rescale_size_condition(scale)
+
+    if margin > 0:
+        if condition is None:
+            condition = margin_filter_condition(data_config, margin)
+        else:
+            # mergin two conditions into one to avoid looping querying the db twice
+            first_cond = condition
+            second_cond = margin_filter_condition(data_config, margin)
+
+            def condition(node: Node) -> bool:
+                return first_cond(node) or second_cond(node)
+
+    if condition is not None:
+        df = filter_nodes_generic(data_config, df, condition)
+
+    if len(df) == 0:
+        raise ValueError("Solution is empty after filtering.")
+
     df = add_track_ids_to_forest(df)
 
     if first_frame is not None:
@@ -332,6 +378,10 @@ def to_ctc(
             stitch_tracks=stitch_tracks,
         )
 
+    df["track_id"], fw, _ = relabel_sequential(df["track_id"].values)
+    fw[NO_PARENT] = NO_PARENT
+    df["parent_track_id"] = fw[df["parent_track_id"].values]
+
     # convert to CTC format and write output
     tracks_df = ctc_compress_forest(df)
     tracks_df.to_csv(tracks_path, sep=" ", header=False, index=False)
@@ -341,5 +391,66 @@ def to_ctc(
     export_segmentation_generic(
         data_config,
         df,
-        _write_tiff_buffer(scale=scale, output_dir=output_dir),
+        _write_tiff_buffer(
+            output_dir=output_dir, scale=scale, dilation_iters=dilation_iters
+        ),
     )
+
+
+def margin_filter_condition(
+    data_config: DataConfig,
+    margin: int,
+) -> Callable[[Node], bool]:
+    """Condition to check if nodes are completely inside margin.
+
+    Parameters
+    ----------
+    data_config : DataConfig
+        Data configuration parameters.
+    margin : int
+        yx-axis margin.
+
+    Returns
+    -------
+    Callable[[Node], bool]
+        Condition checking if node is completely inside the margins.
+    """
+    # ignoring time
+    upper_lim = np.asarray(data_config.metadata["shape"][1:])
+    upper_lim[-2:] -= margin  # only for y, x coordinates
+
+    lower_lim = np.zeros_like(upper_lim)
+    lower_lim[-2:] += margin  # only for y, x coordinates
+
+    limits = np.concatenate((lower_lim, upper_lim))
+
+    LOG.info(f"Using limits {limits} from {margin}")
+
+    def condition(node: Node) -> bool:
+        return not intersects(node.bbox, limits)
+
+    return condition
+
+
+def rescale_size_condition(
+    scale: ArrayLike,
+) -> Callable[[Node], bool]:
+    """Condition to check if a node will disappear after scaling.
+
+    Parameters
+    ----------
+    scale : ArrayLike
+        Scaling factors.
+
+    Returns
+    -------
+    Callable[[Node], bool]
+        Condition to check if node is valid after scaling.
+    """
+    scale = np.asarray(scale)
+
+    def condition(node: Node) -> bool:
+        ndim = node.mask.ndim
+        return np.any(node.mask.shape * scale[-ndim:] < 1.0)
+
+    return condition

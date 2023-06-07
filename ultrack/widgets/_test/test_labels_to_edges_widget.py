@@ -4,7 +4,7 @@ import napari
 import numpy as np
 
 from ultrack.utils._test.test_edge import multiple_labels  # noqa: F401
-from ultrack.widgets.labels_to_edges_widget import LabelsToEdgesWidget
+from ultrack.widgets import LabelsToEdgesWidget
 
 
 def test_labels_to_edges_widget(

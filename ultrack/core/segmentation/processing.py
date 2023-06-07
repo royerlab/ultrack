@@ -1,27 +1,20 @@
 import logging
-import pickle
 from contextlib import nullcontext
-from typing import Optional
+from typing import List, Optional
 
 import fasteners
 import numpy as np
-import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
+from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config import DataConfig, SegmentationConfig
-from ultrack.core.database import (
-    NO_PARENT,
-    Base,
-    DivisionAnnotation,
-    NodeAnnotation,
-    NodeDB,
-    OverlapDB,
-)
+from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
-from ultrack.core.segmentation.utils import check_array_chunk, clear_segmentation_data
+from ultrack.core.segmentation.utils import check_array_chunk
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
@@ -52,6 +45,35 @@ def generate_id(index: int, time: int, max_segments: int) -> int:
     return index + (time + 1) * max_segments
 
 
+def _insert_db(
+    db_path: str, time: int, nodes: List[NodeDB], overlaps: List[OverlapDB]
+) -> None:
+    """
+    Helper function to insert data into database.
+    IMPORTANT: This function resets `nodes` and `overlaps`.
+
+    Parameters
+    ----------
+    db_path : str
+        Database path including URI.
+    time : int
+        Current time.
+    nodes : List[NodeDB]
+        List of nodes to insert.
+    overlaps : List[OverlapDB]
+        List of overlap of nodes to insert.
+    """
+    LOG.info(f"Pushing some nodes from hier time {time} to {db_path}")
+    engine = sqla.create_engine(db_path, hide_parameters=True)
+    with Session(engine) as session:
+        session.add_all(nodes)
+        session.add_all(overlaps)
+        session.commit()
+    engine.dispose()
+    nodes.clear()
+    overlaps.clear()
+
+
 @curry
 def _process(
     time: int,
@@ -60,7 +82,7 @@ def _process(
     config: SegmentationConfig,
     db_path: str,
     max_segments_per_time: int,
-    lock: Optional[fasteners.InterProcessLock] = None,
+    write_lock: Optional[fasteners.InterProcessLock] = None,
 ) -> None:
     """Process `detection` and `edge` of current time and add data to database.
 
@@ -69,23 +91,30 @@ def _process(
     time : int
         Current time.
     detection : ArrayLike
-        Detection array of current `time`.
+        Detection array.
     edge : ArrayLike
-        Edge array of current `time`.
-    config : InitConfig
-        Initialization configuration parameters.
+        Edge array.
+    config : SegmentationConfig
+        Segmentation configuration parameters.
     db_path : str
         Path to database including type prefix.
     max_segments_per_time : int
         Upper bound of segments per time point.
-    lock : Optional[fasteners.Lock], optional
+    lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
-    np.random.seed(42)  # necessary because of watershed tie-zones
+    np.random.seed(time)
+
+    edge_map = edge[time]
+    if config.max_noise > 0:
+        noise = np.random.uniform(0, config.max_noise, size=edge_map.shape)
+        # promoting edge_map to smallest float
+        noise = noise.astype(np.result_type(edge_map.dtype, np.float16))
+        edge_map = edge_map + noise
 
     hiers = create_hierarchies(
         detection[time] > config.threshold,
-        edge[time],
+        edge_map,
         hierarchy_fun=config.ws_hierarchy,
         max_area=config.max_area,
         min_area=config.min_area,
@@ -94,10 +123,10 @@ def _process(
 
     LOG.info(f"Computing nodes of time {time}")
 
-    nodes = []
-    overlap_source = []
-    overlap_ancestor = []
     index = 1
+    nodes = []
+    overlaps = []
+
     for h, hierarchy in enumerate(hiers):
         hierarchy.cache = True
 
@@ -117,34 +146,32 @@ def _process(
                 z, y, x = centroid
 
             nodes.append(
-                {
-                    "id": node.id,
-                    "t_node_id": index,
-                    "t_hier_id": h + 1,
-                    "t": time,
-                    "z": z,
-                    "y": y,
-                    "x": x,
-                    "selected": False,
-                    "area": node.area,
-                    "parent_id": NO_PARENT,
-                    "pickle": pickle.dumps(node),
-                    "annotation": NodeAnnotation.UNKNOWN.name,
-                    "division": DivisionAnnotation.UNKNOWN.name,
-                }
+                NodeDB(
+                    id=node.id,
+                    t_node_id=index,
+                    t_hier_id=h + 1,
+                    t=time,
+                    z=int(z),
+                    y=int(y),
+                    x=int(x),
+                    area=int(node.area),
+                    pickle=node,
+                )
             )
             index += 1
 
         tree = hierarchy.tree
         # find overlapping segments by iterating through hierarchy (tree)
         for h_index in hier_index_map.keys():
-            overlaps = [
-                hier_index_map[a]
-                for a in tree.ancestors(h_index)
-                if a in hier_index_map and a != h_index  # roots point to it self
-            ]
-            overlap_source += [hier_index_map[h_index]] * len(overlaps)
-            overlap_ancestor += overlaps
+            for a in tree.ancestors(h_index):
+                if a in hier_index_map and a != h_index:
+                    overlaps.append(
+                        OverlapDB(
+                            node_id=hier_index_map[h_index],
+                            ancestor_id=hier_index_map[a],
+                        )
+                    )
+
             LOG.info(
                 f"{len(overlaps)} overlaps found for node {hier_index_map[h_index]}."
             )
@@ -157,22 +184,20 @@ def _process(
                 f"Number of segments exceeds upper bound of {max_segments_per_time} per time."
             )
 
-    nodes = pd.DataFrame(nodes)
-    overlaps = pd.DataFrame(
-        np.asarray([overlap_source, overlap_ancestor]).T,
-        columns=["node_id", "ancestor_id"],
-    )
+        # if lock is None it inserts at every iteration
+        if write_lock is None:
+            _insert_db(db_path, time, nodes, overlaps)
 
-    with lock if lock is not None else nullcontext():
-        LOG.info(f"Pushing nodes from time {time} to {db_path}")
-        engine = sqla.create_engine(db_path, hide_parameters=True)
-        with engine.begin() as conn:
-            nodes.to_sql(
-                name=NodeDB.__tablename__, con=conn, if_exists="append", index=False
-            )
-            overlaps.to_sql(
-                name=OverlapDB.__tablename__, con=conn, if_exists="append", index=False
-            )
+        # otherwise it inserts only when it can acquire the lock
+        elif write_lock.acquire(blocking=False):
+            _insert_db(db_path, time, nodes, overlaps)
+            write_lock.release()
+
+    # pushes any remaning data
+    with write_lock if write_lock is not None else nullcontext():
+        _insert_db(db_path, time, nodes, overlaps)
+
+    LOG.info(f"DONE with time {time}.")
 
 
 def segment(
@@ -181,6 +206,7 @@ def segment(
     segmentation_config: SegmentationConfig,
     data_config: DataConfig,
     max_segments_per_time: int = 1_000_000,
+    batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
     """Add candidate segmentation (nodes) from `detection` and `edge` to database.
@@ -197,6 +223,8 @@ def segment(
         Data configuration parameters.
     max_segments_per_time : int
         Upper bound of segments per time point.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
         Cleans up segmentation, linking, and tracking database content before processing.
     """
@@ -213,29 +241,32 @@ def segment(
     LOG.info(f"Detection array with shape {detection.shape}")
     LOG.info(f"Edge array with shape {edge.shape}")
 
-    engine = sqla.create_engine(data_config.database_path)
-    Base.metadata.create_all(engine)
+    length = detection.shape[0]
+    time_points = batch_index_range(length, segmentation_config.n_workers, batch_index)
+    LOG.info(f"Segmenting time points {time_points}")
 
-    if overwrite:
-        clear_segmentation_data(data_config.database_path)
+    if batch_index is None or batch_index == 0:
+        engine = sqla.create_engine(data_config.database_path)
 
-    data_config.metadata_add({"shape": detection.shape})
+        if overwrite:
+            clear_all_data(data_config.database_path)
+
+        Base.metadata.create_all(engine)
+        data_config.metadata_add({"shape": detection.shape})
 
     with multiprocessing_sqlite_lock(data_config) as lock:
-
         process = _process(
             detection=detection,
             edge=edge,
             config=segmentation_config,
             db_path=data_config.database_path,
-            lock=lock,
+            write_lock=lock,
             max_segments_per_time=max_segments_per_time,
         )
 
-        length = detection.shape[0]
         multiprocessing_apply(
             process,
-            range(length),
+            time_points,
             segmentation_config.n_workers,
             desc="Adding nodes to database",
         )

@@ -8,8 +8,8 @@ from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
 from ultrack.core.database import NO_PARENT
-from ultrack.core.tracking.solver.base_solver import BaseSolver
-from ultrack.core.tracking.solver.heuristic._numba_heuristic_solver import (
+from ultrack.core.solve.solver.base_solver import BaseSolver
+from ultrack.core.solve.solver.heuristic._numba_heuristic_solver import (
     NumbaHeuristicSolver,
 )
 
@@ -116,8 +116,8 @@ class HeuristicSolver(BaseSolver):
         self._weights = np.asarray(
             self._config.apply_link_function(weights), np.float32
         )
-        self._out_edge = self._forward_map[np.asarray(sources)]
-        self._in_edge = self._forward_map[np.asarray(targets)]
+        self._out_edge = self._forward_map[np.asarray(sources)].astype(np.int64)
+        self._in_edge = self._forward_map[np.asarray(targets)].astype(np.int64)
 
         LOG.info(f"transformed edge weights {self._weights}")
 

@@ -6,19 +6,21 @@ from numpy.typing import ArrayLike
 from tqdm import tqdm
 from zarr.storage import Store
 
+from ultrack.utils.data import large_chunk_size
+
+LOG = logging.getLogger(__name__)
+
 try:
     import cupy as xp
     import cupyx.scipy.ndimage as ndi
-    from cucim.segmentation import find_boundaries
+    from cucim.skimage.segmentation import find_boundaries
 
-except ImportError:
+except ImportError as e:
+    LOG.info(e)
+    LOG.info("cupy not found, using CPU processing")
     import numpy as xp
     import scipy.ndimage as ndi
     from skimage.segmentation import find_boundaries
-
-from ultrack.core.export.utils import large_chunk_size
-
-LOG = logging.getLogger(__name__)
 
 
 def labels_to_edges(

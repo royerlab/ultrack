@@ -16,6 +16,7 @@ from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.node import Node
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
@@ -46,6 +47,7 @@ def _process(
     config: LinkingConfig,
     db_path: str,
     images: Sequence[ArrayLike],
+    scale: Optional[Sequence[float]],
     write_lock: Optional[fasteners.InterProcessLock] = None,
 ) -> None:
     """Link nodes from current time to time + 1.
@@ -60,27 +62,49 @@ def _process(
         Database path.
     images : Sequence[ArrayLike]
         Sequence of images for DCT correlation edge weight, if empty, IoU is used for weighting.
+    scale : Sequence[float]
+        Optional scaling for nodes' distances.
     write_lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
     engine = sqla.create_engine(db_path)
     with Session(engine) as session:
-        query = session.query(NodeDB.pickle)
+        current_nodes = [
+            n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
+        ]
 
-        current_nodes = [n for n, in query.where(NodeDB.t == time)]
-        next_nodes = [n for n, in query.where(NodeDB.t == time + 1)]
+        query = session.query(
+            NodeDB.pickle,
+            NodeDB.z_shift,
+            NodeDB.y_shift,
+            NodeDB.x_shift,
+        ).where(NodeDB.t == time + 1)
+
+        next_nodes = [row[0] for row in query]
+        next_shift = np.asarray([row[1:] for row in query])
 
     current_pos = np.asarray([n.centroid for n in current_nodes])
-    next_pos = np.asarray([n.centroid for n in next_nodes])
+    next_pos = np.asarray([n.centroid for n in next_nodes], dtype=np.float32)
+
+    n_dim = next_pos.shape[1]
+    next_shift = next_shift[:, -n_dim:]  # matching positions dimensions
+    next_pos += next_shift
+
+    if scale is not None:
+        min_n_dim = min(n_dim, len(scale))
+        scale = scale[-min_n_dim:]
+        current_pos = current_pos[..., -min_n_dim:] * scale
+        next_pos = next_pos[..., -min_n_dim:] * scale
 
     # finds neighbors nodes within the radius
-    # and connect the pairs with highest IoU
+    # and connect the pairs with highest edge weight
     current_kdtree = KDTree(current_pos)
-    next_kdtree = KDTree(next_pos)
 
-    neighbors = current_kdtree.query_ball_tree(
-        next_kdtree,
-        r=config.max_distance,
+    distances, neighbors = current_kdtree.query(
+        next_pos,
+        # twice as expected because we select the nearest with highest edge weight
+        k=2 * config.max_neighbors,
+        distance_upper_bound=config.max_distance,
     )
 
     if len(images) > 0:
@@ -93,15 +117,28 @@ def _process(
         LOG.info("IoU edge weight")
         weight_func = Node.IoU
 
+    int_next_shift = np.round(next_shift).astype(int)
+    # moving bbox with shift, MUST be after `_compute_dct`
+    for node, shift in zip(next_nodes, int_next_shift):
+        node.bbox[:n_dim] += shift
+        node.bbox[-n_dim:] += shift
+
+    distance_w = config.distance_weight
     links = []
-    for i, node in enumerate(current_nodes):
+
+    for i, node in enumerate(next_nodes):
+        valid = np.logical_not(np.isinf(distances[i]))
+        valid_neighbors = neighbors[i, valid]
+        neigh_distances = distances[i, valid]
+
         neighborhood = []
-        neigh_size = len(neighbors[i])
-        for j, neigh_idx in enumerate(neighbors[i]):
-            neigh = next_nodes[neigh_idx]
-            edge_weight = weight_func(node, neigh)
-            # assuming neighbors are ordered so size - j will be used as tie breaker
-            neighborhood.append((edge_weight, neigh_size - j, node.id, neigh.id))
+        for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
+            neigh = current_nodes[neigh_idx]
+            edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
+            # using dist as a tie-breaker
+            neighborhood.append(
+                (edge_weight, -neigh_dist, neigh.id, node.id)
+            )  # current, next
 
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
         LOG.info(f"Node {node.id} links {neighborhood}")
@@ -123,6 +160,8 @@ def link(
     linking_config: LinkingConfig,
     data_config: DataConfig,
     images: Sequence[ArrayLike] = tuple(),
+    scale: Optional[Sequence[float]] = None,
+    batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
     """Links candidate segments (nodes) with their neighbors on the next time.
@@ -135,14 +174,20 @@ def link(
         Data configuration parameters.
     images : Sequence[ArrayLike]
         Optinal sequence of images for DCT correlation edge weight.
+    scale : Sequence[float]
+        Optional scaling for nodes' distances.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
         Cleans up linking database content before processing.
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
 
     max_t = maximum_time(data_config)
+    time_points = batch_index_range(max_t, linking_config.n_workers, batch_index)
+    LOG.info(f"Linking time points {time_points}")
 
-    if overwrite:
+    if overwrite and (batch_index is None or batch_index == 0):
         clear_linking_data(data_config.database_path)
 
     with multiprocessing_sqlite_lock(data_config) as lock:
@@ -151,7 +196,8 @@ def link(
             db_path=data_config.database_path,
             write_lock=lock,
             images=images,
+            scale=scale,
         )
         multiprocessing_apply(
-            process, range(max_t), linking_config.n_workers, desc="Linking nodes."
+            process, time_points, linking_config.n_workers, desc="Linking nodes."
         )

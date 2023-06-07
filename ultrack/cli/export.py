@@ -23,6 +23,14 @@ from ultrack.core.export.utils import maybe_overwrite_path
 @config_option()
 @overwrite_option()
 @click.option(
+    "--margin",
+    "-ma",
+    default=0,
+    type=int,
+    show_default=True,
+    help="Ignored margin on xy-plane.",
+)
+@click.option(
     "--scale",
     "-s",
     default=None,
@@ -40,6 +48,14 @@ from ultrack.core.export.utils import maybe_overwrite_path
     help="Optional first frame path used to select a subset of lineages connected to this reference annotations.",
 )
 @click.option(
+    "--dilation-iters",
+    "-di",
+    default=0,
+    type=int,
+    show_default=True,
+    help="Iterations of radius 1 morphological dilations on labels, applied after scaling.",
+)
+@click.option(
     "--stitch-tracks",
     default=False,
     is_flag=True,
@@ -49,8 +65,10 @@ from ultrack.core.export.utils import maybe_overwrite_path
 def ctc_cli(
     output_directory: Path,
     config: MainConfig,
+    margin: int,
     scale: Optional[Tuple[float]],
     first_frame_path: Optional[Path],
+    dilation_iters: int,
     stitch_tracks: bool,
     overwrite: bool,
 ) -> None:
@@ -64,10 +82,12 @@ def ctc_cli(
     to_ctc(
         output_directory,
         config.data_config,
-        scale,
-        first_frame,
-        stitch_tracks,
-        overwrite,
+        margin=margin,
+        scale=scale,
+        first_frame=first_frame,
+        dilation_iters=dilation_iters,
+        stitch_tracks=stitch_tracks,
+        overwrite=overwrite,
     )
 
 
@@ -77,10 +97,18 @@ def ctc_cli(
 )
 @config_option()
 @overwrite_option()
+@click.option(
+    "--include-parents",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="Include parents track id in output tracks dataframe. Required for reconstructing divisions.",
+)
 def zarr_napari_cli(
     output_directory: Path,
     config: MainConfig,
     overwrite: bool,
+    include_parents: bool,
 ) -> None:
     """
     Exports segments to zarr and tracks to napari tabular format
@@ -94,10 +122,10 @@ def zarr_napari_cli(
 
     output_directory.mkdir(exist_ok=True)
 
-    tracks, _ = to_tracks_layer(config.data_config)
+    tracks, _ = to_tracks_layer(config.data_config, include_parents=include_parents)
     tracks.to_csv(tracks_path, index=False)
 
-    store = zarr.DirectoryStore(segm_path)
+    store = zarr.NestedDirectoryStore(segm_path)
     tracks_to_zarr(config.data_config, tracks, store=store)
 
 

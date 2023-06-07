@@ -6,7 +6,8 @@ import zarr
 from zarr.storage import Store
 
 from ultrack.config.dataconfig import DataConfig
-from ultrack.core.export.utils import export_segmentation_generic, large_chunk_size
+from ultrack.core.export.utils import export_segmentation_generic
+from ultrack.utils import large_chunk_size
 
 
 def tracks_to_zarr(
@@ -26,7 +27,7 @@ def tracks_to_zarr(
     tracks_df : pd.DataFrame
         Tracks dataframe, must have `track_id` column and be indexed by node id.
     store : Optional[Store], optional
-        Zarr storage, if not provided zarr.MemoryStore is used.
+        Zarr storage, if not provided zarr.TempStore is used.
     chunks : Optional[Tuple[int]], optional
         Chunk size, if not provided it chunks time with 1 and the spatial dimensions as big as possible.
 
@@ -39,13 +40,17 @@ def tracks_to_zarr(
     shape = data_config.metadata["shape"]
 
     if store is None:
-        store = zarr.MemoryStore()
+        store = zarr.TempStore()
+
+    elif isinstance(store, zarr.MemoryStore) and data_config.n_workers > 1:
+        raise ValueError(
+            "zarr.MemoryStore and multiple workers are not allowed. "
+            f"Found {data_config.n_workers} workers in `data_config`."
+        )
 
     if chunks is None:
-        chunks = large_chunk_size(shape, dtype=np.uint16)
+        chunks = large_chunk_size(shape, dtype=np.int32)
 
-    array = zarr.zeros(shape, dtype=np.uint16, store=store, chunks=chunks)
-    export_segmentation_generic(
-        data_config, tracks_df, lambda t, buffer: array.__setitem__(t, buffer)
-    )
+    array = zarr.zeros(shape, dtype=np.int32, store=store, chunks=chunks)
+    export_segmentation_generic(data_config, tracks_df, array.__setitem__)
     return array

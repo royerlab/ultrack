@@ -14,16 +14,28 @@ from ultrack.core.database import NodeDB, OverlapDB
 @pytest.mark.parametrize(
     "config_content,timelapse_mock_data",
     [
-        ({"segmentation.n_workers": 1}, {"length": 4, "size": 128, "n_dim": 2}),
-        ({"segmentation.n_workers": 4}, {"length": 4, "size": 128, "n_dim": 2}),
-        ({"segmentation.n_workers": 1}, {"length": 4, "size": 64, "n_dim": 3}),
-        ({"segmentation.n_workers": 4}, {"length": 4, "size": 64, "n_dim": 3}),
+        (
+            {"segmentation.n_workers": 1, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 128, "n_dim": 2},
+        ),
+        (
+            {"segmentation.n_workers": 4, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 128, "n_dim": 2},
+        ),
+        (
+            {"segmentation.n_workers": 1, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 64, "n_dim": 3},
+        ),
+        (
+            {"segmentation.n_workers": 4, "segmentation.max_noise": 0.1},
+            {"length": 4, "size": 64, "n_dim": 3},
+        ),
     ],
     indirect=True,
 )
 def test_multiprocessing_segment(
     config_instance: MainConfig,
-    timelapse_mock_data: Tuple[zarr.Array, zarr.Array],
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
     detection, edges, _ = timelapse_mock_data
 
