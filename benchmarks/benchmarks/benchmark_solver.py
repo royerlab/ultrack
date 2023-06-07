@@ -3,12 +3,12 @@ from typing import Dict, Tuple
 import numpy as np
 
 from ultrack.config import TrackingConfig
-from ultrack.core.solve.solver import GurobiSolver, HeuristicSolver
+from ultrack.core.solve.solver import HeuristicSolver, MIPSolver
 
 
 class SolverSuite:
     params = [
-        ["gurobi", "heuristic"],
+        ["mip", "heuristic"],
         [
             (10, 100, 5, 5),
             (10, 1_000, 5, 5),
@@ -23,7 +23,7 @@ class SolverSuite:
     # params = length, n_nodes_per_time, n_neighbors, n_overlaps
     param_names = ["solver_class", "params"]
 
-    _SOLVER_CLASS = {"gurobi": GurobiSolver, "heuristic": HeuristicSolver}
+    _SOLVER_CLASS = {"mip": MIPSolver, "heuristic": HeuristicSolver}
 
     def setup(self, solver: str, params: Tuple[int]) -> None:
         length, n_nodes_per_time, n_neighbors, n_overlaps = params

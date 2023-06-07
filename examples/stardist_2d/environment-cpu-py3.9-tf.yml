@@ -1,13 +1,11 @@
 name: ultrack-stardist
 channels:
   - conda-forge
-  - gurobi
   - defaults
 dependencies:
   - python=3.9
-  - rapidsai::cucim
   - conda-forge::tensorflow
-  - gurobi:gurobi
+  - coin-or-cbc
   - jupyter
   - pip
   - zarr
