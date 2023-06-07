@@ -25,14 +25,14 @@ def test_multiprocess_link(
 ) -> None:
     config = segmentation_database_mock_data
 
-    link(config.linking_config, config.data_config)
+    link(config.linking_config, config.data_config, scale=(2, 1, 1))
 
     edges = pd.read_sql_table(
         LinkDB.__tablename__, con=config.data_config.database_path
     )
 
     # since they're all the same, there must be at one edge with weight 1.0 for each node
-    for _, group in edges.groupby("source_id"):
+    for _, group in edges.groupby("target_id"):
         assert len(group) <= config.linking_config.max_neighbors
         assert (group["iou"] == 1.0).sum() == 1.0
 

@@ -1,13 +1,30 @@
-from typing import Callable, List, Optional, Tuple
+import logging
+from functools import wraps
+from typing import Any, Callable, List, Optional, Tuple
 
 import higra as hg
 import numpy as np
 from numpy.typing import ArrayLike
-from skimage import measure, morphology, segmentation
+from skimage import measure, segmentation
 from skimage.measure._regionprops import RegionProperties
 
 from ultrack.core.segmentation.vendored.graph import mask_to_graph
 from ultrack.core.segmentation.vendored.node import Node
+
+LOG = logging.getLogger(__name__)
+
+
+def _cached(f: Callable) -> Callable:
+    """Hierarchy data cache"""
+
+    @wraps(f)
+    def wrapper(obj: object) -> Any:
+        name = f.__name__
+        if name in obj._cache:
+            return obj._cache[name]
+        return f(obj)
+
+    return wrapper
 
 
 class Hierarchy:
@@ -20,24 +37,32 @@ class Hierarchy:
         max_area: int = 1000000,
         min_frontier: float = 0.25,
         anisotropy_pen: float = 0.0,
-        cache: bool = False,
+        cache: bool = True,
     ):
         """
         Helper class to interact with the watershed hierarchy of segments.
 
-        Args:
-            props (RegionProperties): Region properties computed from scikit-image `measure.regionprops`.
-            hierarchy_fun (Callable, optional):
-                Hierarchical watershed criterion function. Defaults to hg.watershed_hierarchy_by_area.
-            cut_threshold (float, optional):
-                Hierarchy horizontal cut threshold. Defaults to None, returning a single labeling (no cut).
-            min_area (int, optional): Minimum number of pixels per segment. Defaults to 50.
-            max_area (int, optional): Maximum number of pixels per segment. Defaults to 1000000.
-            min_frontier (float, optional): Minimum required edge weight for splitting segments. Defaults to 0.25.
-            anisotropy_pen (float, optional): Edge weight penalization for the z-axis. Defaults to 0.0.
-            cache (bool, optional): Enables cache of data structures. Defaults to False.
+        Parameters
+        ----------
+        props : RegionProperties
+            Region properties computed from scikit-image `measure.regionprops`.
+        hierarchy_fun : Callable, optional
+            Hierarchical watershed criterion function. Defaults to hg.watershed_hierarchy_by_area.
+        cut_threshold : Optional[float], optional
+            Hierarchy horizontal cut threshold. Defaults to None, returning a single labeling (no cut).
+        min_area : int, optional
+            Minimum number of pixels per segment. Defaults to 50.
+        max_area : int, optional
+            Maximum number of pixels per segment. Defaults to 1000000.
+        min_frontier : float, optional
+            Minimum required edge weight for splitting segments. Defaults to 0.25.
+        anisotropy_pen : float, optional
+            Edge weight penalization for the z-axis. Defaults to 0.0.
+        cache : bool, optional
+            Enables cache of data structures. Defaults to True.
+            Can lead to segmentation fault when False if there's tie-zones on the watershed hierarchy.
+            Due to tree and altitute miss match.
         """
-
         self.props = props
         self.hierarchy_fun = hierarchy_fun
         self.cut_threshold = cut_threshold
@@ -69,12 +94,18 @@ class Hierarchy:
             buffer[self.props.slice][self.props.image] = offset
             return 1
 
-        tree, _, cut = self.data()
-        cut = cut.horizontal_cut_from_altitude(self.cut_threshold)
+        # cache must be on for cut
+        cache_status = self.cache
+        self.cache = True
+
+        cut = self.cut.horizontal_cut_from_altitude(self.cut_threshold)
         relabeled, _, _ = segmentation.relabel_sequential(
-            cut.labelisation_leaves(tree), offset=offset
+            cut.labelisation_leaves(self.tree), offset=offset
         )
         buffer[self.props.slice][self.props.image] = relabeled
+
+        self.cache = cache_status
+
         return len(cut.nodes())
 
     @property
@@ -86,8 +117,10 @@ class Hierarchy:
         self._cache_active = status
         self.props._cache_active = status
         if not status:
+            hg.clear_auto_cache(reference_object=self.tree)
             self._cache.clear()
             self.props._cache.clear()
+            self._nodes.clear()
 
     @staticmethod
     def _filter_contour_strength(
@@ -98,6 +131,8 @@ class Hierarchy:
         threshold: float,
     ) -> Tuple[hg.Tree, ArrayLike]:
 
+        LOG.info("Filtering hierarchy by contour strength.")
+
         hg.set_attribute(graph, "no_border_vertex_out_degree", None)
         irrelevant_nodes = hg.attribute_contour_strength(tree, weights) < threshold
         hg.set_attribute(graph, "no_border_vertex_out_degree", 6)
@@ -105,7 +140,7 @@ class Hierarchy:
         tree, node_map = hg.simplify_tree(tree, irrelevant_nodes)
         return tree, alt[node_map]
 
-    def data(self) -> Tuple[hg.Tree, ArrayLike, hg.HorizontalCutExplorer]:
+    def watershed_hierarchy(self) -> Tuple[hg.Tree, ArrayLike]:
         """
         Creates and filters the watershed hierarchy.
 
@@ -114,13 +149,9 @@ class Hierarchy:
             when processing with a single node. Increase `min_area` to avoid this.
 
         Returns:
-            Tuple[hg.Tree, ArrayLike, hg.HorizontalCutExplorer]:
-            It returns the watershed hierarchy (tree), its altitudes and multiple
-            possible horizontal cuts.
+            Tuple[hg.Tree, ArrayLike]:
+            It returns the watershed hierarchy (tree), its altitudes.
         """
-        if "tree" in self._cache and "alt" in self._cache and "cut" in self._cache:
-            return self._cache["tree"], self._cache["alt"], self._cache["cut"]
-
         image = self.props.intensity_image
         if image.dtype == np.float16:
             image = image.astype(np.float32)
@@ -128,43 +159,67 @@ class Hierarchy:
         if image.size < 8:
             raise RuntimeError(f"Region too small. Size of {image.size} found.")
 
+        LOG.info("Creating graph from mask.")
         mask = self.props.image
         graph, weights = mask_to_graph(mask, image, self._anisotropy_pen)
 
+        LOG.info("Constructing hierarchy.")
         tree, alt = self.hierarchy_fun(graph, weights)
+
+        LOG.info("Filtering small nodes of hierarchy.")
         tree, alt = hg.filter_small_nodes_from_tree(tree, alt, self._min_area)
+
         if self._min_frontier > 0.0:
             tree, alt = self._filter_contour_strength(
                 tree, alt, graph, weights, self._min_frontier
             )
 
-        cut = hg.HorizontalCutExplorer(tree, alt)
-        if self._cache_active:
-            self._cache["tree"] = tree
-            self._cache["alt"] = alt
-            self._cache["cut"] = cut
+        LOG.info("Filtering large nodes of hierarchy.")
+        tree, node_map = hg.simplify_tree(
+            tree, hg.attribute_area(tree) > self._max_area
+        )
+        alt = alt[node_map]
 
-        return tree, alt, cut
+        return tree, alt
 
     @property
+    @_cached
+    def area(self) -> ArrayLike:
+        area = hg.attribute_area(self.tree)
+        if self.cache:
+            self._cache["area"] = area
+        return area
+
+    @property
+    @_cached
+    def dynamics(self) -> ArrayLike:
+        dynamics = hg.attribute_dynamics(self.tree, self.alt)
+        if self.cache:
+            self._cache["dynamics"] = dynamics
+        return dynamics
+
+    @property
+    @_cached
     def tree(self) -> hg.Tree:
-        tree = self._cache.get("tree")
-        if tree is None:
-            tree, _, _ = self.data()
+        tree, alt = self.watershed_hierarchy()
+        if self.cache:
+            self._cache["tree"], self._cache["alt"] = tree, alt
         return tree
 
     @property
+    @_cached
     def alt(self) -> ArrayLike:
-        alt = self._cache.get("alt")
-        if alt is None:
-            _, alt, _ = self.data()
+        tree, alt = self.watershed_hierarchy()
+        if self.cache:
+            self._cache["tree"], self._cache["alt"] = tree, alt
         return alt
 
     @property
+    @_cached
     def cut(self) -> hg.HorizontalCutExplorer:
-        cut = self._cache.get("cut")
-        if cut is None:
-            _, _, cut = self.data()
+        cut = hg.HorizontalCutExplorer(self.tree, self.alt)
+        if self.cache:
+            self._cache["cut"] = cut
         return cut
 
     @staticmethod
@@ -188,7 +243,7 @@ class Hierarchy:
         parameters (`min_area`, `max_area`, etc.)
         """
         tree = self.tree
-        area = hg.attribute_area(tree)
+        area = self.area
         num_leaves = tree.num_leaves()
 
         for i, node_idx in enumerate(
@@ -197,7 +252,9 @@ class Hierarchy:
             if area[num_leaves + i] > self._max_area:
                 continue
             self._nodes[node_idx] = self.create_node(
-                node_idx, self, area=area[num_leaves + i].item()
+                node_idx,
+                self,
+                area=area[num_leaves + i].item(),
             )
 
     def _fix_empty_nodes(self) -> None:
@@ -210,7 +267,9 @@ class Hierarchy:
 
         root_index = self.tree.root()
         self._nodes[root_index] = self.create_node(
-            root_index, self, area=self.props.area
+            root_index,
+            self,
+            area=self.props.area,
         )
 
     @property
@@ -262,29 +321,6 @@ def oversegment_components(
             new_labels[c.slice][c.image] = offset
             offset += 1
     return new_labels
-
-
-def create_hierarchies(
-    labels: ArrayLike,
-    boundaries: ArrayLike,
-    cache: bool = False,
-    **kwargs,
-) -> List[Hierarchy]:
-    assert issubclass(labels.dtype.type, np.integer) or labels.dtype == bool
-
-    labels = measure.label(labels, connectivity=1)
-    if "min_area" in kwargs:
-        morphology.remove_small_objects(
-            labels, min_size=kwargs["min_area"], in_place=True
-        )
-
-    if "max_area" in kwargs:
-        labels = oversegment_components(labels, boundaries, kwargs["max_area"])
-
-    return [
-        Hierarchy(c, cache=cache, **kwargs)
-        for c in measure.regionprops(labels, boundaries, cache=cache)
-    ]
 
 
 def to_labels(

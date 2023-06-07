@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
-from ultrack.config.dataconfig import DataConfig
+from ultrack.config.dataconfig import DatabaseChoices, DataConfig
 
 # constant value to indicate it has no parent
 NO_PARENT = -1
@@ -51,8 +51,11 @@ class NodeDB(Base):
     z = Column(Float)
     y = Column(Float)
     x = Column(Float)
+    z_shift = Column(Float, default=0.0)
+    y_shift = Column(Float, default=0.0)
+    x_shift = Column(Float, default=0.0)
     area = Column(Integer)
-    selected = Column(Boolean)
+    selected = Column(Boolean, default=False)
     pickle = Column(PickleType)
     annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
     division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)
@@ -89,7 +92,10 @@ def maximum_time(data_config: DataConfig) -> int:
 def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     """Checks if table is empty."""
     url = make_url(data_config.database_path)
-    if data_config.database == "sqlite" and not Path(url.database).exists():
+    if (
+        data_config.database == DatabaseChoices.sqlite.value
+        and not Path(url.database).exists()
+    ):
         # avoids creating a database with create_engine call
         return True
 
@@ -147,3 +153,10 @@ def get_node_values(
         annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
 
     return annotation
+
+
+def clear_all_data(database_path: str) -> None:
+    """Clears all data from database"""
+    LOG.info("Clearing all databases.")
+    engine = sqla.create_engine(database_path)
+    Base.metadata.drop_all(engine)

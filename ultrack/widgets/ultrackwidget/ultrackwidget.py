@@ -1,16 +1,16 @@
 import logging
 from pathlib import Path
-from typing import Dict, Sequence, Tuple
+from typing import Any, Dict, Sequence, Tuple
 
 import napari
 import numpy as np
 import pandas as pd
-from magicgui.widgets import Container
 from napari.layers import Image, Labels
 from napari.qt.threading import thread_worker
 from numpy.typing import ArrayLike
+from qtpy.QtWidgets import QFrame, QTabWidget, QVBoxLayout, QWidget
 
-from ultrack import link, segment, track
+from ultrack import link, segment, solve
 from ultrack.config.config import MainConfig, load_config
 from ultrack.core.database import LinkDB, NodeDB, is_table_empty
 from ultrack.core.export.tracks_layer import to_tracks_layer
@@ -25,28 +25,41 @@ from ultrack.widgets.utils import wait_cursor
 LOG = logging.getLogger(__name__)
 
 
-class UltrackWidget(Container):
+class UltrackWidget(QWidget):
     def __init__(self, viewer: napari.Viewer) -> None:
-        super().__init__(labels=False)
+        super().__init__()
+
+        layout = QVBoxLayout()
 
         self._viewer = viewer
+        self._tab = QTabWidget()
+        self.setLayout(layout)
+
+        layout.addWidget(self._tab)
 
         config = MainConfig()
 
         self._main_config_w = MainConfigWidget(config=config)
-        self.append(self._main_config_w)
-
+        tmp_layout = self._main_config_w.native.layout()
+        tmp_layout.takeAt(tmp_layout.count() - 1)
         self._data_config_w = DataWidget(config=config.data_config)
-        self.append(self._data_config_w)
+
+        frame_layout = QVBoxLayout()
+        main_frame = QFrame()
+        main_frame.setLayout(frame_layout)
+        frame_layout.addWidget(self._main_config_w.native)
+        frame_layout.addWidget(self._data_config_w.native)
+        frame_layout.addStretch()
+        self._tab.addTab(main_frame, "Main")
 
         self._segmentation_w = SegmentationWidget(config=config.segmentation_config)
-        self.append(self._segmentation_w)
+        self._tab.addTab(self._segmentation_w.native, "Segmentation")
 
         self._linking_w = LinkingWidget(config=config.linking_config)
-        self.append(self._linking_w)
+        self._tab.addTab(self._linking_w.native, "Linking")
 
         self._tracking_w = TrackingWidget(config=config.tracking_config)
-        self.append(self._tracking_w)
+        self._tab.addTab(self._tracking_w.native, "Tracking")
 
         self._setup_signals()
         self._update_widget_status()
@@ -133,7 +146,7 @@ class UltrackWidget(Container):
     @thread_worker
     @wait_cursor()
     def _make_track_worker(self) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-        track(self._tracking_w.config, self._data_config_w.config, overwrite=True)
+        solve(self._tracking_w.config, self._data_config_w.config, overwrite=True)
         tracks, graph = to_tracks_layer(self._data_config_w.config)
         labels = tracks_to_zarr(self._data_config_w.config, tracks)
         return tracks, graph, labels
@@ -161,3 +174,10 @@ class UltrackWidget(Container):
         data_config = self._data_config_w.config
         self._linking_w._link_btn.enabled = not is_table_empty(data_config, NodeDB)
         self._tracking_w._track_btn.enabled = not is_table_empty(data_config, LinkDB)
+
+    def reset_choices(self, *_: Any) -> None:
+        self._main_config_w.reset_choices()
+        self._data_config_w.reset_choices()
+        self._linking_w.reset_choices()
+        self._tracking_w.reset_choices()
+        self._segmentation_w.reset_choices()

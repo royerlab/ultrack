@@ -1,10 +1,9 @@
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from magicgui.widgets import Container, Label
 from pydantic import BaseModel
-from toolz import curry
 
 LOG = logging.getLogger(__name__)
 
@@ -19,6 +18,8 @@ class BaseConfigWidget(Container):
         self._attr_to_widget: Dict[str, Container] = {}
         self._setup_widgets()
         self.config = config
+
+        self.native.layout().addStretch(0)
 
     @abstractmethod
     def _setup_widgets(self) -> None:
@@ -38,10 +39,13 @@ class BaseConfigWidget(Container):
                 widget = self._attr_to_widget[k]
                 widget.changed.disconnect()
                 widget.value = v
-                widget.changed.connect(self.set_config(k))
+                widget.changed.connect(self._set_config_func(k))
 
-    @curry
-    def set_config(self, key: str, value: Any) -> None:
-        """Updats config attribute and logs it"""
-        LOG.info(f"Updating {type(self).__name__} {key} with value {value}")
-        setattr(self._config, key, value)
+    def _set_config_func(self, key: str) -> Callable[[Any], None]:
+        """Updates config attribute and logs it"""
+
+        def _set_config(value: Any) -> None:
+            LOG.info(f"Updating {type(self).__name__} {key} with value {value}")
+            setattr(self._config, key, value)
+
+        return _set_config

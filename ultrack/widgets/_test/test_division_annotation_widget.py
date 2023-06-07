@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
 from ultrack.core.database import DivisionAnnotation, NodeDB
-from ultrack.widgets.division_annotation_widget import DivisionAnnotationWidget
+from ultrack.widgets import DivisionAnnotationWidget
 
 
 @pytest.mark.parametrize(
@@ -48,6 +48,7 @@ def test_division_annotation_widget(
 
     if request.config.getoption("--show-napari-viewer"):
         napari.run()
+        return
 
     assert widget.list_index == 0
 

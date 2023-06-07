@@ -134,7 +134,7 @@ def napari_reader_option() -> Callable:
         return click.option(
             "--reader-plugin",
             "-r",
-            default="builtins",
+            default="napari",
             type=str,
             show_default=True,
             help="Napari reader plugin.",
@@ -152,6 +152,21 @@ def layer_key_option() -> Callable:
             type=str,
             show_default=True,
             help="Layer key to index multi-channel input.",
+        )(f)
+
+    return decorator
+
+
+def channel_axis_option(default: Optional[int], help: str) -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--channel-axis",
+            "-cha",
+            required=False,
+            type=int,
+            default=default,
+            show_default=True,
+            help=help,
         )(f)
 
     return decorator

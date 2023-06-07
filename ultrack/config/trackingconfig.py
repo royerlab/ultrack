@@ -11,9 +11,9 @@ class LinkFunctionChoices(Enum):
 
 
 class TrackingConfig(BaseModel):
-    appear_weight: float = -0.5
-    disappear_weight: float = -0.75
-    division_weight: float = -1.0
+    appear_weight: float = -0.001
+    disappear_weight: float = -0.001
+    division_weight: float = -0.001
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
     window_size: Optional[int] = None
@@ -23,8 +23,8 @@ class TrackingConfig(BaseModel):
     method: int = 0
     n_threads: int = 0
     link_function: LinkFunctionChoices = "power"
-    power: float = 1
-    bias: float = -0.005
+    power: float = 4
+    bias: float = -0.0
 
     class Config:
         use_enum_values = True

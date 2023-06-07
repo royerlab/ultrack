@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeAnnotation, NodeDB
-from ultrack.widgets.node_annotation_widget import NodeAnnotationWidget
+from ultrack.widgets import NodeAnnotationWidget
 
 
 def test_node_annotation_widget(
@@ -38,6 +38,7 @@ def test_node_annotation_widget(
 
     if request.config.getoption("--show-napari-viewer"):
         napari.run()
+        return
 
     assert widget._mask_layer_name in viewer.layers
     assert widget._next_btn.enabled
