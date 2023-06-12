@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import toml
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, Extra, root_validator, validator
 
 LOG = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ class DataConfig(BaseModel):
     class Config:
         validate_assignment = True
         use_enum_values = True
+        extra = Extra.forbid
 
     @validator("working_dir")
     def validate_working_dir_writeable(cls, value: Path) -> Path:

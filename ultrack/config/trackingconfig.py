@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Callable, Optional
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 
 
 class LinkFunctionChoices(Enum):
@@ -28,6 +28,7 @@ class TrackingConfig(BaseModel):
 
     class Config:
         use_enum_values = True
+        extra = Extra.forbid
 
     @property
     def apply_link_function(self) -> Callable[[np.ndarray], np.ndarray]:

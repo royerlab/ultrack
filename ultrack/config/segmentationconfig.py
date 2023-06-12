@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict
 
 import higra as hg
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, Extra, root_validator, validator
 
 NAME_TO_WS_HIER = {
     "area": hg.watershed_hierarchy_by_area,
@@ -19,6 +19,10 @@ class SegmentationConfig(BaseModel):
     max_noise: float = 0.0
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
     n_workers: int = 1
+
+    class Config:
+        use_enum_values = True
+        extra = Extra.forbid
 
     @validator("ws_hierarchy", pre=True)
     def ws_name_to_function(cls, value: str) -> Callable:
