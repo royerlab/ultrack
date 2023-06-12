@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union
 
 import toml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Extra, Field
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.segmentationconfig import SegmentationConfig
@@ -18,8 +18,14 @@ class LinkingConfig(BaseModel):
     max_distance: float = 15.0
     distance_weight: float = 0.0
 
+    class Config:
+        extra = Extra.forbid
+
 
 class MainConfig(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"
