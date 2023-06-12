@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 import mip
 import numpy as np
@@ -17,6 +18,7 @@ class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
+        solver: Literal["CBC", "GRB"] = "CBC",
     ) -> None:
         """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
@@ -24,14 +26,17 @@ class MIPSolver(BaseSolver):
         ----------
         config : TrackingConfig
             Tracking configuration parameters.
+        solver : str
+            MIP solver name.
         """
 
         self._config = config
+        self._solver_name = solver
         self.reset()
 
     def reset(self) -> None:
         """Sets model to an empty state."""
-        self._model = mip.Model(sense=mip.MAXIMIZE)
+        self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
         self._forward_map = None
         self._backward_map = None
         self._nodes = None
