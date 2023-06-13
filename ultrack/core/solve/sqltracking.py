@@ -62,7 +62,7 @@ class SQLTracking:
 
         LOG.info(f"Solving ILP batch {index}")
         try:
-            solver = MIPSolver(self._tracking_config, "GRB")
+            solver = MIPSolver(self._tracking_config)
         except InterfacingError:
             solver = MIPSolver(self._tracking_config, "CBC")
 
