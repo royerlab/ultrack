@@ -4,6 +4,7 @@ from typing import Tuple
 
 import pandas as pd
 import sqlalchemy as sqla
+from mip.exceptions import InterfacingError
 from sqlalchemy.orm import Session
 
 from ultrack.config.dataconfig import DataConfig
@@ -60,7 +61,10 @@ class SQLTracking:
             )
 
         LOG.info(f"Solving ILP batch {index}")
-        solver = MIPSolver(self._tracking_config)
+        try:
+            solver = MIPSolver(self._tracking_config)
+        except InterfacingError:
+            solver = MIPSolver(self._tracking_config, "CBC")
 
         self._add_nodes(solver=solver, index=index)
         self._add_edges(solver=solver, index=index)
