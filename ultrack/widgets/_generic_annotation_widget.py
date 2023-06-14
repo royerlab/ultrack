@@ -140,9 +140,9 @@ class GenericAnnotationWidget(GenericDataWidget):
         self._viewer.layers.move(self._viewer.layers.index(self._mask_layer_name), -1)
 
         if self._viewer.dims.ndim == node.mask.ndim:
-            self._viewer.dims.set_point(range(3), node.centroid)
+            self._viewer.dims.set_point(range(len(node.centroid)), node.centroid)
         else:
-            self._viewer.dims.set_point(range(4), (node.time, *node.centroid))
+            self._viewer.dims.set_point(range(len(node.centroid) + 1), (node.time, *node.centroid))
 
     def _on_confirm(self, layer: Optional[Labels] = None) -> None:
         if not self._confirm_btn.enabled:
