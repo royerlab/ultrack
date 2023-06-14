@@ -105,6 +105,7 @@ class GenericAnnotationWidget(GenericDataWidget):
                 name = state["name"]
                 crop_name = name + self._suffix
                 if crop_name in self._viewer.layers:
+                    state["visible"] = self._viewer.layers[crop_name].visible
                     self._viewer.layers.remove(crop_name)
 
                 data = node.roi(data[node.time])
@@ -114,7 +115,6 @@ class GenericAnnotationWidget(GenericDataWidget):
                 )
                 state["scale"] = state["scale"][-data.ndim :]
                 state["name"] = crop_name
-                state["visible"] = True
 
                 # removing this matrices for now
                 state.pop("rotate")
