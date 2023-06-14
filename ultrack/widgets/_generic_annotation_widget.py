@@ -132,7 +132,7 @@ class GenericAnnotationWidget(GenericDataWidget):
             layer.translate = node.bbox[: node.mask.ndim]
         except KeyError:
             layer = self._viewer.add_labels(
-                node.mask, name=self._mask_layer_name, translate=node.bbox[:3]
+                node.mask, name=self._mask_layer_name, translate=node.bbox[: node.mask.ndim]
             )
             layer.bind_key("Enter", self._on_confirm)
 
