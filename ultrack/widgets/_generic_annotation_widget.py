@@ -144,6 +144,8 @@ class GenericAnnotationWidget(GenericDataWidget):
         else:
             self._viewer.dims.set_point(range(4), (node.time, *node.centroid))
 
+        self._viewer.camera.center = node.centroid
+
     def _on_confirm(self, layer: Optional[Labels] = None) -> None:
         if not self._confirm_btn.enabled:
             # required by key binding
