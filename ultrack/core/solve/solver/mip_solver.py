@@ -18,7 +18,7 @@ class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
-        solver: Literal["CBC", "GRB"] = "CBC",
+        solver: Literal["CBC", "GRB", ""] = "",
     ) -> None:
         """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
