@@ -22,7 +22,7 @@ jobs:
             backend: pyqt5
           - python: 3.9
             platform: macos-latest
-            backend: pyqt5
+            backend: pyside2
           - python: 3.9
             platform: ubuntu-latest
             backend: pyqt6
