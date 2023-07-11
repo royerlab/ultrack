@@ -4,6 +4,7 @@ from typing import Optional, Sequence
 import click
 from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
+from numpy.typing import ArrayLike
 
 from ultrack import segment
 from ultrack.cli.utils import (
@@ -14,6 +15,15 @@ from ultrack.cli.utils import (
     paths_argument,
 )
 from ultrack.config import MainConfig
+
+
+def _get_layer_data(viewer: ViewerModel, key: str) -> ArrayLike:
+    """Get layer data from napari viewer."""
+    layer = viewer.layers[key]
+    if layer.multiscale:
+        return layer.data[0]
+    else:
+        return layer.data
 
 
 @click.command("segment")
@@ -51,8 +61,8 @@ def segmentation_cli(
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)
 
-    detection = viewer.layers[detection_layer].data
-    edge = viewer.layers[edge_layer].data
+    detection = _get_layer_data(viewer, detection_layer)
+    edge = _get_layer_data(viewer, edge_layer)
 
     if batch_index is None or batch_index == 0:
         # this is not saved inside the `segment` function because this info

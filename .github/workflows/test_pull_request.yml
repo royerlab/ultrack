@@ -22,7 +22,7 @@ jobs:
             backend: pyqt5
           - python: 3.9
             platform: macos-latest
-            backend: pyqt5
+            backend: pyside2
           - python: 3.9
             platform: ubuntu-latest
             backend: pyqt6
@@ -72,6 +72,7 @@ jobs:
           pip install --upgrade pip
           pip install setuptools tox tox-gh-actions
           poetry install
+          pip install gurobipy
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
