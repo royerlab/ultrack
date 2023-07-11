@@ -48,7 +48,8 @@ def link_cli(
             kwargs["channel_axis"] = channel_axis
 
         images = [
-            layer.data for layer in viewer.open(paths, **kwargs, plugin=reader_plugin)
+            layer.data[0] if layer.multiscale else layer.data
+            for layer in viewer.open(paths, **kwargs, plugin=reader_plugin)
         ]
 
     link(

@@ -36,4 +36,4 @@ Their columns are described below:
 - id: Link id;
 - source_id: Source node from t, matches to `node.id`;
 - target_id: Target node from t + 1, matchs to `node.id`;
-- iou: Link association score.
+- weight: Link association score, the higher the better.

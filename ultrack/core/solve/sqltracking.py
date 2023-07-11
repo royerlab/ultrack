@@ -154,7 +154,7 @@ class SQLTracking:
             f"Batch {index}, edges with source nodes with t between {start_time} and {end_time - 1}"
         )
 
-        solver.add_edges(df["source_id"], df["target_id"], df["iou"])
+        solver.add_edges(df["source_id"], df["target_id"], df["weight"])
 
     def _add_overlap_constraints(self, solver: BaseSolver, index: int) -> None:
         """Adds overlaping segmentation constrainsts

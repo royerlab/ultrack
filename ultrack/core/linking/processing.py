@@ -34,7 +34,7 @@ def _compute_dct(
 ) -> None:
     """Precomputes DCT values for the nodes using the frames from the provided time."""
 
-    frames = [image[time] for image in images]
+    frames = [np.asarray(image[time]) for image in images]
     LOG.info(f"Image with shape {[f.shape for f in frames]}")
 
     for node in nodes:
@@ -145,7 +145,7 @@ def _process(
         links += neighborhood
 
     links = np.asarray(links)[:, [0, 2, 3]]  # ignoring index column
-    df = pd.DataFrame(links, columns=["iou", "source_id", "target_id"])
+    df = pd.DataFrame(links, columns=["weight", "source_id", "target_id"])
 
     with write_lock if write_lock is not None else nullcontext():
         LOG.info(f"Pushing links from time {time} to {db_path}")
