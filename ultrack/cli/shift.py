@@ -32,7 +32,7 @@ def add_shift_cli(
     viewer = ViewerModel()
 
     vector_field = [
-        layer.data
+        layer.data[0] if layer.multiscale else layer.data
         for layer in viewer.open(paths, channel_axis=channel_axis, plugin=reader_plugin)
     ]
 
