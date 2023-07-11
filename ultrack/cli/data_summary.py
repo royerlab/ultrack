@@ -51,20 +51,20 @@ def _link_stats_over_time(database_path: str, out_dir: Path) -> None:
     """Queries and plots link statistics over time. Solution isn't taken into account."""
     engine = sqla.create_engine(database_path)
     with Session(engine) as session:
-        query = session.query(NodeDB.t, LinkDB.iou).join(
+        query = session.query(NodeDB.t, LinkDB.weight).join(
             NodeDB, NodeDB.id == LinkDB.source_id
         )
         groups = pd.read_sql(query.statement, session.bind).groupby("t")
 
     sns.set_theme(style="whitegrid")
 
-    fig_path = out_dir / "link_iou_plot.png"
-    plot = sns.lineplot(data=groups.agg({"iou": [q1, q2, q3]}), legend=False)
-    plot.set_ylabel("iou")
+    fig_path = out_dir / "link_weight_plot.png"
+    plot = sns.lineplot(data=groups.agg({"weight": [q1, q2, q3]}), legend=False)
+    plot.set_ylabel("link weight")
     plot.get_figure().savefig(fig_path)
     plt.close()
 
-    print(f"Links IoU over time saved at {fig_path}")
+    print(f"Links weights over time saved at {fig_path}")
 
     fig_path = out_dir / "link_count_plot.png"
     plot = sns.lineplot(data=groups.count(), legend=False)

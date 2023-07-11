@@ -34,7 +34,7 @@ def test_multiprocess_link(
     # since they're all the same, there must be at one edge with weight 1.0 for each node
     for _, group in edges.groupby("target_id"):
         assert len(group) <= config.linking_config.max_neighbors
-        assert (group["iou"] == 1.0).sum() == 1.0
+        assert (group["weight"] == 1.0).sum() == 1.0
 
     # validate if distances are whitin max_distance
     nodes = pd.read_sql_query(

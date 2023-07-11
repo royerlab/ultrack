@@ -41,11 +41,19 @@ class DivisionAnnotation(enum.IntEnum):
     FALSE = 2
 
 
+class LinkAnnotation(enum.IntEnum):
+    UNKNOWN = 0
+    REAL = 1
+    FAKE = 2
+
+
 class NodeDB(Base):
     __tablename__ = "nodes"
     t = Column(Integer, primary_key=True)
     id = Column(BigInteger, primary_key=True, unique=True)
     parent_id = Column(BigInteger, default=NO_PARENT)
+    # hierarchy parent id matches to `id` column.
+    hier_parent_id = Column(BigInteger, default=NO_PARENT)
     t_node_id = Column(Integer)
     t_hier_id = Column(Integer)
     z = Column(Float)
@@ -73,7 +81,8 @@ class LinkDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
-    iou = Column(Float)
+    weight = Column(Float)
+    annotation = Column(Enum(LinkAnnotation), default=LinkAnnotation.UNKNOWN)
 
 
 def maximum_time(data_config: DataConfig) -> int:

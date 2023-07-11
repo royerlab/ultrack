@@ -129,7 +129,7 @@ class HypothesesVizWidget(GenericDataWidget):
 
         engine = sqla.create_engine(self.config.database_path, echo=True)
         with Session(engine) as session:
-            query = session.query(NodeDB.z, NodeDB.y, NodeDB.x, LinkDB.iou).where(
+            query = session.query(NodeDB.z, NodeDB.y, NodeDB.x, LinkDB.weight).where(
                 LinkDB.target_id == NodeDB.id, LinkDB.source_id == index
             )
             df = pd.read_sql(query.statement, session.bind)
@@ -152,7 +152,7 @@ class HypothesesVizWidget(GenericDataWidget):
         self._viewer.add_vectors(
             data=vectors,
             name=self._link_layer_name,
-            features={"weights": df["iou"]},
+            features={"weights": df["weight"]},
             edge_color="weights",
             opacity=1.0,
         )

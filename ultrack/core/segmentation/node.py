@@ -169,7 +169,7 @@ class Node(_Node):
         return tuple(slice(bbox[i], bbox[i + ndim]) for i in range(ndim))
 
     def roi(self, image: Union[zarr.Array, np.ndarray]) -> np.ndarray:
-        return image[self.slice]
+        return np.asarray(image[self.slice])
 
     def masked_roi(self, image: Union[zarr.Array, np.ndarray]) -> np.ndarray:
         crop = image[self.slice].copy()

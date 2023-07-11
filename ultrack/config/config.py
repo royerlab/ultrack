@@ -23,9 +23,6 @@ class LinkingConfig(BaseModel):
 
 
 class MainConfig(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
     data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"
