@@ -34,7 +34,7 @@ def _compute_dct(
 ) -> None:
     """Precomputes DCT values for the nodes using the frames from the provided time."""
 
-    frames = [image[time] for image in images]
+    frames = [np.asarray(image[time]) for image in images]
     LOG.info(f"Image with shape {[f.shape for f in frames]}")
 
     for node in nodes:
