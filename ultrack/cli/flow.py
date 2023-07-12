@@ -12,15 +12,15 @@ from ultrack.cli.utils import (
     paths_argument,
 )
 from ultrack.config import MainConfig
-from ultrack.utils.shift import add_shift
+from ultrack.utils.flow import add_flow
 
 
-@click.command("add_shift")
+@click.command("add_flow")
 @paths_argument()
 @napari_reader_option()
 @config_option()
 @channel_axis_option(default=0, help="Coordinates shift axis.")
-def add_shift_cli(
+def add_flow_cli(
     paths: Sequence[Path],
     reader_plugin: str,
     config: MainConfig,
@@ -36,7 +36,7 @@ def add_shift_cli(
         for layer in viewer.open(paths, channel_axis=channel_axis, plugin=reader_plugin)
     ]
 
-    add_shift(
+    add_flow(
         config.data_config,
         vector_field=vector_field,
     )

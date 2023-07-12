@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
 from ultrack.core.database import Base, NodeDB
-from ultrack.utils.shift import add_shift
+from ultrack.utils.flow import add_flow
 
 
 @pytest.mark.parametrize("n_channels,n_dim", [(2, 2), (3, 3), (2, 3)])
-def test_add_shift(
+def test_add_flow(
     config_instance: MainConfig,
     n_channels: int,
     n_dim: int,
@@ -83,7 +83,7 @@ def test_add_shift(
             session.add(mock_node)
         session.commit()
 
-    add_shift(data_config, vector_field)
+    add_flow(data_config, vector_field)
 
     with Session(engine) as session:
         query = session.query(
