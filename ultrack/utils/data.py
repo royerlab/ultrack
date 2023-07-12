@@ -145,12 +145,12 @@ def large_chunk_size(
 
     if len(shape) == 3:
         chunks = (1, *plane_shape)
-    elif len(shape) == 4:
+    elif len(shape) > 3:
         depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
-        chunks = (1, depth, *plane_shape)
+        chunks = (1,) * (len(shape) - 3) + (depth, *plane_shape)
     else:
         raise NotImplementedError(
-            f"Large chunk size only implemented for 2,3-D + time arrays. Found {len(shape) - 1} + time."
+            f"Large chunk size only implemented for 3-or-more dimensional arrays. Found {len(shape) - 1}-dims."
         )
 
     return chunks

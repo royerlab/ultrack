@@ -6,21 +6,18 @@ from numpy.typing import ArrayLike
 from tqdm import tqdm
 from zarr.storage import Store
 
+from ultrack.utils.cuda import import_module
 from ultrack.utils.data import large_chunk_size
 
 LOG = logging.getLogger(__name__)
 
 try:
     import cupy as xp
-    import cupyx.scipy.ndimage as ndi
-    from cucim.skimage.segmentation import find_boundaries
 
 except ImportError as e:
     LOG.info(e)
     LOG.info("cupy not found, using CPU processing")
     import numpy as xp
-    import scipy.ndimage as ndi
-    from skimage.segmentation import find_boundaries
 
 
 def labels_to_edges(
@@ -49,6 +46,8 @@ def labels_to_edges(
     Tuple[ArrayLike, ArrayLike]
         Detection and edges array.
     """
+    ndi = import_module("scipy", "ndimage")
+    segm = import_module("skimage", "segmentation")
 
     if detection_store is None:
         detection_store = zarr.MemoryStore()
@@ -88,7 +87,7 @@ def labels_to_edges(
         for lb in labels:
             lb_frame = xp.asarray(lb[t])
             detection_frame |= lb_frame > 0
-            edges_frame += find_boundaries(lb_frame, mode="outer")
+            edges_frame += segm.find_boundaries(lb_frame, mode="outer")
 
         edges_frame /= len(labels)
 
