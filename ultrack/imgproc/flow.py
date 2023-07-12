@@ -322,6 +322,8 @@ def _to_tensor(
     th.Tensor
         (C, (Z), Y, X)-tensor.
     """
+    image = np.asarray(image)
+
     if channel_axis is None:
         image = image[np.newaxis, ...]
 

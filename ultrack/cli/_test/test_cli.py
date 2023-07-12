@@ -62,11 +62,11 @@ class TestCommandLine:
             + zarr_dataset_paths
         )
 
-    def test_add_shift(self, instance_config_path: str) -> None:
+    def test_add_flow(self, instance_config_path: str) -> None:
         config = load_config(instance_config_path)
         tmp_store = zarr.TempStore(suffix=".zarr")
         zarr.zeros((2,) + tuple(config.data_config.metadata["shape"]), store=tmp_store)
-        _run_command(["add_shift", "-cfg", str(instance_config_path), tmp_store.path])
+        _run_command(["add_flow", "-cfg", str(instance_config_path), tmp_store.path])
 
     def test_link_iou(self, instance_config_path: str) -> None:
         _run_command(["link", "-cfg", str(instance_config_path)])

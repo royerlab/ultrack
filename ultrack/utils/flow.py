@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence
+from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -17,9 +17,9 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 LOG = logging.getLogger(__name__)
 
 
-def add_shift(
+def add_flow(
     data_config: DataConfig,
-    vector_field: Sequence[ArrayLike],
+    vector_field: Union[ArrayLike, Sequence[ArrayLike]],
 ) -> None:
     """
     Adds vector field (coordinate shift) data into nodes.
@@ -33,26 +33,35 @@ def add_shift(
     data_config : DataConfig
         Data configuration parameters.
     vector_field : Sequence[ArrayLike]
-        Vector field arrays. Each array per coordinate.
+        Vector field arrays. Each array per coordinate or a single (T, D, (Z), Y, X)-array.
     """
     LOG.info("Adding shift (vector field) to nodes")
 
-    assert all(v.shape == vector_field[0].shape for v in vector_field)
+    if isinstance(vector_field, Sequence):
+        assert all(v.shape == vector_field[0].shape for v in vector_field)
+        ndim = vector_field[0].ndim
+        nvecs = len(vector_field)
+        vec_shape = np.asarray(vector_field[0].shape)
+        is_sequence = True
+    else:
+        ndim = vector_field.ndim - 1
+        nvecs = vector_field.shape[1]
+        vec_shape = np.asarray([vector_field.shape[0], *vector_field.shape[2:]])
+        is_sequence = False
 
     shape = np.asarray(data_config.metadata["shape"])
-    if len(shape) != vector_field[0].ndim:
+    if len(shape) != ndim:
         raise ValueError(
-            "Original data shape and vector field must have same number of dimensions."
-            f" Found {len(shape)} and {vector_field[0].ndim}."
+            "Original data shape and vector field must have same number of dimensions (ignoring channels)."
+            f" Found {len(shape)} and {ndim}."
         )
 
-    engine = sqla.create_engine(data_config.database_path)
-
-    vec_shape = np.asarray(vector_field[0].shape)
-    scaling = (vec_shape[1:] - 1) / (shape[1:] - 1)
-
     columns = ["x_shift", "y_shift", "z_shift"]
+    scaling = (vec_shape[1:] - 1) / (shape[1:] - 1)
     coordinate_columns = ["z", "y", "x"][-len(scaling) :]
+    vec_index_iterator = reversed(range(nvecs))
+
+    engine = sqla.create_engine(data_config.database_path)
 
     for t in tqdm(range(shape[0])):
         with Session(engine) as session:
@@ -74,10 +83,14 @@ def add_shift(
 
         # default value
         df[columns] = 0.0
-        for vec, colname in zip(reversed(vector_field), columns):
-            df[colname] = np.asarray(vec[t])[
-                coords
-            ]  # asarray due lazy loading formats (e.g. dask)
+        # reversed because z could be missing
+        for v, colname in zip(vec_index_iterator, columns):
+            if is_sequence:
+                df[colname] = np.asarray(vector_field[v][t])[
+                    coords
+                ]  # asarray due lazy loading formats (e.g. dask)
+            else:
+                df[colname] = np.asarray(vector_field[t, v])[coords]
 
         df["node_id"] = df.index
         with Session(engine) as session:
