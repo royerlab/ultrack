@@ -40,6 +40,7 @@ def tracks_to_zarr(
     """
 
     shape = config.data_config.metadata["shape"]
+    dtype = np.int32
 
     if isinstance(store_or_path, zarr.MemoryStore) and config.data_config.n_workers > 1:
         raise ValueError(
@@ -48,15 +49,15 @@ def tracks_to_zarr(
         )
 
     if chunks is None:
-        chunks = large_chunk_size(shape, dtype=np.float16)
+        chunks = large_chunk_size(shape, dtype=dtype)
 
     if isinstance(store_or_path, Store):
-        array = zarr.zeros(shape, dtype=np.int32, store=store_or_path, chunks=chunks)
+        array = zarr.zeros(shape, dtype=dtype, store=store_or_path, chunks=chunks)
 
     else:
         array = create_zarr(
             shape,
-            dtype=np.int32,
+            dtype=dtype,
             store_or_path=store_or_path,
             chunks=chunks,
             default_store_type=zarr.TempStore,
