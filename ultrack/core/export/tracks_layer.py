@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
-from ultrack.config.dataconfig import DataConfig
+from ultrack.config.config import MainConfig
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
     inv_tracks_forest,
@@ -11,15 +11,15 @@ from ultrack.core.export.utils import (
 
 
 def to_tracks_layer(
-    data_config: DataConfig,
+    config: MainConfig,
     include_parents: bool = False,
 ) -> Tuple[pd.DataFrame, Dict[int, List[int]]]:
     """Exports solution from database to napari tracks layer format.
 
     Parameters
     ----------
-    data_config : DataConfig
-        Data configuration parameters.
+    config : MainConfig
+        Configuration parameters.
     include_parents : bool
         Flag to include parents track id for each track id.
 
@@ -28,11 +28,13 @@ def to_tracks_layer(
     Tuple[pd.DataFrame, Dict[int, List[int]]]
         Tracks dataframe and an lineage graph, mapping node_id -> parent_id.
     """
-    df = solution_dataframe_from_sql(data_config.database_path)
+    df = solution_dataframe_from_sql(config.data_config.database_path)
     df = add_track_ids_to_forest(df)
+    df.sort_values(by=["track_id", "t"], inplace=True)
+
     graph = inv_tracks_forest(df)
 
-    data_dim = len(data_config.metadata["shape"])
+    data_dim = len(config.data_config.metadata["shape"])
     if data_dim == 4:
         columns = ["track_id", "t", "z", "y", "x"]
     elif data_dim == 3:

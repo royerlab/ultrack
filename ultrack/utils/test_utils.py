@@ -84,7 +84,7 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array, zarr.Array]:
 
     # avoiding popping from instance
     kwargs = request.param.copy()
-    length = kwargs.pop("length", 4)
+    length = kwargs.pop("length", 3)
 
     blobs, contours, labels = make_segmentation_mock_data(**kwargs)
     shape = (length,) + blobs.shape
@@ -116,8 +116,7 @@ def segmentation_database_mock_data(
     segment(
         detection,
         edge,
-        config_instance.segmentation_config,
-        config_instance.data_config,
+        config_instance,
     )
     return config_instance
 
@@ -127,7 +126,7 @@ def linked_database_mock_data(
     segmentation_database_mock_data: MainConfig,
 ) -> MainConfig:
     config = segmentation_database_mock_data
-    link(config.linking_config, config.data_config)
+    link(config)
     return config
 
 
@@ -136,7 +135,7 @@ def tracked_database_mock_data(
     linked_database_mock_data: MainConfig,
 ) -> MainConfig:
     config = linked_database_mock_data
-    solve(config.tracking_config, config.data_config)
+    solve(config)
     return config
 
 
@@ -155,10 +154,9 @@ def tracked_cell_division_mock_data(
     segment(
         detection,
         edges,
-        config_instance.segmentation_config,
-        config_instance.data_config,
+        config_instance,
     )
-    link(config_instance.linking_config, config_instance.data_config)
-    solve(config_instance.tracking_config, config_instance.data_config)
+    link(config_instance)
+    solve(config_instance)
 
     return config_instance
