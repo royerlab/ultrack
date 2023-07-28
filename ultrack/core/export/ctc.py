@@ -17,7 +17,8 @@ from tifffile import imwrite
 from toolz import curry
 from tqdm import tqdm
 
-from ultrack.config import DataConfig
+from ultrack.config.config import MainConfig
+from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
     add_track_ids_to_forest,
@@ -292,7 +293,7 @@ def _write_tiff_buffer(
 
 def to_ctc(
     output_dir: Path,
-    data_config: DataConfig,
+    config: MainConfig,
     margin: int = 0,
     scale: Optional[Tuple[float]] = None,
     first_frame: Optional[ArrayLike] = None,
@@ -307,8 +308,8 @@ def to_ctc(
     ----------
     output_dir : Path
         Output directory to save segmentation masks and lineage graph
-    data_config : DataConfig
-        Data configuration parameters.
+    config : DataConfig
+        Configuration parameters.
     scale : Optional[Tuple[float]], optional
         Optional scaling of output segmentation masks, by default None
     margin : int
@@ -333,7 +334,7 @@ def to_ctc(
     _validate_masks_path(output_dir, overwrite)
     maybe_overwrite_path(tracks_path, overwrite)
 
-    df = solution_dataframe_from_sql(data_config.database_path)
+    df = solution_dataframe_from_sql(config.data_config.database_path)
 
     if len(df) == 0:
         raise ValueError("Solution is empty.")
@@ -344,17 +345,17 @@ def to_ctc(
 
     if margin > 0:
         if condition is None:
-            condition = margin_filter_condition(data_config, margin)
+            condition = margin_filter_condition(config.data_config, margin)
         else:
             # mergin two conditions into one to avoid looping querying the db twice
             first_cond = condition
-            second_cond = margin_filter_condition(data_config, margin)
+            second_cond = margin_filter_condition(config.data_config, margin)
 
             def condition(node: Node) -> bool:
                 return first_cond(node) or second_cond(node)
 
     if condition is not None:
-        df = filter_nodes_generic(data_config, df, condition)
+        df = filter_nodes_generic(config.data_config, df, condition)
 
     if len(df) == 0:
         raise ValueError("Solution is empty after filtering.")
@@ -372,7 +373,7 @@ def to_ctc(
             )
 
         df = select_tracks_from_first_frame(
-            data_config,
+            config.data_config,
             first_frame,
             df,
             stitch_tracks=stitch_tracks,
@@ -389,7 +390,7 @@ def to_ctc(
     LOG.info(f"CTC tracking data:\n{tracks_df}")
 
     export_segmentation_generic(
-        data_config,
+        config.data_config,
         df,
         _write_tiff_buffer(
             output_dir=output_dir, scale=scale, dilation_iters=dilation_iters

@@ -13,4 +13,4 @@ from ultrack.config import MainConfig
 @overwrite_option()
 def solve_cli(config: MainConfig, batch_index: Optional[int], overwrite: bool) -> None:
     """Compute tracks by selecting optimal linking between candidate segments."""
-    solve(config.tracking_config, config.data_config, batch_index, overwrite)
+    solve(config, batch_index, overwrite)

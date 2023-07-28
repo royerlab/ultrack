@@ -58,10 +58,9 @@ def track(
     segment(
         detection,
         edges,
-        config.segmentation_config,
-        config.data_config,
+        config,
         overwrite=overwrite,
     )
 
-    link(config.linking_config, config.data_config, scale=scale)
-    solve(config.tracking_config, config.data_config)
+    link(config, scale=scale)
+    solve(config)

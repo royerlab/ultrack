@@ -59,9 +59,7 @@ def test_sql_tracking(
     linked_database_mock_data: MainConfig,
 ) -> None:
     config = linked_database_mock_data
-
-    solve(config.tracking_config, config.data_config)
-
+    solve(config)
     _validate_tracking_solution(config)
 
 
@@ -75,11 +73,11 @@ def test_batch_sql_tracking(
 ) -> None:
     config = linked_database_mock_data
 
-    solve(config.tracking_config, config.data_config, batch_index=0)
-    solve(config.tracking_config, config.data_config, batch_index=1)
+    solve(config, batch_index=0)
+    solve(config, batch_index=1)
 
     with pytest.raises(ValueError):
-        solve(config.tracking_config, config.data_config, batch_index=2)
+        solve(config, batch_index=2)
 
     _validate_tracking_solution(config)
 

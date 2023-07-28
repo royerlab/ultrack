@@ -1,0 +1,18 @@
+name: ultrack-stardist
+channels:
+  - conda-forge
+  - defaults
+  - gurobi
+dependencies:
+  - python=3.10
+  - conda-forge::tensorflow
+  - coin-or-cbc
+  - gurobi
+  - jupyter
+  - pip
+  - zarr
+  - pip:
+    - pyqt5
+    - napari
+    - stardist
+    - csbdeep

@@ -11,7 +11,7 @@ from scipy.spatial import KDTree
 from sqlalchemy.orm import Session
 from toolz import curry
 
-from ultrack.config import DataConfig, LinkingConfig
+from ultrack.config.config import LinkingConfig, MainConfig
 from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.node import Node
@@ -157,8 +157,7 @@ def _process(
 
 
 def link(
-    linking_config: LinkingConfig,
-    data_config: DataConfig,
+    config: MainConfig,
     images: Sequence[ArrayLike] = tuple(),
     scale: Optional[Sequence[float]] = None,
     batch_index: Optional[int] = None,
@@ -168,10 +167,8 @@ def link(
 
     Parameters
     ----------
-    linking_config : LinkingConfig
-        Linking configuration parameters.
-    data_config : DataConfig
-        Data configuration parameters.
+    config : MainConfig
+        Configuration parameters.
     images : Sequence[ArrayLike]
         Optinal sequence of images for DCT correlation edge weight.
     scale : Sequence[float]
@@ -181,23 +178,23 @@ def link(
     overwrite : bool
         Cleans up linking database content before processing.
     """
-    LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
+    LOG.info(f"Linking nodes with LinkingConfig:\n{config.linking_config}")
 
-    max_t = maximum_time(data_config)
-    time_points = batch_index_range(max_t, linking_config.n_workers, batch_index)
+    max_t = maximum_time(config.data_config)
+    time_points = batch_index_range(max_t, config.linking_config.n_workers, batch_index)
     LOG.info(f"Linking time points {time_points}")
 
     if overwrite and (batch_index is None or batch_index == 0):
-        clear_linking_data(data_config.database_path)
+        clear_linking_data(config.data_config.database_path)
 
-    with multiprocessing_sqlite_lock(data_config) as lock:
+    with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
-            config=linking_config,
-            db_path=data_config.database_path,
+            config=config.linking_config,
+            db_path=config.data_config.database_path,
             write_lock=lock,
             images=images,
             scale=scale,
         )
         multiprocessing_apply(
-            process, time_points, linking_config.n_workers, desc="Linking nodes."
+            process, time_points, config.linking_config.n_workers, desc="Linking nodes."
         )

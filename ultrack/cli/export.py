@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
-import zarr
 from tifffile import imread
 
 from ultrack.cli.utils import (
@@ -81,7 +80,7 @@ def ctc_cli(
 
     to_ctc(
         output_directory,
-        config.data_config,
+        config,
         margin=margin,
         scale=scale,
         first_frame=first_frame,
@@ -122,11 +121,10 @@ def zarr_napari_cli(
 
     output_directory.mkdir(exist_ok=True)
 
-    tracks, _ = to_tracks_layer(config.data_config, include_parents=include_parents)
+    tracks, _ = to_tracks_layer(config, include_parents=include_parents)
     tracks.to_csv(tracks_path, index=False)
 
-    store = zarr.NestedDirectoryStore(segm_path)
-    tracks_to_zarr(config.data_config, tracks, store=store)
+    tracks_to_zarr(config, tracks, store_or_path=segm_path)
 
 
 @click.group("export")

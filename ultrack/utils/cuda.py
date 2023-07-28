@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from types import ModuleType
 from typing import Generator
 
-import torch as th
+from numpy.typing import ArrayLike
 
 LOG = logging.getLogger(__name__)
 
@@ -16,6 +16,14 @@ try:
 except (ModuleNotFoundError, ImportError):
     LOG.info("cupy not found.")
     cp = None
+
+try:
+    import torch as th
+
+    LOG.info("torch found.")
+except (ModuleNotFoundError, ImportError):
+    LOG.info("torch not found.")
+    th = None
 
 
 CUPY_MODULES = {
@@ -43,7 +51,7 @@ def unified_memory() -> Generator:
         cp.cuda.set_allocator(previous_allocator)
 
 
-def torch_default_device() -> th.device:
+def torch_default_device() -> "th.device":
     """
     Returns "gpu", "mps" or "cpu" devices depending on their availability.
 
@@ -52,6 +60,9 @@ def torch_default_device() -> th.device:
     th.device
         Torch fastest device.
     """
+    if th is None:
+        raise ImportError("torch not found.")
+
     if th.cuda.is_available():
         device = th.cuda.device_count() - 1
     elif th.backends.mps.is_available():
@@ -68,7 +79,6 @@ def import_module(module: str, submodule: str) -> ModuleType:
     ----------
     module : str
         Main python module (e.g. skimage, scipy)
-
     submodule : str
         Secondary python module (e.g. morphology, ndimage)
 
@@ -88,3 +98,12 @@ def import_module(module: str, submodule: str) -> ModuleType:
         LOG.info(f"{cupy_module_name} not found. Using cpu equivalent")
 
     return pkg
+
+
+def to_cpu(arr: ArrayLike) -> ArrayLike:
+    """Moves array to cpu, if it's already there nothing is done."""
+    if hasattr(arr, "cpu"):
+        arr = arr.cpu()
+    elif hasattr(arr, "get"):
+        arr = arr.get()
+    return arr

@@ -74,8 +74,7 @@ def segmentation_cli(
     segment(
         detection,
         edge,
-        config.segmentation_config,
-        config.data_config,
+        config,
         batch_index=batch_index,
         overwrite=overwrite,
     )

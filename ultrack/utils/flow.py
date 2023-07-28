@@ -8,7 +8,7 @@ from numpy.typing import ArrayLike
 from sqlalchemy.orm import Session
 from tqdm import tqdm
 
-from ultrack.config import DataConfig
+from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
 
 logging.basicConfig()
@@ -18,7 +18,7 @@ LOG = logging.getLogger(__name__)
 
 
 def add_flow(
-    data_config: DataConfig,
+    config: MainConfig,
     vector_field: Union[ArrayLike, Sequence[ArrayLike]],
 ) -> None:
     """
@@ -49,19 +49,27 @@ def add_flow(
         vec_shape = np.asarray([vector_field.shape[0], *vector_field.shape[2:]])
         is_sequence = False
 
-    shape = np.asarray(data_config.metadata["shape"])
+    shape = np.asarray(config.data_config.metadata["shape"])
     if len(shape) != ndim:
         raise ValueError(
             "Original data shape and vector field must have same number of dimensions (ignoring channels)."
             f" Found {len(shape)} and {ndim}."
         )
 
-    columns = ["x_shift", "y_shift", "z_shift"]
-    scaling = (vec_shape[1:] - 1) / (shape[1:] - 1)
-    coordinate_columns = ["z", "y", "x"][-len(scaling) :]
-    vec_index_iterator = reversed(range(nvecs))
+    if np.any(np.abs(vector_field[0]) > 1):
+        raise ValueError(
+            "Vector field values must be normalized. "
+            f"Found {vector_field[0].min()} and {vector_field[0].max()}."
+        )
 
-    engine = sqla.create_engine(data_config.database_path)
+    columns = ["x_shift", "y_shift", "z_shift"]
+    coords_scaling = (vec_shape[1:] - 1) / (shape[1:] - 1)
+    coordinate_columns = ["z", "y", "x"][-len(coords_scaling) :]
+    vec_index_iterator = reversed(range(nvecs))
+    # vec_scaling varies depending on the number of vector field and image dimensions
+    vec_scaling = np.asarray(shape[1 + len(coords_scaling) - nvecs :])
+
+    engine = sqla.create_engine(config.data_config.database_path)
 
     for t in tqdm(range(shape[0])):
         with Session(engine) as session:
@@ -75,7 +83,7 @@ def add_flow(
             continue
 
         coords = df[coordinate_columns].to_numpy()
-        coords = np.round(coords * scaling).astype(int)
+        coords = np.round(coords * coords_scaling).astype(int)
         coords = np.minimum(
             np.maximum(0, coords), vec_shape[1:] - 1
         )  # truncating boundary
@@ -91,6 +99,12 @@ def add_flow(
                 ]  # asarray due lazy loading formats (e.g. dask)
             else:
                 df[colname] = np.asarray(vector_field[t, v])[coords]
+
+        # vector field is between -0.5 to 0.5, so it's scaled to the original image size
+        # ours is the torch convection divided by 2.0
+        # reference
+        # https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html
+        df[columns[:nvecs]] *= vec_scaling[::-1]  # x, y, z
 
         df["node_id"] = df.index
         with Session(engine) as session:

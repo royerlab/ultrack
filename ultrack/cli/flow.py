@@ -37,6 +37,6 @@ def add_flow_cli(
     ]
 
     add_flow(
-        config.data_config,
+        config,
         vector_field=vector_field,
     )

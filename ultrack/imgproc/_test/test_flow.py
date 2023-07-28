@@ -1,7 +1,12 @@
 import pytest
-import torch as th
 
-from ultrack.imgproc.flow import advenct_field, flow, to_tracks
+th = pytest.importorskip("torch")
+
+from ultrack.imgproc.flow import (  # noqa: E402
+    advenct_field,
+    timelapse_flow,
+    trajectories_to_tracks,
+)
 
 
 @pytest.mark.parametrize("ndim", [2, 3])
@@ -24,14 +29,14 @@ def test_flow_field(ndim: int, request) -> None:
         [intensity * th.exp(-th.square(grid - mu).sum(dim=-1) / sigma) for mu in mus]
     )
 
-    fields = flow(
+    fields = timelapse_flow(
         frames.numpy(),
         im_factor=im_factor,
         grid_factor=grid_factor,
         num_iterations=1000,
     )
     trajectory = advenct_field(fields, mus[None, 0], size)
-    tracks = to_tracks(trajectory)
+    tracks = trajectories_to_tracks(trajectory)
 
     if request.config.getoption("--show-napari-viewer"):
         import napari
