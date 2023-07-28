@@ -16,8 +16,8 @@ The existing examples are:
 
 # Development Notes
 
-To run all the examples and update the notebooks in headless mode run:
+To run all the examples and update the notebooks in headless mode, run:
 
 ```bash
-source refresh_examples.sh
+bash refresh_examples.sh
 ```
