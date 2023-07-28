@@ -517,17 +517,18 @@ def timelapse_flow(
 
     resized_shape = [max(1, int(s // im_factor)) for s in imgs_shape]
     shape = (images.shape[0], len(imgs_shape), *resized_shape)  # (T, D, (Z), Y, X)
+    dtype = np.float16
 
     if chunks is None:
-        chunks = large_chunk_size(shape, dtype=np.float16)
+        chunks = large_chunk_size(shape, dtype=dtype)
 
     if isinstance(store_or_path, Store):
-        output = zarr.zeros(shape, dtype=np.float16, store=store_or_path, chunks=chunks)
+        output = zarr.zeros(shape, dtype=dtype, store=store_or_path, chunks=chunks)
 
     else:
         output = create_zarr(
             shape,
-            dtype=np.float16,
+            dtype=dtype,
             store_or_path=store_or_path,
             chunks=chunks,
             default_store_type=zarr.TempStore,
