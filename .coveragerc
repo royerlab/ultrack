@@ -2,6 +2,7 @@
 [run]
 omit =
     */_test/*.py
+    ultrack/widgets/*
 
 [report]
 # Regexes for lines to exclude from consideration

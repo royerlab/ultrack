@@ -106,7 +106,10 @@ class TestCommandLine:
         )
 
     def test_zarr_napari_export(
-        self, instance_config_path: str, tmp_path: Path
+        self,
+        instance_config_path: str,
+        tmp_path: Path,
+        zarr_dataset_paths: List[str],
     ) -> None:
         _run_command(
             [
@@ -116,7 +119,8 @@ class TestCommandLine:
                 instance_config_path,
                 "-o",
                 str(tmp_path / "results"),
-                "--include-parents",
+                "-i",
+                zarr_dataset_paths[2],
             ]
         )
 
