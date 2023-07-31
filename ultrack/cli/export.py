@@ -2,10 +2,13 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
+from napari.plugins import _initialize_plugins
+from napari.viewer import ViewerModel
 from tifffile import imread
 
 from ultrack.cli.utils import (
     config_option,
+    napari_reader_option,
     output_directory_option,
     overwrite_option,
     tuple_callback,
@@ -13,6 +16,7 @@ from ultrack.cli.utils import (
 from ultrack.config import MainConfig
 from ultrack.core.export import to_ctc, to_tracks_layer, tracks_to_zarr
 from ultrack.core.export.utils import maybe_overwrite_path
+from ultrack.imgproc.measure import tracks_properties
 
 
 @click.command("ctc")
@@ -97,17 +101,27 @@ def ctc_cli(
 @config_option()
 @overwrite_option()
 @click.option(
-    "--include-parents",
+    "--measure",
     default=False,
+    show_default=True,
     is_flag=True,
-    type=bool,
-    help="Include parents track id in output tracks dataframe. Required for reconstructing divisions.",
+    help="Add segmentation measurements to tracks table.",
 )
+@click.option(
+    "--image-path",
+    "-i",
+    type=click.Path(path_type=Path, exists=True),
+    default=None,
+    help="If provided, tracks measurements will be enriched with intensity-based properties.",
+)
+@napari_reader_option()
 def zarr_napari_cli(
     output_directory: Path,
     config: MainConfig,
     overwrite: bool,
-    include_parents: bool,
+    measure: bool,
+    image_path: Optional[Path],
+    reader_plugin: str,
 ) -> None:
     """
     Exports segments to zarr and tracks to napari tabular format
@@ -121,10 +135,30 @@ def zarr_napari_cli(
 
     output_directory.mkdir(exist_ok=True)
 
-    tracks, _ = to_tracks_layer(config, include_parents=include_parents)
-    tracks.to_csv(tracks_path, index=False)
+    tracks, _ = to_tracks_layer(config, include_parents=True)
+    tracks.to_csv(tracks_path, index=False)  # saving before measures just to be sure
 
-    tracks_to_zarr(config, tracks, store_or_path=segm_path)
+    segments = tracks_to_zarr(config, tracks, store_or_path=segm_path)
+
+    if measure or image_path is not None:
+        # extract segmentation measurements
+        if image_path is None:
+            image = None
+        else:
+            _initialize_plugins()
+            viewer = ViewerModel()
+            image = [
+                layer.data[0] if layer.multiscale else layer.data
+                for layer in viewer.open(image_path, plugin=reader_plugin)
+            ]
+
+        tracks_w_measures = tracks_properties(
+            segments=segments,
+            tracks_df=tracks,
+            image=image,
+            scale=config.data_config.metadata.get("scale"),
+        )
+        tracks_w_measures.to_csv(tracks_path, index=False)
 
 
 @click.group("export")
