@@ -81,7 +81,7 @@ def create_zarr(
             else:
                 shutil.rmtree(store_or_path)
 
-        store = zarr.DirectoryStore(str(store_or_path))
+        store = zarr.NestedDirectoryStore(str(store_or_path))
     else:
         store = default_store_type()
 
