@@ -31,6 +31,7 @@ def test_tracks_properties_geometric(
     _, _, segmentation = timelapse_mock_data
     result_df = tracks_properties(
         segments=segmentation,
+        n_workers=2,
     )
 
     # Ensure DataFrame contains the expected columns

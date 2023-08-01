@@ -157,6 +157,7 @@ def zarr_napari_cli(
             tracks_df=tracks,
             image=image,
             scale=config.data_config.metadata.get("scale"),
+            n_workers=config.data_config.n_workers,
         )
         tracks_w_measures.to_csv(tracks_path, index=False)
 
