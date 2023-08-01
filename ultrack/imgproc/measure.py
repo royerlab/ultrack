@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from skimage.measure import regionprops_table
-from tqdm import tqdm
+from toolz import curry
+
+from ultrack.utils.multiprocessing import multiprocessing_apply
 
 
 def intensity_sum(mask: np.ndarray, intensities: np.ndarray) -> float:
@@ -25,6 +27,50 @@ def num_pixels(mask: np.ndarray) -> int:
     return mask.sum()
 
 
+@curry
+def _extract_measurements(
+    t: int,
+    segments: ArrayLike,
+    image: Optional[Union[List[ArrayLike], ArrayLike]],
+    channel_axis: Optional[int],
+    properties: Tuple[str, ...],
+    extra_properties: Optional[List],
+    spatial_scale: Optional[ArrayLike],
+) -> pd.DataFrame:
+    """
+    Extract measurements for a single time point.
+    See `tracks_properties` for parameter descriptions.
+    """
+    if image is not None:
+        # create image with channel as the last dimension
+        if isinstance(image, list):
+            t_image = np.stack([np.asarray(channel[t]) for channel in image], axis=-1)
+        else:
+            t_image = np.asarray(image[t])
+            if channel_axis is not None:
+                axes = list(range(t_image.ndim))
+                axes.remove(channel_axis)
+                axes.append(channel_axis)
+                t_image = t_image.transpose(axes)
+    else:
+        t_image = None
+
+    df = pd.DataFrame(
+        regionprops_table(
+            np.asarray(segments[t]),
+            intensity_image=t_image,
+            properties=properties,
+            separator="_",
+            extra_properties=extra_properties,
+            spacing=spatial_scale,
+        ),
+    )
+
+    df["t"] = t
+
+    return df
+
+
 def tracks_properties(
     segments: ArrayLike,
     tracks_df: Optional[pd.DataFrame] = None,
@@ -42,6 +88,7 @@ def tracks_properties(
     ),
     channel_axis: Optional[int] = None,
     scale: Optional[ArrayLike] = None,
+    n_workers: int = 1,
 ) -> pd.DataFrame:
     """
     Calculate properties of tracked regions from segmentation data.
@@ -78,6 +125,8 @@ def tracks_properties(
         Array-like object containing the scaling factors for each dimension of segments.
         Must include time dimension.
         Used for converting pixel measurements to physical units.
+    n_workers : int, default 1
+        Number of workers to use for parallel processing.
 
     Returns
     -------
@@ -133,39 +182,25 @@ def tracks_properties(
         if "intensity_std" in properties:
             extra_properties.append(intensity_std)
 
-    measures = []
-    for t in tqdm(range(segments.shape[0]), "Measuring properties"):
-        if image is not None:
-            # create image with channel as the last dimension
-            if isinstance(image, list):
-                t_image = np.stack(
-                    [np.asarray(channel[t]) for channel in image], axis=-1
-                )
-            else:
-                t_image = np.asarray(image[t])
-                if channel_axis is not None:
-                    axes = list(range(t_image.ndim))
-                    axes.remove(channel_axis)
-                    axes.append(channel_axis)
-                    t_image = t_image.transpose(axes)
-        else:
-            t_image = None
+    extract_measurements = _extract_measurements(
+        segments=segments,
+        image=image,
+        channel_axis=channel_axis,
+        properties=properties,
+        extra_properties=extra_properties,
+        spatial_scale=spatial_scale,
+    )
 
-        df = pd.DataFrame(
-            regionprops_table(
-                np.asarray(segments[t]),
-                intensity_image=t_image,
-                properties=properties,
-                separator="_",
-                extra_properties=extra_properties,
-                spacing=spatial_scale,
-            ),
-        )
-        df["t"] = t
-        df.rename(columns=rename_map, inplace=True)
-        measures.append(df)
+    measures = multiprocessing_apply(
+        extract_measurements,
+        range(segments.shape[0]),
+        n_workers=n_workers,
+        desc="Extracting measurements",
+    )
 
     measures = pd.concat(measures)
+    measures.rename(columns=rename_map, inplace=True)
+
     if tracks_df is not None:
         measures = tracks_df.merge(
             measures,
