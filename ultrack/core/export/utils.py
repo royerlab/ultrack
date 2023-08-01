@@ -184,7 +184,7 @@ def tracks_forest(df: pd.DataFrame) -> Dict[int, List[int]]:
     Example:
     forest[parent_id] = [child_id_0, child_id_1]
     """
-    df = df.drop_duplicates(["track_id", "parent_track_id"])
+    df = df.drop_duplicates("track_id")
     df = df[df["parent_track_id"] != NO_PARENT]
     graph = {}
     for parent_id, id in zip(df["parent_track_id"], df["track_id"]):
@@ -199,7 +199,7 @@ def inv_tracks_forest(df: pd.DataFrame) -> Dict[int, int]:
     Example:
     forest[child_id] = parent_id
     """
-    df = df.drop_duplicates(["track_id", "parent_track_id"])
+    df = df.drop_duplicates("track_id")
     df = df[df["parent_track_id"] != NO_PARENT]
     graph = {}
     for parent_id, id in zip(df["parent_track_id"], df["track_id"]):
