@@ -36,7 +36,6 @@ def test_tracks_properties_geometric(
 
     # Ensure DataFrame contains the expected columns
     expected_columns = ["track_id", "t", "num_pixels", "area"]
-    expected_columns += [c for c in "xyz"[: segmentation.ndim - 1]]
     assert all(column in result_df.columns for column in expected_columns)
 
     # Ensure intensity-related columns are not present
@@ -82,7 +81,6 @@ def test_tracks_properties_merge(
         "intensity_min",
         "intensity_max",
     ]
-    expected_columns += [c for c in "xyz"[: segmentation.ndim - 1]]
     assert all(column in result_df.columns for column in expected_columns)
 
     # Ensure the DataFrame has the correct number of rows

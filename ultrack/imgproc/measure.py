@@ -79,7 +79,6 @@ def tracks_properties(
         "label",
         "num_pixels",
         "area",
-        "centroid",
         "intensity_sum",
         "intensity_mean",
         "intensity_std",
@@ -105,13 +104,12 @@ def tracks_properties(
         Array-like object containing the image data for each time point. If provided,
         intensity-based properties will be calculated; otherwise, only geometric
         properties will be calculated.
-    properties : Tuple[str, ...], default ('num_pixels', 'area', 'centroid', 'intensity_sum',
+    properties : Tuple[str, ...], default ('num_pixels', 'area', 'intensity_sum',
                                           'intensity_mean', 'intensity_std', 'intensity_min',
                                           'intensity_max')
         Tuple of property names to be calculated. Available options include:
             - 'num_pixels': Number of pixels in the region.
             - 'area': Area of the region.
-            - 'centroid': Centroid coordinates (row, column) of the region.
             - 'intensity_sum': Sum of pixel intensities within the region.
             - 'intensity_mean': Mean pixel intensity within the region.
             - 'intensity_std': Standard deviation of pixel intensities within the region.
@@ -157,10 +155,6 @@ def tracks_properties(
         spatial_scale = scale[1:]
 
     rename_map = {"label": "track_id"}
-    rename_map.update(
-        {f"centroid_{i}": c for i, c in enumerate("zyx"[-segments.ndim + 1 :])}
-    )
-
     extra_properties = []
 
     if "num_pixels" in properties:
@@ -200,6 +194,7 @@ def tracks_properties(
 
     measures = pd.concat(measures)
     measures.rename(columns=rename_map, inplace=True)
+    measures.reset_index(inplace=True, drop=True)
 
     if tracks_df is not None:
         measures = tracks_df.merge(
@@ -207,7 +202,5 @@ def tracks_properties(
             on=["t", "track_id"],
             how="left",
         )
-
-    measures.reset_index(inplace=True)
 
     return measures
