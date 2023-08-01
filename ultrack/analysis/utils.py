@@ -3,9 +3,10 @@ from typing import List
 import numpy as np
 import pandas as pd
 from numba import njit, types
+from numpy.typing import ArrayLike
 
 from ultrack.core.database import NO_PARENT
-from ultrack.core.export.utils import _create_tracks_forest
+from ultrack.core.export.utils import _create_tracks_forest, inv_tracks_forest
 
 
 @njit
@@ -90,7 +91,7 @@ def sort_track_ids(
     [4 2 5 1 6 3 7]
     """
 
-    tracks_df = tracks_df.drop_duplicates(subset=["track_id"])
+    tracks_df = tracks_df.drop_duplicates("track_id")
     graph = _create_tracks_forest(
         tracks_df["track_id"].values,
         tracks_df["parent_track_id"].values,
@@ -102,3 +103,62 @@ def sort_track_ids(
         sorted_track_ids += _left_first_search(root, graph)
 
     return sorted_track_ids
+
+
+def get_subgraph(
+    tracks_df: pd.DataFrame,
+    track_ids: ArrayLike,
+) -> pd.DataFrame:
+    """
+    Get a subgraph from a forest of tracks represented as a DataFrame.
+
+    Parameters
+    ----------
+    tracks_df : pd.DataFrame
+        DataFrame containing track information with columns:
+            "track_id" : Unique identifier for each track.
+            "parent_track_id" : Identifier of the parent track in the forest.
+            (Other columns may be present in the DataFrame but are not used in this function.)
+    track_ids : ArrayLike
+        An array-like object containing the track IDs for which to extract the subgraph.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the subgraph of tracks corresponding to the input track IDs.
+
+    Examples
+    --------
+    >>> subgraph_df = get_subgraph(tracks_df, [3, 7, 10])
+
+    Notes
+    -----
+    The input DataFrame 'tracks_df' should have at least two columns: "track_id" and "parent_track_id",
+    where "track_id" represents the unique identifier for each track, and "parent_track_id" represents
+    the identifier of the parent track in the forest.
+    """
+    track_ids = np.atleast_1d(track_ids)
+    compressed_df = tracks_df.drop_duplicates("track_id")
+
+    inv_graph = inv_tracks_forest(compressed_df)
+    roots = []
+    for id in track_ids:
+
+        while True:
+            parent_id = inv_graph.get(id, NO_PARENT)
+            if parent_id == NO_PARENT:
+                break
+            id = parent_id
+
+        roots.append(id)
+
+    graph = _create_tracks_forest(
+        compressed_df["track_id"].values,
+        compressed_df["parent_track_id"].values,
+    )
+
+    subforest = []
+    for root in roots:
+        subforest += _left_first_search(root, graph)
+
+    return tracks_df[tracks_df["track_id"].isin(subforest)]
