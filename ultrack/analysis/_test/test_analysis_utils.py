@@ -5,8 +5,6 @@ import pandas as pd
 from numba import typed, types
 
 from ultrack.analysis.utils import _left_first_search, sort_track_ids
-
-# Import the functions to be tested
 from ultrack.core.database import NO_PARENT
 
 

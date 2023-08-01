@@ -104,10 +104,8 @@ def tracks_properties(
     """
     if scale is None:
         spatial_scale = None
-        t_scale = 1
     else:
         spatial_scale = scale[1:]
-        t_scale = scale[0]
 
     rename_map = {"label": "track_id"}
     rename_map.update(
@@ -176,6 +174,5 @@ def tracks_properties(
         )
 
     measures.reset_index(inplace=True)
-    measures["t"] *= t_scale
 
     return measures
