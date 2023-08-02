@@ -1,6 +1,9 @@
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import pytest
+import zarr
 
 from ultrack import link
 from ultrack.config import MainConfig
@@ -22,10 +25,17 @@ from ultrack.core.database import LinkDB, NodeDB
 )
 def test_multiprocess_link(
     segmentation_database_mock_data: MainConfig,
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
     config = segmentation_database_mock_data
 
-    link(config, scale=(2, 1, 1))
+    link(
+        config,
+        scale=(2, 1, 1),
+        images=[
+            timelapse_mock_data[0]
+        ],  # using a random image just to test with color verify
+    )
 
     edges = pd.read_sql_table(
         LinkDB.__tablename__, con=config.data_config.database_path
