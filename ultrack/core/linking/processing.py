@@ -127,10 +127,13 @@ def _process(
         next_features, next_features_std = _compute_features(
             time + 1, next_nodes, images, [Node.intensity_mean, Node.intensity_std]
         )
+        LOG.info(
+            f"Features Std. Dev. range {next_features_std.min()} {next_features_std.max()}"
+        )
         next_features_std[next_features_std <= 1e-6] = 1.0
         difference = next_features[:, None, ...] - current_features[neighbors]
         difference /= next_features_std[:, None, ...]
-        filtered_by_color = np.abs(difference).max(axis=-1) <= 3.0
+        filtered_by_color = np.abs(difference).max(axis=-1) <= config.z_score_threshold
     else:
         filtered_by_color = np.ones_like(neighbors, dtype=bool)
 
