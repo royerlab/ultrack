@@ -128,8 +128,7 @@ class UltrackWidget(QWidget):
         segment(
             detection=self._main_config_w._detection_layer_w.value.data,
             edge=self._main_config_w._edge_layer_w.value.data,
-            segmentation_config=self._segmentation_w.config,
-            data_config=self._data_config_w.config,
+            config=self.config,
             overwrite=True,
         )
 
@@ -137,8 +136,7 @@ class UltrackWidget(QWidget):
     @wait_cursor()
     def _make_link_worker(self, images: Sequence[ArrayLike]) -> None:
         link(
-            self._linking_w.config,
-            self._data_config_w.config,
+            self.config,
             images=images,
             overwrite=True,
         )
@@ -146,9 +144,9 @@ class UltrackWidget(QWidget):
     @thread_worker
     @wait_cursor()
     def _make_track_worker(self) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-        solve(self._tracking_w.config, self._data_config_w.config, overwrite=True)
-        tracks, graph = to_tracks_layer(self._data_config_w.config)
-        labels = tracks_to_zarr(self._data_config_w.config, tracks)
+        solve(self.config, overwrite=True)
+        tracks, graph = to_tracks_layer(self.config)
+        labels = tracks_to_zarr(self.config)
         return tracks, graph, labels
 
     @wait_cursor()

@@ -53,8 +53,7 @@ def link_cli(
         ]
 
     link(
-        config.linking_config,
-        config.data_config,
+        config,
         images=images,
         scale=config.data_config.metadata.get("scale"),
         batch_index=batch_index,

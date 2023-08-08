@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence
 
 import fasteners
 import numpy as np
@@ -11,7 +11,7 @@ from scipy.spatial import KDTree
 from sqlalchemy.orm import Session
 from toolz import curry
 
-from ultrack.config import DataConfig, LinkingConfig
+from ultrack.config.config import LinkingConfig, MainConfig
 from ultrack.core.database import LinkDB, NodeDB, maximum_time
 from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.node import Node
@@ -27,18 +27,24 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 LOG = logging.getLogger(__name__)
 
 
-def _compute_dct(
+def _compute_features(
     time: int,
     nodes: List[Node],
     images: Sequence[ArrayLike],
-) -> None:
-    """Precomputes DCT values for the nodes using the frames from the provided time."""
+    feature_funcs: List[Callable[[Node, ArrayLike], ArrayLike]],
+) -> List[ArrayLike]:
+    """Compute mean intensity for each node"""
 
-    frames = [np.asarray(image[time]) for image in images]
+    frames = np.stack(
+        [np.asarray(image[time]) for image in images],
+        axis=-1,
+    )
     LOG.info(f"Image with shape {[f.shape for f in frames]}")
 
-    for node in nodes:
-        node.precompute_dct(frames)
+    return [
+        np.stack([func(node, frames) for node in nodes], axis=0)
+        for func in feature_funcs
+    ]
 
 
 @curry
@@ -61,7 +67,7 @@ def _process(
     db_path : str
         Database path.
     images : Sequence[ArrayLike]
-        Sequence of images for DCT correlation edge weight, if empty, IoU is used for weighting.
+        Sequence of images for color space filtering, if empty, no filtering is performed.
     scale : Sequence[float]
         Optional scaling for nodes' distances.
     write_lock : Optional[fasteners.InterProcessLock], optional
@@ -108,17 +114,31 @@ def _process(
     )
 
     if len(images) > 0:
-        LOG.info("DCT edge weight")
-        LOG.info(f"computing DCT of nodes from t={time}")
-        _compute_dct(time, current_nodes, images)
-        _compute_dct(time + 1, next_nodes, images)
-        weight_func = Node.dct_dot
+        LOG.info(f"computing filtering by color z-score from t={time}")
+        (current_features,) = _compute_features(
+            time, current_nodes, images, [Node.intensity_mean]
+        )
+        # inserting dummy value for missing neighbors
+        current_features = np.append(
+            current_features,
+            np.zeros((1, current_features.shape[1])),
+            axis=0,
+        )
+        next_features, next_features_std = _compute_features(
+            time + 1, next_nodes, images, [Node.intensity_mean, Node.intensity_std]
+        )
+        LOG.info(
+            f"Features Std. Dev. range {next_features_std.min()} {next_features_std.max()}"
+        )
+        next_features_std[next_features_std <= 1e-6] = 1.0
+        difference = next_features[:, None, ...] - current_features[neighbors]
+        difference /= next_features_std[:, None, ...]
+        filtered_by_color = np.abs(difference).max(axis=-1) <= config.z_score_threshold
     else:
-        LOG.info("IoU edge weight")
-        weight_func = Node.IoU
+        filtered_by_color = np.ones_like(neighbors, dtype=bool)
 
     int_next_shift = np.round(next_shift).astype(int)
-    # moving bbox with shift, MUST be after `_compute_dct`
+    # NOTE: moving bbox with shift, MUST be after `feature computation`
     for node, shift in zip(next_nodes, int_next_shift):
         node.bbox[:n_dim] += shift
         node.bbox[-n_dim:] += shift
@@ -127,14 +147,14 @@ def _process(
     links = []
 
     for i, node in enumerate(next_nodes):
-        valid = np.logical_not(np.isinf(distances[i]))
+        valid = (~np.isinf(distances[i])) & filtered_by_color[i]
         valid_neighbors = neighbors[i, valid]
         neigh_distances = distances[i, valid]
 
         neighborhood = []
         for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
             neigh = current_nodes[neigh_idx]
-            edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
+            edge_weight = node.IoU(neigh) - distance_w * neigh_dist
             # using dist as a tie-breaker
             neighborhood.append(
                 (edge_weight, -neigh_dist, neigh.id, node.id)
@@ -145,7 +165,7 @@ def _process(
         links += neighborhood
 
     links = np.asarray(links)[:, [0, 2, 3]]  # ignoring index column
-    df = pd.DataFrame(links, columns=["iou", "source_id", "target_id"])
+    df = pd.DataFrame(links, columns=["weight", "source_id", "target_id"])
 
     with write_lock if write_lock is not None else nullcontext():
         LOG.info(f"Pushing links from time {time} to {db_path}")
@@ -157,8 +177,7 @@ def _process(
 
 
 def link(
-    linking_config: LinkingConfig,
-    data_config: DataConfig,
+    config: MainConfig,
     images: Sequence[ArrayLike] = tuple(),
     scale: Optional[Sequence[float]] = None,
     batch_index: Optional[int] = None,
@@ -168,12 +187,10 @@ def link(
 
     Parameters
     ----------
-    linking_config : LinkingConfig
-        Linking configuration parameters.
-    data_config : DataConfig
-        Data configuration parameters.
+    config : MainConfig
+        Configuration parameters.
     images : Sequence[ArrayLike]
-        Optinal sequence of images for DCT correlation edge weight.
+        Optinal sequence of images for color space filtering.
     scale : Sequence[float]
         Optional scaling for nodes' distances.
     batch_index : Optional[int], optional
@@ -181,23 +198,23 @@ def link(
     overwrite : bool
         Cleans up linking database content before processing.
     """
-    LOG.info(f"Linking nodes with LinkingConfig:\n{linking_config}")
+    LOG.info(f"Linking nodes with LinkingConfig:\n{config.linking_config}")
 
-    max_t = maximum_time(data_config)
-    time_points = batch_index_range(max_t, linking_config.n_workers, batch_index)
+    max_t = maximum_time(config.data_config)
+    time_points = batch_index_range(max_t, config.linking_config.n_workers, batch_index)
     LOG.info(f"Linking time points {time_points}")
 
     if overwrite and (batch_index is None or batch_index == 0):
-        clear_linking_data(data_config.database_path)
+        clear_linking_data(config.data_config.database_path)
 
-    with multiprocessing_sqlite_lock(data_config) as lock:
+    with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
-            config=linking_config,
-            db_path=data_config.database_path,
+            config=config.linking_config,
+            db_path=config.data_config.database_path,
             write_lock=lock,
             images=images,
             scale=scale,
         )
         multiprocessing_apply(
-            process, time_points, linking_config.n_workers, desc="Linking nodes."
+            process, time_points, config.linking_config.n_workers, desc="Linking nodes."
         )

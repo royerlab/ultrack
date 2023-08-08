@@ -1,16 +1,14 @@
 import logging
 from typing import Optional
 
-from ultrack.config.dataconfig import DataConfig
-from ultrack.config.trackingconfig import TrackingConfig
+from ultrack.config.config import MainConfig
 from ultrack.core.solve.sqltracking import SQLTracking
 
 LOG = logging.getLogger(__name__)
 
 
 def solve(
-    tracking_config: TrackingConfig,
-    data_config: DataConfig,
+    config: MainConfig,
     batch_index: Optional[int] = None,
     overwrite: bool = False,
 ) -> None:
@@ -18,16 +16,14 @@ def solve(
 
     Parameters
     ----------
-    tracking_config : TrackingConfig
-        Tracking configuration parameters.
-    data_config : DataConfig
-        Data configuration parameters.
+    config : MainConfig
+        Configuration parameters.
     batch_index : Optional[int], optional
         Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool, optional
         Resets existing solution before processing.
     """
-    tracker = SQLTracking(tracking_config, data_config)
+    tracker = SQLTracking(config)
 
     if overwrite and (batch_index is None or batch_index == 0):
         tracker.reset_solution()
