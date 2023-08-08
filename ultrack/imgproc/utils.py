@@ -68,7 +68,7 @@ def create_zarr(
         Shape of the array.
     dtype : np.dtype
         Data type of the array.
-    path : Optional[Union[Path, str]], optional
+    store_or_path : Optional[Union[Path, str]], optional
         Path to store the array, if None a zarr.MemoryStore is used, by default None
     overwrite : bool, optional
         Overwrite existing file, by default False
@@ -80,7 +80,13 @@ def create_zarr(
     zarr.Array
         Zarr array of zeros.
     """
-    if store_or_path is not None:
+    if store_or_path is None:
+        store = default_store_type()
+
+    elif isinstance(store_or_path, Store):
+        store = store_or_path
+
+    else:
         if isinstance(store_or_path, str):
             store_or_path = Path(store_or_path)
 
@@ -91,8 +97,6 @@ def create_zarr(
                 shutil.rmtree(store_or_path)
 
         store = zarr.NestedDirectoryStore(str(store_or_path))
-    else:
-        store = default_store_type()
 
     if chunks is None:
         chunks = large_chunk_size(shape, dtype=dtype)
