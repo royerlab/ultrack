@@ -16,6 +16,8 @@ def track(
     sigma: Optional[Union[Sequence[float], float]] = None,
     detection: Optional[ArrayLike] = None,
     edges: Optional[ArrayLike] = None,
+    images: Sequence[ArrayLike] = tuple(),
+    scale: Optional[Sequence[float]] = None,
     overwrite: bool = False,
 ) -> None:
     """
@@ -37,6 +39,10 @@ def track(
         Fuzzy detection array of shape (T, (Z), Y, X), by default None
     edges : Optional[ArrayLike], optional
         Edges array of shape (T, (Z), Y, X), by default None
+    images : Sequence[ArrayLike]
+        Optinal sequence of images (T, (Z), Y, X) for color space filtering.
+    scale : Sequence[float]
+        Optional scaling for nodes' distances.
     overwrite : bool, optional
         Cleans up segmentation, linking and tracking content before processing, by default False
     """
@@ -55,10 +61,9 @@ def track(
     segment(
         detection,
         edges,
-        config.segmentation_config,
-        config.data_config,
+        config,
         overwrite=overwrite,
     )
 
-    link(config.linking_config, config.data_config)
-    solve(config.tracking_config, config.data_config)
+    link(config, images=images, scale=scale)
+    solve(config)

@@ -1,6 +1,9 @@
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import pytest
+import zarr
 
 from ultrack import link
 from ultrack.config import MainConfig
@@ -22,10 +25,17 @@ from ultrack.core.database import LinkDB, NodeDB
 )
 def test_multiprocess_link(
     segmentation_database_mock_data: MainConfig,
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
     config = segmentation_database_mock_data
 
-    link(config.linking_config, config.data_config, scale=(2, 1, 1))
+    link(
+        config,
+        scale=(2, 1, 1),
+        images=[
+            timelapse_mock_data[0]
+        ],  # using a random image just to test with color verify
+    )
 
     edges = pd.read_sql_table(
         LinkDB.__tablename__, con=config.data_config.database_path
@@ -34,7 +44,7 @@ def test_multiprocess_link(
     # since they're all the same, there must be at one edge with weight 1.0 for each node
     for _, group in edges.groupby("target_id"):
         assert len(group) <= config.linking_config.max_neighbors
-        assert (group["iou"] == 1.0).sum() == 1.0
+        assert (group["weight"] == 1.0).sum() == 1.0
 
     # validate if distances are whitin max_distance
     nodes = pd.read_sql_query(

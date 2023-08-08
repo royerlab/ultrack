@@ -105,6 +105,7 @@ class GenericAnnotationWidget(GenericDataWidget):
                 name = state["name"]
                 crop_name = name + self._suffix
                 if crop_name in self._viewer.layers:
+                    state["visible"] = self._viewer.layers[crop_name].visible
                     self._viewer.layers.remove(crop_name)
 
                 data = node.roi(data[node.time])
@@ -114,7 +115,6 @@ class GenericAnnotationWidget(GenericDataWidget):
                 )
                 state["scale"] = state["scale"][-data.ndim :]
                 state["name"] = crop_name
-                state["visible"] = True
 
                 # removing this matrices for now
                 state.pop("rotate")
@@ -132,7 +132,7 @@ class GenericAnnotationWidget(GenericDataWidget):
             layer.translate = node.bbox[: node.mask.ndim]
         except KeyError:
             layer = self._viewer.add_labels(
-                node.mask, name=self._mask_layer_name, translate=node.bbox[:3]
+                node.mask, name=self._mask_layer_name, translate=node.bbox[: node.mask.ndim]
             )
             layer.bind_key("Enter", self._on_confirm)
 
@@ -140,9 +140,11 @@ class GenericAnnotationWidget(GenericDataWidget):
         self._viewer.layers.move(self._viewer.layers.index(self._mask_layer_name), -1)
 
         if self._viewer.dims.ndim == node.mask.ndim:
-            self._viewer.dims.set_point(range(3), node.centroid)
+            self._viewer.dims.set_point(range(len(node.centroid)), node.centroid)
         else:
-            self._viewer.dims.set_point(range(4), (node.time, *node.centroid))
+            self._viewer.dims.set_point(range(len(node.centroid) + 1), (node.time, *node.centroid))
+
+        self._viewer.camera.center = node.centroid
 
     def _on_confirm(self, layer: Optional[Labels] = None) -> None:
         if not self._confirm_btn.enabled:

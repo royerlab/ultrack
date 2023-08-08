@@ -7,8 +7,7 @@ import sqlalchemy as sqla
 from mip.exceptions import InterfacingError
 from sqlalchemy.orm import Session
 
-from ultrack.config.dataconfig import DataConfig
-from ultrack.config.trackingconfig import TrackingConfig
+from ultrack.config.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
 from ultrack.core.solve.solver import MIPSolver
 from ultrack.core.solve.solver.base_solver import BaseSolver
@@ -21,22 +20,21 @@ LOG = logging.getLogger(__name__)
 
 class SQLTracking:
     def __init__(
-        self, tracking_config: TrackingConfig, data_config: DataConfig
+        self,
+        config: MainConfig,
     ) -> None:
         """
         Helper class to query data from SQL database and dispatch do solver.
 
         Parameters
         ----------
-        tracking_config : TrackingConfig
-            Tracking configuration parameters.
-        data_config : DataConfig
-            Data configuration parameters.
+        config : MainConfig
+            Configuration parameters.
         """
-        LOG.info(f"SQLTracking with TrackingConfig:\n{tracking_config}")
+        LOG.info(f"SQLTracking with TrackingConfig:\n{config.tracking_config}")
 
-        self._tracking_config = tracking_config
-        self._data_config = data_config
+        self._tracking_config = config.tracking_config
+        self._data_config = config.data_config
 
         self._max_t = maximum_time(self._data_config)
         if self._tracking_config.window_size is None:
@@ -154,7 +152,7 @@ class SQLTracking:
             f"Batch {index}, edges with source nodes with t between {start_time} and {end_time - 1}"
         )
 
-        solver.add_edges(df["source_id"], df["target_id"], df["iou"])
+        solver.add_edges(df["source_id"], df["target_id"], df["weight"])
 
     def _add_overlap_constraints(self, solver: BaseSolver, index: int) -> None:
         """Adds overlaping segmentation constrainsts

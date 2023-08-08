@@ -24,7 +24,7 @@ conda activate tracking
 Install the package from github:
 
 ```bash
-pip install git+https://github.com/royerlab/ultrack.git
+pip install git+ssh://git@github.com:royerlab/ultrack-dev.git
 ```
 
 ## Usage

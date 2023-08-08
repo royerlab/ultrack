@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike
 from sqlalchemy.orm import Session
 from toolz import curry
 
-from ultrack.config import DataConfig, SegmentationConfig
+from ultrack.config.config import MainConfig, SegmentationConfig
 from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.utils import check_array_chunk
@@ -131,13 +131,11 @@ def _process(
         hierarchy.cache = True
 
         hier_index_map = {}
-        for node in hierarchy.nodes:
-            node.id = generate_id(index, time, max_segments_per_time)
-            node.time = time
-            node._parent = None  # avoiding pickling parent hierarchy
-            centroid = node.centroid
-
-            hier_index_map[node._h_node_index] = node.id
+        for hier_node in hierarchy.nodes:
+            hier_node.id = generate_id(index, time, max_segments_per_time)
+            hier_node.time = time
+            hier_node._parent = None  # avoiding pickling parent hierarchy
+            centroid = hier_node.centroid
 
             if len(centroid) == 2:
                 y, x = centroid
@@ -145,35 +143,48 @@ def _process(
             else:
                 z, y, x = centroid
 
-            nodes.append(
-                NodeDB(
-                    id=node.id,
-                    t_node_id=index,
-                    t_hier_id=h + 1,
-                    t=time,
-                    z=int(z),
-                    y=int(y),
-                    x=int(x),
-                    area=int(node.area),
-                    pickle=node,
-                )
+            node = NodeDB(
+                id=hier_node.id,
+                t_node_id=index,
+                t_hier_id=h + 1,
+                t=time,
+                z=int(z),
+                y=int(y),
+                x=int(x),
+                area=int(hier_node.area),
+                pickle=hier_node,
             )
+
+            hier_index_map[hier_node._h_node_index] = node
+            nodes.append(node)
+
             index += 1
 
         tree = hierarchy.tree
-        # find overlapping segments by iterating through hierarchy (tree)
-        for h_index in hier_index_map.keys():
+
+        for h_index, node in hier_index_map.items():
+
+            h_parent_index = tree.parent(h_index)
+            # checking if h_index is root or parent is not in hier_index_map
+            if h_index != h_parent_index:
+                try:
+                    # assign hierarchy parent to node
+                    node.hier_parent_id = hier_index_map[h_parent_index].id
+                except KeyError:
+                    pass
+
+            # find overlapping segments by iterating through hierarchy (tree)
             for a in tree.ancestors(h_index):
                 if a in hier_index_map and a != h_index:
                     overlaps.append(
                         OverlapDB(
-                            node_id=hier_index_map[h_index],
-                            ancestor_id=hier_index_map[a],
+                            node_id=hier_index_map[h_index].id,
+                            ancestor_id=hier_index_map[a].id,
                         )
                     )
 
             LOG.info(
-                f"{len(overlaps)} overlaps found for node {hier_index_map[h_index]}."
+                f"{len(overlaps)} overlaps found for node {hier_index_map[h_index].id}."
             )
 
         hierarchy.cache = False
@@ -203,8 +214,7 @@ def _process(
 def segment(
     detection: ArrayLike,
     edge: ArrayLike,
-    segmentation_config: SegmentationConfig,
-    data_config: DataConfig,
+    config: MainConfig,
     max_segments_per_time: int = 1_000_000,
     batch_index: Optional[int] = None,
     overwrite: bool = False,
@@ -217,10 +227,8 @@ def segment(
         Fuzzy detection array of shape (T, (Z), Y, X)
     edge : ArrayLike
         Edge array of shape (T, (Z), Y, X)
-    segmentation_config : SegmentationConfig
-        Segmentation configuration parameters.
-    data_config : DataConfig
-        Data configuration parameters.
+    config : MainConfig
+        Configuration parameters.
     max_segments_per_time : int
         Upper bound of segments per time point.
     batch_index : Optional[int], optional
@@ -228,7 +236,7 @@ def segment(
     overwrite : bool
         Cleans up segmentation, linking, and tracking database content before processing.
     """
-    LOG.info(f"Adding nodes with SegmentationConfig:\n{segmentation_config}")
+    LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
     if detection.shape != edge.shape:
         raise ValueError(
@@ -242,24 +250,26 @@ def segment(
     LOG.info(f"Edge array with shape {edge.shape}")
 
     length = detection.shape[0]
-    time_points = batch_index_range(length, segmentation_config.n_workers, batch_index)
+    time_points = batch_index_range(
+        length, config.segmentation_config.n_workers, batch_index
+    )
     LOG.info(f"Segmenting time points {time_points}")
 
     if batch_index is None or batch_index == 0:
-        engine = sqla.create_engine(data_config.database_path)
+        engine = sqla.create_engine(config.data_config.database_path)
 
         if overwrite:
-            clear_all_data(data_config.database_path)
+            clear_all_data(config.data_config.database_path)
 
         Base.metadata.create_all(engine)
-        data_config.metadata_add({"shape": detection.shape})
+        config.data_config.metadata_add({"shape": detection.shape})
 
-    with multiprocessing_sqlite_lock(data_config) as lock:
+    with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
             detection=detection,
             edge=edge,
-            config=segmentation_config,
-            db_path=data_config.database_path,
+            config=config.segmentation_config,
+            db_path=config.data_config.database_path,
             write_lock=lock,
             max_segments_per_time=max_segments_per_time,
         )
@@ -267,6 +277,6 @@ def segment(
         multiprocessing_apply(
             process,
             time_points,
-            segmentation_config.n_workers,
+            config.segmentation_config.n_workers,
             desc="Adding nodes to database",
         )

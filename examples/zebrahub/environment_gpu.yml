@@ -1,0 +1,17 @@
+name: ultrack-zebrahub
+channels:
+  - gurobi
+  - rapidsai
+  - conda-forge
+  - defaults
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - cupy
+  - gurobi
+  - jupyter
+  - pip
+  - pyqt
+  - pip:
+    - napari==0.4.18
+    - napari-ome-zarr

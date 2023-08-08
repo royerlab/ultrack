@@ -247,3 +247,21 @@ class Node(_Node):
     def __setstate__(self, d: Dict) -> None:
         d["mask"] = blosc2.unpack_array(d["mask"])
         self.__dict__ = d
+
+    def intensity_mean(
+        self,
+        image: ArrayLike,
+    ) -> ArrayLike:
+        """Compute the mean intensity feature for this node."""
+        features = np.mean(image[self.mask_indices()], axis=0)
+        assert features.shape[0] == image.shape[-1], f"{features.shape}, {image.shape}"
+        return features
+
+    def intensity_std(
+        self,
+        image: ArrayLike,
+    ) -> ArrayLike:
+        """Compute the standard deviation of intensity feature for this node."""
+        features = image[self.mask_indices()].std(axis=0)
+        assert features.shape[0] == image.shape[-1], f"{features.shape}, {image.shape}"
+        return features

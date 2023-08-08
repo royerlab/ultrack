@@ -1,0 +1,20 @@
+name: ultrack-flow-field
+channels:
+  - pytorch
+  - nvidia
+  - gurobi
+  - rapidsai
+  - conda-forge
+  - defaults
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - cupy
+  - gurobi
+  - jupyter
+  - pip
+  - pyqt
+  - pytorch
+  - pytorch-cuda
+  - pip:
+    - napari==0.4.18

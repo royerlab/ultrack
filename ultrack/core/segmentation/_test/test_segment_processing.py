@@ -42,8 +42,7 @@ def test_multiprocessing_segment(
     segment(
         detection,
         edges,
-        config_instance.segmentation_config,
-        config_instance.data_config,
+        config_instance,
     )
 
     assert config_instance.data_config.metadata["shape"] == list(edges.shape)

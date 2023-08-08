@@ -14,18 +14,16 @@ LOG = logging.getLogger(__name__)
 
 class LinkingConfig(BaseModel):
     n_workers: int = 1
-    max_neighbors: int = 10
+    max_neighbors: int = 5
     max_distance: float = 15.0
     distance_weight: float = 0.0
+    z_score_threshold: float = 5.0
 
     class Config:
         extra = Extra.forbid
 
 
 class MainConfig(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
     data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"

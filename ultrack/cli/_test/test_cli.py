@@ -62,16 +62,16 @@ class TestCommandLine:
             + zarr_dataset_paths
         )
 
-    def test_add_shift(self, instance_config_path: str) -> None:
+    def test_add_flow(self, instance_config_path: str) -> None:
         config = load_config(instance_config_path)
         tmp_store = zarr.TempStore(suffix=".zarr")
         zarr.zeros((2,) + tuple(config.data_config.metadata["shape"]), store=tmp_store)
-        _run_command(["add_shift", "-cfg", str(instance_config_path), tmp_store.path])
+        _run_command(["add_flow", "-cfg", str(instance_config_path), tmp_store.path])
 
     def test_link_iou(self, instance_config_path: str) -> None:
         _run_command(["link", "-cfg", str(instance_config_path)])
 
-    def test_link_dct(
+    def test_link_wuth_images(
         self, instance_config_path: str, zarr_dataset_paths: List[str]
     ) -> None:
         # using detection and edges layer to simulate image channel
@@ -106,7 +106,10 @@ class TestCommandLine:
         )
 
     def test_zarr_napari_export(
-        self, instance_config_path: str, tmp_path: Path
+        self,
+        instance_config_path: str,
+        tmp_path: Path,
+        zarr_dataset_paths: List[str],
     ) -> None:
         _run_command(
             [
@@ -116,7 +119,8 @@ class TestCommandLine:
                 instance_config_path,
                 "-o",
                 str(tmp_path / "results"),
-                "--include-parents",
+                "-i",
+                zarr_dataset_paths[2],
             ]
         )
 
