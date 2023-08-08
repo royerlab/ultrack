@@ -293,3 +293,19 @@ def robust_invert(
         output += to_cpu(_image)
 
     return output
+
+
+class Cellpose:
+    def __init__(self, **kwargs) -> None:
+        """See cellpose.models.Cellpose documentation for details."""
+        from cellpose.models import Cellpose as _Cellpose
+
+        self.model = _Cellpose(**kwargs)
+
+    def __call__(self, image: ArrayLike, **kwargs) -> np.ndarray:
+        """
+        Predicts image labels.
+        See cellpose.models.Cellpose.eval documentation for details.
+        """
+        labels, _, _, _ = self.model.eval(image, **kwargs)
+        return labels

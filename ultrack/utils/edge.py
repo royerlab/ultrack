@@ -41,6 +41,7 @@ def labels_to_edges(
     edges_store : zarr.storage.Store, optional
         Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
         By default it loads the data into memory.
+
     Returns
     -------
     Tuple[ArrayLike, ArrayLike]

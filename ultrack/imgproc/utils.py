@@ -1,3 +1,4 @@
+import itertools
 import shutil
 from pathlib import Path
 from typing import Callable, Optional, Tuple, Union
@@ -16,7 +17,7 @@ def array_apply(
     in_data: ArrayLike,
     out_data: ArrayLike,
     *,
-    axis: int = 0,
+    axis: Union[Tuple[int], int] = 0,
     **kwargs,
 ) -> None:
     """Apply a function over a given dimension of an array.
@@ -29,16 +30,24 @@ def array_apply(
         Zarr array to apply function to.
     out_data : zarr.Array
         Zarr array to store result of function.
-    axis : int, optional
+    axis : Union[Tuple[int], int], optional
         Axis of data to apply func, by default 0.
     args : tuple
         Positional arguments to pass to func.
     **kwargs :
         Keyword arguments to pass to func.
     """
-    stub_slicing = (slice(None),) * axis
-    for i in tqdm(range(in_data.shape[axis]), f"Applying {func.__name__} ..."):
-        indexing = stub_slicing + (i,)
+    name = func.__name__ if hasattr(func, "__name__") else type(func).__name__
+
+    if isinstance(axis, int):
+        axis = (axis,)
+
+    stub_slicing = [slice(None) for _ in range(in_data.ndim)]
+    multi_indices = list(itertools.product(*[range(in_data.shape[i]) for i in axis]))
+    for indices in tqdm(multi_indices, f"Applying {name} ..."):
+        for a, i in zip(axis, indices):
+            stub_slicing[a] = i
+        indexing = tuple(stub_slicing)
         out_data[indexing] = func(in_data[indexing], **kwargs)
 
 
@@ -89,3 +98,39 @@ def create_zarr(
         chunks = large_chunk_size(shape, dtype=dtype)
 
     return zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
+
+
+def normalize(
+    image: ArrayLike,
+    gamma: float,
+    lower_q: float = 0.001,
+    upper_q: float = 0.9999,
+) -> ArrayLike:
+    """
+    Normalize image to between [0, 1] and applies a gamma transform (x ^ gamma).
+
+    Parameters
+    ----------
+    image : ArrayLike
+        Images as an T,Y,X,C array.
+    gamma : float
+        Expoent of gamma transform.
+    lower_q : float, optional
+        Lower quantile for normalization.
+    upper_q : float, optional
+        Upper quantile for normalization.
+
+    Returns
+    -------
+    ArrayLike
+        Normalized array.
+    """
+    frame = image
+    frame = frame - np.quantile(frame, lower_q)
+    frame = frame / np.quantile(frame, upper_q)
+    frame = np.clip(frame, 0, 1)
+
+    if gamma != 1.0:
+        frame = np.power(frame, gamma)
+
+    return frame

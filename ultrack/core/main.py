@@ -16,6 +16,7 @@ def track(
     sigma: Optional[Union[Sequence[float], float]] = None,
     detection: Optional[ArrayLike] = None,
     edges: Optional[ArrayLike] = None,
+    images: Sequence[ArrayLike] = tuple(),
     scale: Optional[Sequence[float]] = None,
     overwrite: bool = False,
 ) -> None:
@@ -38,6 +39,8 @@ def track(
         Fuzzy detection array of shape (T, (Z), Y, X), by default None
     edges : Optional[ArrayLike], optional
         Edges array of shape (T, (Z), Y, X), by default None
+    images : Sequence[ArrayLike]
+        Optinal sequence of images (T, (Z), Y, X) for color space filtering.
     scale : Sequence[float]
         Optional scaling for nodes' distances.
     overwrite : bool, optional
@@ -62,5 +65,5 @@ def track(
         overwrite=overwrite,
     )
 
-    link(config, scale=scale)
+    link(config, images=images, scale=scale)
     solve(config)
