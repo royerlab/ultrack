@@ -42,3 +42,16 @@ The `ultrack` library relies on a configuration schema, its description is [here
 The segmentation and tracking data are stored in a SQL database, described [here](ultrack/core/README.md).
 
 Helper functions to export to the cell tracking challenge and napari formats are available, [reference](ultrack/core/export).
+
+## Citing
+
+```
+@misc{bragantini2023ultrack,
+      title={Large-Scale Multi-Hypotheses Cell Tracking Using Ultrametric Contours Maps}, 
+      author={Jordão Bragantini and Merlin Lange and Loïc Royer},
+      year={2023},
+      eprint={2308.04526},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
