@@ -1,10 +1,14 @@
 import os
+import warnings
 
 if os.environ.get("ULTRACK_DEBUG", False):
     import logging
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+
+# ignoring small float32/64 zero flush warning
+warnings.filterwarnings("ignore", message="The value of the smallest subnormal for")
 
 from ultrack.config.config import MainConfig, load_config
 from ultrack.core.export.ctc import to_ctc
