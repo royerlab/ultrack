@@ -58,12 +58,15 @@ class SQLTracking:
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
             )
 
-        LOG.info(f"Solving ILP batch {index}")
         try:
             solver = MIPSolver(self._tracking_config)
         except InterfacingError as e:
             LOG.warning(e)
             solver = MIPSolver(self._tracking_config, "CBC")
+
+        print(f"Using {solver._model.solver_name} solver")
+        print(f"Solving ILP batch {index}")
+        print("Constructing ILP ...")
 
         self._add_nodes(solver=solver, index=index)
         self._add_edges(solver=solver, index=index)
@@ -73,9 +76,14 @@ class SQLTracking:
         self._add_overlap_constraints(solver=solver, index=index)
         self._add_boundary_constraints(solver=solver, index=index)
 
+        print("Solving ILP ...")
+
         solver.optimize()
 
+        print("Saving solution ...")
         self._update_solution(index, solver.solution())
+
+        print("Done!")
 
     def _window_limits(self, index: int, with_overlap: bool) -> Tuple[int, int]:
         """Computes time window of a given index, with or without overlap.
