@@ -93,8 +93,8 @@ def sort_track_ids(
 
     tracks_df = tracks_df.drop_duplicates("track_id")
     graph = _create_tracks_forest(
-        tracks_df["track_id"].values,
-        tracks_df["parent_track_id"].values,
+        tracks_df["track_id"].to_numpy(dtype=int),
+        tracks_df["parent_track_id"].to_numpy(dtype=int),
     )
     roots = graph.pop(NO_PARENT)
 
@@ -137,7 +137,7 @@ def get_subgraph(
     where "track_id" represents the unique identifier for each track, and "parent_track_id" represents
     the identifier of the parent track in the forest.
     """
-    track_ids = np.atleast_1d(track_ids)
+    track_ids = np.atleast_1d(track_ids).astype(int)
     compressed_df = tracks_df.drop_duplicates("track_id")
 
     inv_graph = inv_tracks_forest(compressed_df)
@@ -153,8 +153,8 @@ def get_subgraph(
         roots.append(id)
 
     graph = _create_tracks_forest(
-        compressed_df["track_id"].values,
-        compressed_df["parent_track_id"].values,
+        compressed_df["track_id"].to_numpy(dtype=int),
+        compressed_df["parent_track_id"].to_numpy(dtype=int),
     )
 
     subforest = []

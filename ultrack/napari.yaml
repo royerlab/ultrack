@@ -2,9 +2,10 @@ name: ultrack
 display_name: ultrack
 contributions:
   commands:
-#     - id: ultrack.get_reader
-#       python_name: ultrack._reader:napari_get_reader
-#       title: Open data with ultrack
+    - id: ultrack.get_reader
+      python_name: ultrack.reader.napari_reader:napari_get_reader
+      title: Open data with ultrack
+
 #     - id: ultrack.write_multiple
 #       python_name: ultrack._writer:write_multiple
 #       title: Save multi-layer data with ultrack
@@ -36,10 +37,11 @@ contributions:
       python_name: ultrack.widgets:TrackInspectionWidget
       title: Track inspection
 
-#   readers:
-#     - command: ultrack.get_reader
-#       accepts_directories: false
-#       filename_patterns: ['*.npy']
+  readers:
+    - command: ultrack.get_reader
+      accepts_directories: false
+      filename_patterns: ['*.csv']
+
 #   writers:
 #     - command: ultrack.write_multiple
 #       layer_types: ['image*','labels*']
