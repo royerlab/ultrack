@@ -18,7 +18,7 @@ class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
-        solver: Literal["CBC", "GRB", ""] = "",
+        solver: Literal["CBC", "GUROBI", ""] = "",
     ) -> None:
         """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
@@ -37,6 +37,20 @@ class MIPSolver(BaseSolver):
     def reset(self) -> None:
         """Sets model to an empty state."""
         self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
+
+        if self._model.solver_name == mip.CBC:
+            LOG.warning(
+                "Using CBC solver. Consider installing Gurobi for significantly better performance."
+            )
+            LOG.warning(
+                "To install Gurobi, follow the instructions at "
+                "https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-"
+            )
+            LOG.warning(
+                "It is free for academic use. "
+                "See https://www.gurobi.com/academia/academic-program-and-licenses/"
+            )
+
         self._forward_map = None
         self._backward_map = None
         self._nodes = None
