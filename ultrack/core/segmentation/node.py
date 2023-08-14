@@ -3,13 +3,18 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import blosc2
 import numpy as np
-import tensorstore as ts
 import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
 from scipy import fft
 
 from ultrack.core.segmentation.vendored.node import Node as _Node
+
+try:
+    import tensorstore as ts
+except ImportError:
+    ts = None
+
 
 LOG = logging.getLogger(__name__)
 
@@ -186,7 +191,9 @@ class Node(_Node):
         if include_time:
             indices = (self.time,) + indices
 
-        if isinstance(buffer, zarr.Array) or isinstance(buffer, ts.TensorStore):
+        if isinstance(buffer, zarr.Array) or (
+            ts is not None and isinstance(buffer, ts.TensorStore)
+        ):
             buffer.vindex[indices] = value
         else:
             buffer[indices] = value
