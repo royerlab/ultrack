@@ -33,5 +33,8 @@ def solve(
         tracker(index=batch_index)
     else:
         LOG.info(f"Solving ILP batch indices from 0 to {tracker.num_batches}")
-        for batch_index in range(tracker.num_batches):
+        # interleaved processing
+        for batch_index in range(0, tracker.num_batches, 2):
+            tracker(index=batch_index)
+        for batch_index in range(1, tracker.num_batches, 2):
             tracker(index=batch_index)
