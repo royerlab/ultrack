@@ -1,11 +1,14 @@
-from typing import Optional, Sequence, Union
+from typing import Literal, Optional, Sequence, Union
 
 from numpy.typing import ArrayLike
 
 from ultrack.config import MainConfig
+from ultrack.core.database import clear_all_data
 from ultrack.core.linking.processing import link
+from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
+from ultrack.core.solve.sqltracking import SQLTracking
 from ultrack.utils.edge import labels_to_edges
 
 
@@ -18,7 +21,7 @@ def track(
     edges: Optional[ArrayLike] = None,
     images: Sequence[ArrayLike] = tuple(),
     scale: Optional[Sequence[float]] = None,
-    overwrite: bool = False,
+    overwrite: Literal["all", "links", "solutions", "none", True, False] = "none",
 ) -> None:
     """
     All-in-one function for cell tracking, it accepts multiple inputs (labels or edges)
@@ -43,8 +46,9 @@ def track(
         Optinal sequence of images (T, (Z), Y, X) for color space filtering.
     scale : Sequence[float]
         Optional scaling for nodes' distances.
-    overwrite : bool, optional
-        Cleans up segmentation, linking and tracking content before processing, by default False
+    overwrite : Literal["all", "links", "solutions", "none"], optional
+        Clear the corresponding data from the database, by default nothing is overwritten with "none"
+        When not "none", only the cleared and subsequent parts of the pipeline is executed.
     """
     if labels is not None and (detection is not None or edges is not None):
         raise ValueError(
@@ -58,12 +62,33 @@ def track(
             "Both `detection` and `edges` must be supplied when not using `labels`."
         )
 
-    segment(
-        detection,
-        edges,
-        config,
-        overwrite=overwrite,
-    )
+    if isinstance(overwrite, bool):
+        overwrite = "all" if overwrite else "none"
 
-    link(config, images=images, scale=scale)
+    overwrite = overwrite.lower()
+
+    if overwrite == "all":
+        clear_all_data(config.data_config.database_path)
+
+    elif overwrite == "links":
+        clear_linking_data(config.data_config.database_path)
+
+    elif overwrite == "solutions":
+        SQLTracking.clear_solution_from_database(config.data_config.database_path)
+
+    elif overwrite != "none":
+        raise ValueError(
+            f"Overwrite option {overwrite} not found. Expected one of 'all', 'links', 'solutions', 'none'."
+        )
+
+    if overwrite in ("all", "none"):
+        segment(
+            detection,
+            edges,
+            config,
+        )
+
+    if overwrite in ("all", "links", "none"):
+        link(config, images=images, scale=scale)
+
     solve(config)
