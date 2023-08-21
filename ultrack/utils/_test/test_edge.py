@@ -5,6 +5,7 @@ import pytest
 
 from ultrack.utils.data import make_segmentation_mock_data
 from ultrack.utils.edge import labels_to_edges
+from ultrack.utils.cuda import to_cpu
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def multiple_labels(
 def test_labels_to_edges(multiple_labels: List[np.ndarray]) -> None:
     """Tests merge and convertion of multiple labels into detection and edges."""
 
-    detection, _ = labels_to_edges(multiple_labels, sigma=1.5)
+    detection, _ = to_cpu(labels_to_edges(multiple_labels, sigma=1.5))
 
     shape = multiple_labels[0].shape
 
