@@ -71,7 +71,7 @@ class TestCommandLine:
     def test_link_iou(self, instance_config_path: str) -> None:
         _run_command(["link", "-cfg", str(instance_config_path)])
 
-    def test_link_wuth_images(
+    def test_link_with_images(
         self, instance_config_path: str, zarr_dataset_paths: List[str]
     ) -> None:
         # using detection and edges layer to simulate image channel
