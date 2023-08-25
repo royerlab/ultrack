@@ -1,0 +1,35 @@
+# REFACTOR:
+    - merge multiple solver classes methods into constructor to make a single deeper function
+
+# TODO:
+    - IMPORTANT: free nodes after each hierarchy insertation to database and measure performance.
+    - IMPORTANT: refactor widget to use a tab per option (segment, link, track)
+    - add warning when DB already contains data.
+    - create homepage/docs.
+        - document config
+        - document database
+    - option to lock segmentations from hypothesis viz widget
+
+# NOTES:
+    - heuristic optimizer:
+        - add monte-carlo (probabilist) moves into local search function
+        - local search by removing a node and trying to add its overlapping nodes
+
+    - slurm:
+        - segment: 1hr 30min, 790 jobs
+        - link: 30min, 789 jobs
+        - track 1st: 2hr 30min, 8 jobs of 100 time points + overlap
+        - track 2nd: 2hr, 8 jobs of 100 time points + overlap
+        - export: 20min
+        - total: about 7 hours
+        - NOTES:
+            - fix window overlap sql solution update by adding parents only when it already exists on solution
+            - segment step memory usage must be improved, with Daxi dataset it's using about 100GB per frame
+            - tracks should be divided into smaller chunks
+            - reduce tracking model build time with vector variables
+
+# ARTICLE:
+    - experiments comparing tracking results from essemble of connected components, watershed, cellpose, stardist vs their accuracy alone;
+    - experiments comparing results from binary contour (their own algorithm post processing) vs contour obtained from network output directly;
+    - cell-tracking challenge benchmark;
+    - qualitative results our dataset and jan funke datasets;
