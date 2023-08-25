@@ -11,9 +11,9 @@ def test_array_apply_parametrized(axis):
     out_data = np.zeros_like(in_data)
 
     # Define a sample function to apply
-    def sample_func(arr):
-        return arr + len(arr)
+    def sample_func(arr_1, arr_2):
+        return arr_1 + arr_2 + len(arr_1)
 
-    array_apply(sample_func, in_data, out_data, axis=axis)
+    array_apply(in_data, in_data, out_array=out_data, func=sample_func, axis=axis)
     other_axes_length = in_data.shape[1 - axis]
-    assert np.array_equal(out_data, in_data + other_axes_length)
+    assert np.array_equal(out_data, 2 * in_data + other_axes_length)

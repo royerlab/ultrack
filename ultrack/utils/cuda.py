@@ -1,9 +1,12 @@
+import functools
 import importlib
 import logging
 from contextlib import contextmanager
 from types import ModuleType
-from typing import Generator
+from typing import Callable, Generator, Optional
 
+import dask.array as da
+import numpy as np
 from numpy.typing import ArrayLike
 
 LOG = logging.getLogger(__name__)
@@ -72,8 +75,12 @@ def torch_default_device() -> "th.device":
     return th.device(device)
 
 
-def import_module(module: str, submodule: str) -> ModuleType:
-    """Import GPU accelerated module if available, otherwise returns CPU version.
+def import_module(
+    module: str,
+    submodule: str,
+    arr: Optional[ArrayLike] = None,
+) -> ModuleType:
+    """Import GPU accelerated module if available and matches optional array, otherwise returns CPU version.
 
     Parameters
     ----------
@@ -81,21 +88,27 @@ def import_module(module: str, submodule: str) -> ModuleType:
         Main python module (e.g. skimage, scipy)
     submodule : str
         Secondary python module (e.g. morphology, ndimage)
+    arr : ArrayLike
+        If provided, it will be used to determine if GPU module should be imported.
 
     Returns
     -------
     ModuleType
         Imported submodule.
     """
-    cupy_module_name = f"{CUPY_MODULES[module]}.{submodule}"
-    try:
-        pkg = importlib.import_module(cupy_module_name)
-        LOG.info(f"{cupy_module_name} found.")
+    is_gpu_array = cp is not None and isinstance(arr, cp.ndarray)
 
-    except (ModuleNotFoundError, ImportError):
+    if arr is None or is_gpu_array:
+        cupy_module_name = f"{CUPY_MODULES[module]}.{submodule}"
+        try:
+            pkg = importlib.import_module(cupy_module_name)
+            LOG.info(f"{cupy_module_name} found.")
+            return pkg
 
-        pkg = importlib.import_module(f"{module}.{submodule}")
-        LOG.info(f"{cupy_module_name} not found. Using cpu equivalent")
+        except (ModuleNotFoundError, ImportError):
+            LOG.info(f"{cupy_module_name} not found. Using cpu equivalent")
+
+    pkg = importlib.import_module(f"{module}.{submodule}")
 
     return pkg
 
@@ -107,3 +120,37 @@ def to_cpu(arr: ArrayLike) -> ArrayLike:
     elif hasattr(arr, "get"):
         arr = arr.get()
     return arr
+
+
+def on_gpu(func: Callable) -> Callable:
+    """Decorator to run a function on GPU if available, otherwise it will run on CPU.
+
+    Parameters
+    ----------
+    func : Callable
+        Function to be decorated.
+
+    Returns
+    -------
+    Callable
+        Decorated function.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if cp is not None:
+            args = [
+                cp.asarray(a) if isinstance(a, (np.ndarray, da.Array)) else a
+                for a in args
+            ]
+            kwargs = {
+                k: cp.asarray(v) if isinstance(v, (np.ndarray, da.Array)) else v
+                for k, v in kwargs.items()
+            }
+        return func(*args, **kwargs)
+
+    if not hasattr(func, "__name__"):
+        # if it instead a class
+        wrapper.__name__ = func.__class__.__name__
+
+    return wrapper
