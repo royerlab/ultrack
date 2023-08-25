@@ -13,10 +13,9 @@ from ultrack.utils import large_chunk_size
 
 
 def array_apply(
+    *in_arrays: ArrayLike,
+    out_array: ArrayLike,
     func: Callable,
-    in_data: ArrayLike,
-    out_data: ArrayLike,
-    *,
     axis: Union[Tuple[int], int] = 0,
     **kwargs,
 ) -> None:
@@ -24,12 +23,12 @@ def array_apply(
 
     Parameters
     ----------
+    in_arrays : ArrayLike
+        Arrays to apply function to.
+    out_array : ArrayLike
+        Array to store result of function.
     func : function
         Function to apply over time.
-    in_data : zarr.Array
-        Zarr array to apply function to.
-    out_data : zarr.Array
-        Zarr array to store result of function.
     axis : Union[Tuple[int], int], optional
         Axis of data to apply func, by default 0.
     args : tuple
@@ -39,16 +38,22 @@ def array_apply(
     """
     name = func.__name__ if hasattr(func, "__name__") else type(func).__name__
 
+    for arr in in_arrays:
+        if arr.shape != out_array.shape:
+            raise ValueError(
+                f"Input arrays {arr.shape} must have the same shape as the output array {out_array.shape}."
+            )
+
     if isinstance(axis, int):
         axis = (axis,)
 
-    stub_slicing = [slice(None) for _ in range(in_data.ndim)]
-    multi_indices = list(itertools.product(*[range(in_data.shape[i]) for i in axis]))
+    stub_slicing = [slice(None) for _ in range(out_array.ndim)]
+    multi_indices = list(itertools.product(*[range(out_array.shape[i]) for i in axis]))
     for indices in tqdm(multi_indices, f"Applying {name} ..."):
         for a, i in zip(axis, indices):
             stub_slicing[a] = i
         indexing = tuple(stub_slicing)
-        out_data[indexing] = func(in_data[indexing], **kwargs)
+        out_array[indexing] = func(*[a[indexing] for a in in_arrays], **kwargs)
 
 
 def create_zarr(

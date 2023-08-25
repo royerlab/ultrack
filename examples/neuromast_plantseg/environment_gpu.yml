@@ -1,0 +1,23 @@
+name: ultrack-plant-seg
+channels:
+  - pytorch
+  - nvidia
+  - gurobi
+  - rapidsai
+  - conda-forge
+  - defaults
+  - lcerrone
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - cupy
+  - gurobi
+  - jupyter
+  - pip
+  - pyqt
+  - pytorch
+  - pytorch-cuda
+  - plantseg
+  - pip:
+    - napari==0.4.18
+    - napari-ome-zarr

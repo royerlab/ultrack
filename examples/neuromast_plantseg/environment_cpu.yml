@@ -1,0 +1,22 @@
+name: ultrack-flow-field
+channels:
+  - pytorch
+  - gurobi
+  - rapidsai
+  - conda-forge
+  - defaults
+  - lcerrone
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - cupy
+  - cpuonly
+  - gurobi
+  - jupyter
+  - pip
+  - plantseg
+  - pyqt
+  - pytorch
+  - pip:
+    - napari==0.4.18
+    - napari-ome-zarr

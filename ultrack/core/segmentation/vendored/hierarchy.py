@@ -289,29 +289,35 @@ class Hierarchy:
 
 
 def oversegment_components(
-    labels: ArrayLike, boundaries: ArrayLike, max_area: int
+    labels: ArrayLike, boundaries: ArrayLike, max_area: int, anisotropy_pen: float = 0.0
 ) -> ArrayLike:
     """
     This function oversegment segments given an maximum area to decrease the overall hierarchy volume (area),
     speeding up the remaining computation.
 
+    Parameters
+    ----------
+    labels : ArrayLike
+        Input labels to be split into smaller segments.
+    boundaries : ArrayLike
+        Image graph edge weights.
+    max_area : int
+        Maximum area (hierarchy threshold cut).
+    anisotropy_pen : float, optional
+        Edge weight penalization for the z-axis. Defaults to 0.0.
 
-    Args:
-        labels (ArrayLike): Input labels to be split into smaller segments.
-        boundaries (ArrayLike): Weight graph.
-        max_area (int): Maximum area (hierarchy threshold cut).
-
-    Returns:
-        ArrayLike: Labeled image with a greater number of labels than the input.
+    Returns
+    -------
+    ArrayLike
+        Oversgmented labels given max area paremeter.
     """
-
     dtype = np.promote_types(np.float32, boundaries.dtype)
     boundaries = boundaries.astype(dtype)  # required by numba
     offset = 1
     new_labels = np.zeros_like(labels)
     for c in measure.regionprops(labels, boundaries):
         if c.area > max_area:
-            graph, weights = mask_to_graph(c.image, c.intensity_image, 0.0)
+            graph, weights = mask_to_graph(c.image, c.intensity_image, anisotropy_pen)
             tree, alt = hg.watershed_hierarchy_by_area(graph, weights)
             cut = hg.labelisation_horizontal_cut_from_threshold(tree, alt, max_area)
             cut, _, _ = segmentation.relabel_sequential(cut, offset=offset)

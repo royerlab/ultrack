@@ -23,3 +23,7 @@ $UPDATE_JUPYTER zebrahub/zebrahub.ipynb
 # flow field
 install ultrack-flow-field flow_field_3d
 $UPDATE_JUPYTER flow_field_3d/tribolium_cartograph.ipynb
+
+# plant seg
+install ultrack-plant-seg neuromast_plantseg
+$UPDATE_JUPYTER neuromast_plantseg/neuromast_plantseg.ipynb

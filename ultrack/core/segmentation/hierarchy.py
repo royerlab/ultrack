@@ -58,15 +58,23 @@ def create_hierarchies(
     )
 
     LOG.info("Labeling connected components.")
-    labels = measure.label(binary_detection, connectivity=1).astype(np.int32)
+    labels, num_labels = measure.label(
+        binary_detection, return_num=True, connectivity=1
+    )
+    labels = labels.astype(np.int32)
 
-    if "min_area" in kwargs:
+    if "min_area" in kwargs and num_labels > 1:
         LOG.info("Filtering small connected components.")
         labels = morphology.remove_small_objects(labels, min_size=kwargs["min_area"])
 
     if "max_area" in kwargs:
         LOG.info("Oversegmenting connected components.")
-        labels = oversegment_components(labels, edge, kwargs["max_area"])
+        labels = oversegment_components(
+            labels,
+            edge,
+            kwargs["max_area"],
+            kwargs.get("anisotropy_pen", 0.0),
+        )
 
     LOG.info("Creating hierarchies (lazy).")
     return [
