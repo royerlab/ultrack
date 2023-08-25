@@ -33,17 +33,38 @@ def tracks_layer_to_trackmate(
     str
         A string representation of the XML in the TrackMate format.
     """
+    tracks_df["id"] = tracks_df["id"].astype(int)
+    tracks_df["parent_id"] = tracks_df["parent_id"].astype(int)
+    tracks_df["track_id"] = tracks_df["track_id"].astype(int)
 
     # Create XML root and child elements
     root = ET.Element("TrackMate")
+    root.set("version", "3.7.0")  # required by TrackMate, not significant
+
     model_elem = ET.SubElement(root, "Model")
-    tracks_elem = ET.SubElement(model_elem, "TrackCollection")
+    all_tracks_elem = ET.SubElement(model_elem, "AllTracks")
+    filtered_tracks_elem = ET.SubElement(model_elem, "FilteredTracks")
     all_spots_elem = ET.SubElement(model_elem, "AllSpots")
     features_elem = ET.SubElement(model_elem, "FeatureDeclarations")
 
     settings_elem = ET.SubElement(root, "Settings")
+
     _set_filter_elem(ET.SubElement(settings_elem, "InitialSpotFilter"))
-    _set_filter_elem(ET.SubElement(settings_elem, "SpotFilterCollection"))
+    ET.SubElement(settings_elem, "SpotFilterCollection")
+    ET.SubElement(settings_elem, "TrackFilterCollection")
+
+    image_elem = ET.SubElement(settings_elem, "ImageData")
+    image_elem.set("filename", "None")
+    image_elem.set("folder", "None")
+    image_elem.set("width", "0")
+    image_elem.set("height", "0")
+    image_elem.set("depth", "0")
+    image_elem.set("nslices", "1")
+    image_elem.set("nframes", str(tracks_df["t"].max() + 1))
+    image_elem.set("pixelwidth", "1.0")
+    image_elem.set("pixelheight", "1.0")
+    image_elem.set("voxeldepth", "1.0")
+    image_elem.set("timeinterval", "1.0")
 
     has_z = "z" in tracks_df.columns
 
@@ -70,12 +91,12 @@ def tracks_layer_to_trackmate(
         ("SNR", "Signal/Noise ratio", "SNR", "NONE", "false"),
     ]
     for feature, name, shortname, dimension, isint in spot_features:
-        feature_elem = ET.SubElement(spot_features_elem, "Feature")
-        feature_elem.set("feature", feature)
-        feature_elem.set("name", name)
-        feature_elem.set("shortname", shortname)
-        feature_elem.set("dimension", dimension)
-        feature_elem.set("isint", isint)
+        elem = ET.SubElement(spot_features_elem, "Feature")
+        elem.set("feature", feature)
+        elem.set("name", name)
+        elem.set("shortname", shortname)
+        elem.set("dimension", dimension)
+        elem.set("isint", isint)
 
     # Create edge features
     # Create edge features
@@ -86,12 +107,36 @@ def tracks_layer_to_trackmate(
         # ... add other edge features if needed
     ]
     for feature, name, shortname, dimension, isint in edge_features:
-        feature_elem = ET.SubElement(edge_features_elem, "Feature")
-        feature_elem.set("feature", feature)
-        feature_elem.set("name", name)
-        feature_elem.set("shortname", shortname)
-        feature_elem.set("dimension", dimension)
-        feature_elem.set("isint", isint)
+        elem = ET.SubElement(edge_features_elem, "Feature")
+        elem.set("feature", feature)
+        elem.set("name", name)
+        elem.set("shortname", shortname)
+        elem.set("dimension", dimension)
+        elem.set("isint", isint)
+
+    track_features_elem = ET.SubElement(features_elem, "TrackFeatures")
+    track_features = [
+        ("NUMBER_SPOTS", "Number of spots in track", "N spots", "NONE", "true"),
+        ("NUMBER_GAPS", "Number of gaps", "Gaps", "NONE", "true"),
+        ("LONGEST_GAP", "Longest gap", "Longest gap", "NONE", "true"),
+        ("NUMBER_SPLITS", "Number of split events", "Splits", "NONE", "true"),
+        ("NUMBER_MERGES", "Number of merge events", "Merges", "NONE", "true"),
+        ("NUMBER_COMPLEX", "Complex points", "Complex", "NONE", "true"),
+        ("TRACK_DURATION", "Duration of track", "Duration", "TIME", "false"),
+        ("TRACK_START", "Track start", "T start", "TIME", "false"),
+        ("TRACK_STOP", "Track stop", "T stop", "TIME", "false"),
+        ("TRACK_DISPLACEMENT", "Track displacement", "Displacement", "LENGTH", "false"),
+        ("TRACK_INDEX", "Track index", "Index", "NONE", "true"),
+        ("TRACK_ID", "Track ID", "ID", "NONE", "true"),
+    ]
+
+    for feature, name, shortname, dimension, isint in track_features:
+        elem = ET.SubElement(track_features_elem, "Feature")
+        elem.set("feature", feature)
+        elem.set("name", name)
+        elem.set("shortname", shortname)
+        elem.set("dimension", dimension)
+        elem.set("isint", isint)
 
     # Create spots
     for frame, group in tracks_df.groupby("t"):
@@ -101,26 +146,37 @@ def tracks_layer_to_trackmate(
             spot_elem = ET.SubElement(frame_elem, "Spot")
             spot_elem.set("ID", str(spot_id))
             spot_elem.set("QUALITY", "1.0")
-            spot_elem.set("NAME", f"spot_{spot_id}")
-            spot_elem.set("FRAME", str(entry["t"]))
+            spot_elem.set("VISIBILITY", "1")
+            spot_elem.set("NAME", str(spot_id))
+            spot_elem.set("FRAME", str(int(entry["t"])))
+            spot_elem.set("RADIUS", "5.0")
             spot_elem.set("POSITION_X", str(entry["x"]))
             spot_elem.set("POSITION_Y", str(entry["y"]))
             if has_z:
                 spot_elem.set("POSITION_Z", str(entry["z"]))
+            else:
+                spot_elem.set("POSITION_Z", "0.0")
 
     # Create tracks using lineage
     for track_id, group in tracks_df.groupby("track_id"):
-        track_elem = ET.SubElement(tracks_elem, "Track")
+        track_elem = ET.SubElement(all_tracks_elem, "Track")
         track_elem.set("TRACK_ID", str(track_id))
+        track_elem.set("NUMBER_SPOTS", str(len(group)))
+        track_elem.set("NUMBER_GAPS", "0")
+        track_elem.set("TRACK_START", str(group["t"].min()))
+        track_elem.set("TRACK_STOP", str(group["t"].max()))
         track_elem.set("name", f"Track_{track_id}")
 
+        ET.SubElement(filtered_tracks_elem, "TrackID").set("TRACK_ID", str(track_id))
+
         for spot_id, entry in group.iterrows():
-            parent_id = entry["parent_id"]
+            parent_id = int(entry["parent_id"])
             if parent_id == NO_PARENT:
                 continue
             edge_elem = ET.SubElement(track_elem, "Edge")
-            edge_elem.set("SPOT_SOURCE_ID", str(spot_id))
-            edge_elem.set("SPOT_TARGET_ID", str(parent_id))
+            edge_elem.set("SPOT_SOURCE_ID", str(parent_id))
+            edge_elem.set("SPOT_TARGET_ID", str(spot_id))
+            edge_elem.set("EDGE_TIME", str(entry["t"] - 0.5))
 
     # Convert to XML string
     xml_str = ET.tostring(root, encoding="unicode")
