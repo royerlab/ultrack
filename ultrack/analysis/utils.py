@@ -156,6 +156,7 @@ def get_subgraph(
         compressed_df["track_id"].to_numpy(dtype=int),
         compressed_df["parent_track_id"].to_numpy(dtype=int),
     )
+    roots = np.asarray(roots, dtype=int)
 
     subforest = []
     for root in roots:

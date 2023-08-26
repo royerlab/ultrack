@@ -14,7 +14,7 @@ from ultrack.cli.utils import (
     tuple_callback,
 )
 from ultrack.config import MainConfig
-from ultrack.core.export import to_ctc, to_tracks_layer, tracks_to_zarr
+from ultrack.core.export import to_ctc, to_trackmate, to_tracks_layer, tracks_to_zarr
 from ultrack.core.export.utils import maybe_overwrite_path
 from ultrack.imgproc.measure import tracks_properties
 
@@ -162,10 +162,33 @@ def zarr_napari_cli(
         tracks_w_measures.to_csv(tracks_path, index=False)
 
 
+@click.command("trackmate")
+@click.option(
+    "--output-path",
+    "-o",
+    required=True,
+    type=click.Path(path_type=Path),
+    show_default=True,
+    help="TrackMate XML output path.",
+)
+@config_option()
+@overwrite_option()
+def trackmate_cli(
+    config: MainConfig,
+    output_path: Path,
+    overwrite: bool,
+) -> None:
+    """
+    Exports tracking results to TrackMate XML format.
+    """
+    to_trackmate(config, output_path, overwrite)
+
+
 @click.group("export")
 def export_cli() -> None:
     """Exports tracking and segmentation results to selected format."""
 
 
 export_cli.add_command(ctc_cli)
+export_cli.add_command(trackmate_cli)
 export_cli.add_command(zarr_napari_cli)
