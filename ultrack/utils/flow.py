@@ -50,6 +50,10 @@ def add_flow(
         is_sequence = False
 
     shape = np.asarray(config.data_config.metadata["shape"])
+    LOG.info(f"Image shape {shape}, ndim={ndim}")
+    LOG.info(f"Vec. shape {shape}")
+    LOG.info(f"Num. Vec. {nvecs}")
+
     if len(shape) != ndim:
         raise ValueError(
             "Original data shape and vector field must have same number of dimensions (ignoring channels)."
@@ -67,7 +71,10 @@ def add_flow(
     coordinate_columns = ["z", "y", "x"][-len(coords_scaling) :]
     vec_index_iterator = reversed(range(nvecs))
     # vec_scaling varies depending on the number of vector field and image dimensions
-    vec_scaling = np.asarray(shape[1 + len(coords_scaling) - nvecs :])
+    vec_scaling = np.asarray(shape[1 + len(coords_scaling) - nvecs :])[::-1]
+
+    LOG.info(f"Coordinate_columns {coordinate_columns}")
+    LOG.info(f"Vector field scaling of {vec_scaling}")
 
     engine = sqla.create_engine(config.data_config.database_path)
 
@@ -104,7 +111,7 @@ def add_flow(
         # ours is the torch convection divided by 2.0
         # reference
         # https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html
-        df[columns[:nvecs]] *= vec_scaling[::-1]  # x, y, z
+        df[columns[:nvecs]] *= vec_scaling  # x, y, z
 
         df["node_id"] = df.index
         with Session(engine) as session:

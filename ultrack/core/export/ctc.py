@@ -328,7 +328,7 @@ def to_ctc(
             "Tracks stitching only implemented for when `first_frame` is supplied."
         )
 
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True, parents=True)
     tracks_path = output_dir / "res_track.txt"
 
     _validate_masks_path(output_dir, overwrite)

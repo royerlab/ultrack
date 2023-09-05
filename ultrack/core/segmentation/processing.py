@@ -1,10 +1,12 @@
 import logging
+import pickle
 from contextlib import nullcontext
 from typing import List, Optional
 
 import fasteners
 import numpy as np
 import sqlalchemy as sqla
+import zarr
 from numpy.typing import ArrayLike
 from sqlalchemy.orm import Session
 from toolz import curry
@@ -152,13 +154,14 @@ def _process(
                 y=int(y),
                 x=int(x),
                 area=int(hier_node.area),
-                pickle=hier_node,
+                pickle=pickle.dumps(hier_node),  # pickling to reduce memory usage
             )
 
             hier_index_map[hier_node._h_node_index] = node
             nodes.append(node)
 
             index += 1
+            del hier_node
 
         tree = hierarchy.tree
 
@@ -211,6 +214,14 @@ def _process(
     LOG.info(f"DONE with time {time}.")
 
 
+def _check_zarr_memory_store(arr: ArrayLike) -> None:
+    if isinstance(arr, zarr.Array) and isinstance(arr.store, zarr.MemoryStore):
+        LOG.warning(
+            "Found zarr with MemoryStore. "
+            "Using an zarr with MemoryStore can lead to considerable memory usage."
+        )
+
+
 def segment(
     detection: ArrayLike,
     edge: ArrayLike,
@@ -245,6 +256,9 @@ def segment(
 
     check_array_chunk(detection)
     check_array_chunk(edge)
+
+    _check_zarr_memory_store(detection)
+    _check_zarr_memory_store(edge)
 
     LOG.info(f"Detection array with shape {detection.shape}")
     LOG.info(f"Edge array with shape {edge.shape}")

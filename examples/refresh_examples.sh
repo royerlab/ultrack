@@ -16,6 +16,10 @@ function install () {
 install ultrack-stardist stardist_2d
 $UPDATE_JUPYTER stardist_2d/2d_tracking.ipynb
 
+# multi color
+install ultrack-multi-color multi_color_ensemble
+$UPDATE_JUPYTER multi_color_ensemble/multi_color_ensemble.ipynb
+
 # zebrahub
 install ultrack-zebrahub zebrahub
 $UPDATE_JUPYTER zebrahub/zebrahub.ipynb
@@ -27,3 +31,7 @@ $UPDATE_JUPYTER flow_field_3d/tribolium_cartograph.ipynb
 # plant seg
 install ultrack-plant-seg neuromast_plantseg
 $UPDATE_JUPYTER neuromast_plantseg/neuromast_plantseg.ipynb
+
+# micro-sam
+install ultrack-micro-sam micro_sam
+$UPDATE_JUPYTER micro_sam/micro_sam_tracking.ipynb

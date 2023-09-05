@@ -33,7 +33,6 @@ def test_flow_field(ndim: int, request) -> None:
         frames.numpy(),
         im_factor=im_factor,
         grid_factor=grid_factor,
-        num_iterations=1000,
     )
     trajectory = advenct_field(fields, mus[None, 0], size)
     tracks = trajectories_to_tracks(trajectory)
@@ -43,22 +42,15 @@ def test_flow_field(ndim: int, request) -> None:
 
         kwargs = {"blending": "additive", "interpolation3d": "nearest", "rgb": False}
 
-        viewer_1 = napari.Viewer()
-        # viewer.add_image(fields.cpu().numpy(), colormap="turbo", scale=(2, 2, 2))
-        viewer_1.add_image(frames.cpu().numpy(), **kwargs)
-        viewer_1.add_tracks(tracks)
+        viewer = napari.Viewer()
 
-        viewer_2 = napari.Viewer()
-        viewer_2.add_image(
-            th.clamp_min(fields, 0).cpu().numpy(),
-            colormap="red",
-            scale=(im_factor,) * 3,
-            **kwargs,
-        )
-        viewer_2.add_image(
-            th.clamp_min(-fields, 0).cpu().numpy(),
-            colormap="blue",
-            scale=(im_factor,) * 3,
+        viewer.add_image(frames.cpu().numpy(), **kwargs)
+        viewer.add_tracks(tracks)
+        viewer.add_image(
+            fields,
+            colormap="turbo",
+            scale=(im_factor,) * ndim,
+            channel_axis=1,
             **kwargs,
         )
 

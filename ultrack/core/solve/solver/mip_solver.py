@@ -237,7 +237,12 @@ class MIPSolver(BaseSolver):
         pd.DataFrame
             Dataframe indexed by nodes as indices and their parent (NA if orphan).
         """
-        if self._model.status != mip.OptimizationStatus.OPTIMAL:
+        if self._model.status == mip.OptimizationStatus.FEASIBLE:
+            LOG.warning(
+                f"Solver status {self._model.status}. Search interrupted before conclusion."
+            )
+
+        elif self._model.status != mip.OptimizationStatus.OPTIMAL:
             raise ValueError(
                 f"Solver must be optimized before returning solution. It had status {self._model.status}"
             )

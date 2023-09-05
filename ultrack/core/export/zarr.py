@@ -17,6 +17,7 @@ def tracks_to_zarr(
     tracks_df: pd.DataFrame,
     store_or_path: Union[None, Store, Path, str] = None,
     chunks: Optional[Tuple[int]] = None,
+    overwrite: bool = False,
 ) -> zarr.Array:
     """
     Exports segmentations masks to zarr array, `track_df` assign the `track_id` to their respective segments.
@@ -32,6 +33,8 @@ def tracks_to_zarr(
         Zarr storage or output path, if not provided zarr.TempStore is used.
     chunks : Optional[Tuple[int]], optional
         Chunk size, if not provided it chunks time with 1 and the spatial dimensions as big as possible.
+    overwrite : bool, optional
+        If True, overwrites existing zarr array.
 
     Returns
     -------
@@ -61,6 +64,7 @@ def tracks_to_zarr(
             store_or_path=store_or_path,
             chunks=chunks,
             default_store_type=zarr.TempStore,
+            overwrite=overwrite,
         )
 
     export_segmentation_generic(config.data_config, tracks_df, array.__setitem__)
