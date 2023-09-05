@@ -28,6 +28,32 @@ Base = declarative_base()
 LOG = logging.getLogger(__name__)
 
 
+class MaybePickleType(PickleType):
+    """Only (un)pickle if value is not bytes."""
+
+    cache_ok = True
+
+    def bind_processor(self, dialect):
+        processor = super().bind_processor(dialect)
+
+        def process(value):
+            if isinstance(value, (bytes, memoryview)):
+                return value
+            return processor(value)
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        processor = super().result_processor(dialect, coltype)
+
+        def process(value):
+            if not isinstance(value, (bytes, memoryview)):
+                return value
+            return processor(value)
+
+        return process
+
+
 class NodeAnnotation(enum.IntEnum):
     UNKNOWN = 0
     CORRECT = 1
@@ -64,7 +90,7 @@ class NodeDB(Base):
     x_shift = Column(Float, default=0.0)
     area = Column(Integer)
     selected = Column(Boolean, default=False)
-    pickle = Column(PickleType)
+    pickle = Column(MaybePickleType)
     annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
     division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)
 

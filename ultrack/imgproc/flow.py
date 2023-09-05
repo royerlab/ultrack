@@ -134,7 +134,7 @@ def flow_field(
     im_factor: int = 4,
     grid_factor: int = 4,
     num_iterations: int = 1000,
-    lr: float = 1e-4,
+    lr: float = 1e-2,
     n_scales: int = 3,
 ) -> th.Tensor:
     """
@@ -155,7 +155,7 @@ def flow_field(
     num_iterations : int, optional
         Number of gradient descent iterations, by default 1000.
     lr : float, optional
-        Learning rate (gradient descent step), by default 1e-4
+        Learning rate (gradient descent step), by default 1e-2
     n_scales : int, optional
         Number of scales used for multi-scale optimization, by default 3.
 
@@ -174,6 +174,8 @@ def flow_field(
     device = source.device
     scales = np.flip(np.power(2, np.arange(n_scales)))
     grid = None
+    norm_factor = None
+    constant = 1_000  # scale of input affects the results, 1_000 is a good value
 
     for scale in scales:
         with th.no_grad():
@@ -184,6 +186,15 @@ def flow_field(
             scaled_target = _interpolate(
                 target, scale_factor=1 / scaled_im_factor, antialias=True
             )
+            if norm_factor is None:
+                norm_factor = (
+                    2.0
+                    * constant
+                    / (scaled_source.quantile(0.9999) + scaled_target.quantile(0.9999))
+                )
+
+            scaled_source *= norm_factor
+            scaled_target *= norm_factor
 
             if grid is None:
                 grid_shape = tuple(
@@ -207,7 +218,8 @@ def flow_field(
 
             large_grid = _interpolate_grid(grid, size=scaled_source.shape[-ndim:])
 
-            im2hat = F.grid_sample(target, large_grid, align_corners=True)
+            im2hat = F.grid_sample(scaled_target, large_grid, align_corners=True)
+
             loss = F.l1_loss(im2hat, scaled_source)
             loss = loss + total_variation_loss(grid - grid0)
             loss.backward()
@@ -348,7 +360,7 @@ def advenct_field(
 
         int_sources = th.round(trajectories[-1] * scales)
         int_sources = th.maximum(int_sources, zero)
-        int_sources = th.minimum(int_sources, field_shape - 1).int()
+        int_sources = th.minimum(int_sources, field_shape - 1).long()
         spatial_idx = tuple(
             t.T[0] for t in th.tensor_split(int_sources, len(orig_shape), dim=1)
         )
@@ -402,6 +414,58 @@ def advenct_field_from_labels(
     centroids = th.as_tensor(centroids, device=device)
 
     trajectories = advenct_field(field, centroids, shape=label.shape, invert=invert)
+
+    trajectories = th.minimum(trajectories, th.as_tensor(label.shape, device=device))
+    trajectories = th.maximum(trajectories, th.zeros(len(label.shape), device=device))
+
+    return trajectories
+
+
+def advenct_from_quasi_random(
+    field: ArrayLike,
+    img_shape: Tuple[int, ...],
+    n_samples: int,
+    invert: bool = True,
+    device: Optional[th.device] = None,
+) -> None:
+    """
+    Advenct points from quasi random uniform distribution.
+
+    Parameters
+    ----------
+    field : ArrayLike
+        Field array with shape T x D x (Z) x Y x X
+    img_shape : Tuple[int, ...]
+        Must be D-dimensional.
+    n_samples : int
+        Number of samples.
+    invert : bool
+        When true flow is multiplied by -1, resulting in reversal of the flow.
+    device : Optional[th.device]
+        Torch device, by default uses last GPU if available or mps.
+
+    Returns
+    -------
+    ArrayLike
+        Trajectories of sources N x T x D
+    """
+
+    if field.shape[1] != len(img_shape):
+        raise ValueError(
+            f"Field dimension {field.shape[1]} does not match image shape {len(img_shape)}."
+        )
+
+    if device is None:
+        device = torch_default_device()
+
+    sources = th.quasirandom.SobolEngine(field.shape[1], seed=42).draw(n_samples)
+    sources = sources.to(device)
+    sources *= th.as_tensor(img_shape, device=device)
+
+    trajectories = advenct_field(field, sources, img_shape, invert=invert)
+
+    trajectories = th.minimum(trajectories, th.as_tensor(img_shape, device=device))
+    trajectories = th.maximum(trajectories, th.zeros(len(img_shape), device=device))
 
     return trajectories
 
@@ -471,8 +535,8 @@ def timelapse_flow(
     channel_axis: Optional[int] = None,
     im_factor: int = 4,
     grid_factor: int = 4,
-    num_iterations: int = 2000,
-    lr: float = 1e-4,
+    num_iterations: int = 1000,
+    lr: float = 1e-2,
     n_scales: int = 3,
     device: Optional[th.device] = None,
 ) -> zarr.Array:

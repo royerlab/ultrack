@@ -85,6 +85,9 @@ def create_zarr(
     zarr.Array
         Zarr array of zeros.
     """
+    if "path" in kwargs:
+        raise ValueError("`path` is not a valid argument, use `store_or_path` instead.")
+
     if store_or_path is None:
         store = default_store_type()
 

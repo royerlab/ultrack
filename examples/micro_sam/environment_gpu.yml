@@ -1,0 +1,21 @@
+name: ultrack-micro-sam
+channels:
+  - pytorch
+  - nvidia
+  - gurobi
+  - rapidsai
+  - conda-forge
+  - defaults
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - cupy
+  - gurobi
+  - jupyter
+  - pip
+  - pyqt
+  - pytorch
+  - pytorch-cuda
+  - micro_sam
+  - pip:
+    - napari==0.4.18

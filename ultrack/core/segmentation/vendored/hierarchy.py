@@ -35,7 +35,7 @@ class Hierarchy:
         cut_threshold: Optional[float] = None,
         min_area: int = 50,
         max_area: int = 1000000,
-        min_frontier: float = 0.25,
+        min_frontier: float = 0.0,
         anisotropy_pen: float = 0.0,
         cache: bool = True,
     ):
@@ -55,7 +55,7 @@ class Hierarchy:
         max_area : int, optional
             Maximum number of pixels per segment. Defaults to 1000000.
         min_frontier : float, optional
-            Minimum required edge weight for splitting segments. Defaults to 0.25.
+            Minimum required edge weight for splitting segments. Defaults to 0.0.
         anisotropy_pen : float, optional
             Edge weight penalization for the z-axis. Defaults to 0.0.
         cache : bool, optional
