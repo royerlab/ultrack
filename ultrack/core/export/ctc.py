@@ -288,7 +288,7 @@ def _write_tiff_buffer(
         np.promote_types(np.min_scalar_type(buffer.max()), np.uint16)
     )
 
-    imwrite(output_dir / f"mask{t:03}.tif", buffer)
+    imwrite(output_dir / f"mask{t:03}.tif", buffer, compression="LZW")
 
 
 def to_ctc(
