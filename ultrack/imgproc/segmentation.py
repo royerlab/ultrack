@@ -1,9 +1,10 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ultrack.imgproc.utils import _channel_iterator, _parse_voxel_size
 from ultrack.utils.constants import ULTRACK_DEBUG
 from ultrack.utils.cuda import import_module, to_cpu
 
@@ -50,40 +51,6 @@ def reconstruction_by_dilation(
         seed = np.minimum(seed, mask, out=seed)
 
     return seed
-
-
-def _parse_voxel_size(
-    voxel_size: Optional[ArrayLike],
-    ndim: int,
-    channel_axis: Optional[int],
-) -> np.ndarray:
-    """Parses voxel size and returns it in the correct format."""
-    ndim = ndim - (channel_axis is not None)
-
-    if voxel_size is None:
-        voxel_size = (1.0,) * ndim
-
-    if len(voxel_size) != ndim:
-        raise ValueError(
-            "Voxel size must have the same number of elements as the image dimensions."
-            f"Expected {ndim} got {len(voxel_size)}."
-        )
-
-    return np.asarray(voxel_size)
-
-
-def _channel_iterator(
-    image: ArrayLike,
-    channel_axis: Optional[int],
-) -> List[Optional[int]]:
-    """Iterates over channels, it returns a [None] if channel_axis is None."""
-
-    if channel_axis is None:
-        channel_iterator = [None]
-    else:
-        channel_iterator = range(image.shape[channel_axis])
-
-    return channel_iterator
 
 
 def detect_foreground(
@@ -201,96 +168,6 @@ def detect_foreground(
         viewer.add_image(to_cpu(_image))
         viewer.add_labels(output)
         napari.run()
-
-    return output
-
-
-def robust_invert(
-    image: ArrayLike,
-    voxel_size: Optional[ArrayLike] = None,
-    sigma: float = 1.0,
-    lower_quantile: Optional[float] = None,
-    upper_quantile: Optional[float] = 0.9999,
-    channel_axis: Optional[int] = None,
-) -> np.ndarray:
-    """
-    Inverts an image robustly by first smoothing it with a gaussian filter
-    and then normalizing it to [0, 1].
-
-    Parameters
-    ----------
-    image : ArrayLike
-        Input image.
-    voxel_size : ArrayLike
-        Array of voxel size (z, y, x).
-    sigma : float, optional
-        Sigma used to smooth the image, by default 1.0.
-    lower_quantile : Optional[float], optional
-        Lower quantile used to clip the intensities, minimum used when None.
-    upper_quantile : Optional[float], optional
-        Upper quantile used to clip the intensities, maximum used when None.
-    channel_axis : Optional[int], optional
-        When provided it will invert each channel separately and merge them.
-
-    Returns
-    -------
-    ArrayLike
-        Inverted and normalized image.
-    """
-    LOG.info(f"Channel axis {channel_axis}")
-
-    ndi = import_module("scipy", "ndimage")
-
-    shape = list(image.shape)
-    if channel_axis is not None:
-        shape.pop(channel_axis)
-        LOG.info(f"Shape={shape} after removing channel axis={channel_axis}")
-
-    voxel_size = _parse_voxel_size(voxel_size, image.ndim, channel_axis)
-    sigmas = sigma / voxel_size
-    LOG.info(f"Inverting with voxel size {voxel_size} and sigma {sigma}")
-    LOG.info(f"Sigmas after scaling {sigmas}")
-
-    iterator = _channel_iterator(image, channel_axis)
-    output = np.zeros(shape, dtype=np.float32)
-    norm_factor = 1 / len(iterator)
-
-    for ch in iterator:
-        if ch is None:
-            _image = image
-        else:
-            _image = np.take(image, indices=ch, axis=channel_axis)
-
-        _image = xp.asarray(_image)
-        ndi.gaussian_filter(_image, sigma=sigmas, output=_image)
-
-        flat_small_img = ndi.zoom(_image, (0.25,) * _image.ndim, order=1).ravel()
-
-        if lower_quantile is not None:
-            im_min = np.quantile(flat_small_img, lower_quantile)
-        else:
-            im_min = flat_small_img.min()
-
-        im_min = im_min.astype(_image.dtype)
-        # safe sub, it could be unsigned
-        np.clip(_image, im_min, None, out=_image)
-        _image -= im_min
-        LOG.info(f"Minimum {im_min}")
-
-        if upper_quantile is not None:
-            im_max = np.quantile(flat_small_img, upper_quantile)
-        else:
-            im_max = flat_small_img.max()
-        del flat_small_img
-
-        im_max = im_max.astype(np.float32)
-        _image = (1 / im_max) * norm_factor * _image
-        LOG.info(f"Maximum {im_max}")
-
-        np.subtract(norm_factor, _image, out=_image)  # inverting
-        np.clip(_image, 0, norm_factor, out=_image)
-
-        output += to_cpu(_image)
 
     return output
 

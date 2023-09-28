@@ -3,9 +3,9 @@ from typing import List
 import numpy as np
 import pytest
 
+from ultrack.utils.cuda import to_cpu
 from ultrack.utils.data import make_segmentation_mock_data
 from ultrack.utils.edge import labels_to_edges
-from ultrack.utils.cuda import to_cpu
 
 
 @pytest.fixture

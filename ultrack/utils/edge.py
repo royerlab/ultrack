@@ -1,13 +1,12 @@
 import logging
 from typing import Optional, Sequence, Tuple, Union
 
-import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
 from zarr.storage import Store
 
+from ultrack.utils.array import create_zarr
 from ultrack.utils.cuda import import_module, to_cpu
-from ultrack.utils.data import large_chunk_size
 
 LOG = logging.getLogger(__name__)
 
@@ -23,8 +22,9 @@ except ImportError as e:
 def labels_to_edges(
     labels: Union[ArrayLike, Sequence[ArrayLike]],
     sigma: Optional[Union[Sequence[float], float]] = None,
-    detection_store: Optional[Store] = None,
-    edges_store: Optional[Store] = None,
+    detection_store_or_path: Union[Store, str, None] = None,
+    edges_store_or_path: Union[Store, str, None] = None,
+    overwrite: bool = False,
 ) -> Tuple[ArrayLike, ArrayLike]:
     """
     Converts and merges a sequence of labels into ultrack input format (detection and edges)
@@ -35,12 +35,14 @@ def labels_to_edges(
         List of labels with equal shape.
     sigma : Optional[Union[Sequence[float], float]], optional
         Edges smoothing parameter (gaussian blur), edges aren't smoothed if not provided
-    detection_store : zarr.storage.Store, optional
+    detection_store_or_path : str, zarr.storage.Store, optional
         Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
         By default it loads the data into memory.
-    edges_store : zarr.storage.Store, optional
+    edges_store_or_path : str, zarr.storage.Store, optional
         Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
         By default it loads the data into memory.
+    overwrite : bool, optional
+        Overwrite output output files if they already exist, by default False.
 
     Returns
     -------
@@ -49,12 +51,6 @@ def labels_to_edges(
     """
     ndi = import_module("scipy", "ndimage")
     segm = import_module("skimage", "segmentation")
-
-    if detection_store is None:
-        detection_store = zarr.MemoryStore()
-
-    if edges_store is None:
-        edges_store = zarr.MemoryStore()
 
     if not isinstance(labels, Sequence):
         labels = [labels]
@@ -68,17 +64,17 @@ def labels_to_edges(
 
     LOG.info(f"Labels shape {shape}")
 
-    detection = zarr.zeros(
+    detection = create_zarr(
         shape=shape,
         dtype=bool,
-        chunks=large_chunk_size(shape, bool),
-        store=detection_store,
+        store_or_path=detection_store_or_path,
+        overwrite=overwrite,
     )
-    edges = zarr.zeros(
+    edges = create_zarr(
         shape=shape,
         dtype=xp.float32,
-        chunks=large_chunk_size(shape, xp.float32),
-        store=edges_store,
+        store_or_path=edges_store_or_path,
+        overwrite=overwrite,
     )
 
     for t in tqdm(range(shape[0]), "Converting labels to edges"):

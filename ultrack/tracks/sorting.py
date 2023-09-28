@@ -4,8 +4,11 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
+from ultrack.core.database import NO_PARENT
+from ultrack.tracks.graph import create_tracks_forest, left_first_search
 
-def _create_forest(
+
+def _invert_forest(
     track_ids: np.ndarray,
     digraph: Dict[int, int],
 ) -> Dict[int, List[int]]:
@@ -104,7 +107,7 @@ def sort_trees_by_length(
     track_ids = length["track_id"].to_numpy()
     length = length["size"].to_dict()
 
-    forest = _create_forest(track_ids, graph)
+    forest = _invert_forest(track_ids, graph)
 
     roots = track_ids[np.isin(track_ids, list(graph.keys()), invert=True)]
     lengths = []
@@ -119,3 +122,53 @@ def sort_trees_by_length(
     return [
         pd.concat([groups.get_group(i) for i in subtree]) for _, subtree in sorted_trees
     ]
+
+
+def sort_track_ids(
+    tracks_df: pd.DataFrame,
+) -> np.ndarray:
+    """
+    Sort track IDs in a given DataFrame representing tracks in a way that maintains the left-first
+    order of the binary tree formed by their parent-child relationships.
+
+    Parameters
+    ----------
+    tracks_df : pd.DataFrame
+        A DataFrame containing information about tracks, where each row represents a track and
+        contains at least two columns - "track_id" and "track_parent_id". The "track_id" column
+        holds unique track IDs, and the "track_parent_id" column contains the parent track IDs
+        for each track. The DataFrame should have a consistent parent-child relationship, forming
+        one or multiple binary trees.
+
+    Returns
+    -------
+    np.ndarray
+        A NumPy array containing the sorted track IDs based on the left-first traversal of the
+        binary trees formed by the parent-child relationships.
+
+    Example
+    -------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> data = {
+    ...     "track_id": [1, 2, 3, 4, 5, 6, 7],
+    ...     "track_parent_id": [None, 1, 1, 2, 2, 3, 3],
+    ... }
+    >>> tracks_df = pd.DataFrame(data)
+    >>> sorted_track_ids = sort_track_ids(tracks_df)
+    >>> print(sorted_track_ids)
+    [4 2 5 1 6 3 7]
+    """
+
+    tracks_df = tracks_df.drop_duplicates("track_id")
+    graph = create_tracks_forest(
+        tracks_df["track_id"].to_numpy(dtype=int),
+        tracks_df["parent_track_id"].to_numpy(dtype=int),
+    )
+    roots = graph.pop(NO_PARENT)
+
+    sorted_track_ids = []
+    for root in roots:
+        sorted_track_ids += left_first_search(root, graph)
+
+    return sorted_track_ids

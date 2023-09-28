@@ -8,7 +8,13 @@ from mip.exceptions import InterfacingError
 from sqlalchemy.orm import Session
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB, maximum_time
+from ultrack.core.database import (
+    NO_PARENT,
+    LinkDB,
+    NodeDB,
+    OverlapDB,
+    maximum_time_from_database,
+)
 from ultrack.core.solve.solver import MIPSolver
 from ultrack.core.solve.solver.base_solver import BaseSolver
 
@@ -36,7 +42,7 @@ class SQLTracking:
         self._tracking_config = config.tracking_config
         self._data_config = config.data_config
 
-        self._max_t = maximum_time(self._data_config)
+        self._max_t = maximum_time_from_database(self._data_config)
         if self._tracking_config.window_size is None:
             LOG.info(f"Window size not set, configured to {self._max_t + 1}.")
             self._window_size = self._max_t + 1

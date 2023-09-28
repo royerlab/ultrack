@@ -6,7 +6,7 @@ import numpy as np
 from magicgui.widgets import Container, PushButton, create_widget
 from napari.layers import Tracks
 
-from ultrack.utils.tracks import sort_trees_by_length
+from ultrack.tracks.sorting import sort_trees_by_length
 from ultrack.widgets.utils import wait_cursor
 
 LOG = logging.getLogger(__name__)

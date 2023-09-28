@@ -1,5 +1,7 @@
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+import shutil
+from pathlib import Path
+from typing import Any, Dict, Literal, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
@@ -114,43 +116,25 @@ def make_cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return cells, edges, labels
 
 
-def large_chunk_size(
-    shape: Tuple[int],
-    dtype: Union[str, np.dtype],
-    max_size: int = 2147483647,
-) -> Tuple[int]:
-    """
-    Computes a large chunk size for a given `shape` and `dtype`.
-    Large chunks improves the performance on Elastic Storage Systems (ESS).
-    Leading dimension (time) will always be chunked as 1.
+def validate_and_overwrite_path(
+    path: Path, overwrite: bool, msg_type: Literal["cli", "api"]
+) -> None:
+    """Validates and errors existance of path (or dir) and overwrites it if requested."""
 
-    Parameters
-    ----------
-    shape : Tuple[int]
-        Input data shape.
-    dtype : Union[str, np.dtype]
-        Input data type.
-    max_size : int, optional
-        Reference maximum size, by default 2147483647
+    if msg_type == "cli":
+        msg = f"{path} already exists. Set `--overwrite` option to overwrite it."
 
-    Returns
-    -------
-    Tuple[int]
-        Suggested chunk size.
-    """
-    if not isinstance(dtype, np.dtype):
-        dtype = np.dtype(dtype)
+    elif msg_type == "api":
+        msg = f"{path} already exists. Set `overwrite=True` to overwrite it."
 
-    plane_shape = np.minimum(shape[-2:], 32768)
-
-    if len(shape) == 3:
-        chunks = (1, *plane_shape)
-    elif len(shape) > 3:
-        depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
-        chunks = (1,) * (len(shape) - 3) + (depth, *plane_shape)
     else:
-        raise NotImplementedError(
-            f"Large chunk size only implemented for 3-or-more dimensional arrays. Found {len(shape) - 1}-dims."
-        )
+        raise ValueError(f"Invalid `msg_type` {msg_type}, must be `cli` or `api`.")
 
-    return chunks
+    if path.exists():
+        if overwrite:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        else:
+            raise ValueError(msg)

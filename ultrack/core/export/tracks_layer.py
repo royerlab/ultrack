@@ -3,11 +3,8 @@ from typing import Dict, List, Tuple
 import pandas as pd
 
 from ultrack.config.config import MainConfig
-from ultrack.core.export.utils import (
-    add_track_ids_to_forest,
-    inv_tracks_forest,
-    solution_dataframe_from_sql,
-)
+from ultrack.core.export.utils import solution_dataframe_from_sql
+from ultrack.tracks.graph import add_track_ids_to_tracks_df, inv_tracks_df_forest
 
 
 def to_tracks_layer(
@@ -32,10 +29,10 @@ def to_tracks_layer(
         Tracks dataframe and an lineage graph, mapping node_id -> parent_id.
     """
     df = solution_dataframe_from_sql(config.data_config.database_path)
-    df = add_track_ids_to_forest(df)
+    df = add_track_ids_to_tracks_df(df)
     df.sort_values(by=["track_id", "t"], inplace=True)
 
-    graph = inv_tracks_forest(df)
+    graph = inv_tracks_df_forest(df)
 
     data_dim = len(config.data_config.metadata["shape"])
     if data_dim == 4:

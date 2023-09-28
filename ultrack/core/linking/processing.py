@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import LinkingConfig, MainConfig
-from ultrack.core.database import LinkDB, NodeDB, maximum_time
+from ultrack.core.database import LinkDB, NodeDB, maximum_time_from_database
 from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.node import Node
+from ultrack.utils.array import check_array_chunk
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,
@@ -200,7 +201,10 @@ def link(
     """
     LOG.info(f"Linking nodes with LinkingConfig:\n{config.linking_config}")
 
-    max_t = maximum_time(config.data_config)
+    for image in images:
+        check_array_chunk(image)
+
+    max_t = maximum_time_from_database(config.data_config)
     time_points = batch_index_range(max_t, config.linking_config.n_workers, batch_index)
     LOG.info(f"Linking time points {time_points}")
 

@@ -12,7 +12,7 @@ from ultrack.cli.utils import (
     paths_argument,
 )
 from ultrack.config import MainConfig
-from ultrack.utils.flow import add_flow
+from ultrack.imgproc.flow import add_flow
 
 
 @click.command("add_flow")

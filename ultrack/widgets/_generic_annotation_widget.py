@@ -132,7 +132,9 @@ class GenericAnnotationWidget(GenericDataWidget):
             layer.translate = node.bbox[: node.mask.ndim]
         except KeyError:
             layer = self._viewer.add_labels(
-                node.mask, name=self._mask_layer_name, translate=node.bbox[: node.mask.ndim]
+                node.mask,
+                name=self._mask_layer_name,
+                translate=node.bbox[: node.mask.ndim],
             )
             layer.bind_key("Enter", self._on_confirm)
 
@@ -142,7 +144,9 @@ class GenericAnnotationWidget(GenericDataWidget):
         if self._viewer.dims.ndim == node.mask.ndim:
             self._viewer.dims.set_point(range(len(node.centroid)), node.centroid)
         else:
-            self._viewer.dims.set_point(range(len(node.centroid) + 1), (node.time, *node.centroid))
+            self._viewer.dims.set_point(
+                range(len(node.centroid) + 1), (node.time, *node.centroid)
+            )
 
         self._viewer.camera.center = node.centroid
 

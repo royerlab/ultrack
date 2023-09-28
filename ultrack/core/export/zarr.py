@@ -8,8 +8,7 @@ from zarr.storage import Store
 
 from ultrack.config.config import MainConfig
 from ultrack.core.export.utils import export_segmentation_generic
-from ultrack.imgproc.utils import create_zarr
-from ultrack.utils import large_chunk_size
+from ultrack.utils.array import create_zarr, large_chunk_size
 
 
 def tracks_to_zarr(

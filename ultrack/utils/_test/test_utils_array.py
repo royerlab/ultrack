@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ultrack.imgproc.utils import array_apply
+from ultrack.utils.array import array_apply
 
 
 @pytest.mark.parametrize("axis", [0, 1])

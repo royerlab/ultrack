@@ -21,15 +21,18 @@ from ultrack.config.config import MainConfig
 from ultrack.config.dataconfig import DataConfig
 from ultrack.core.database import NO_PARENT, NodeDB
 from ultrack.core.export.utils import (
-    add_track_ids_to_forest,
     export_segmentation_generic,
     filter_nodes_generic,
-    maybe_overwrite_path,
     solution_dataframe_from_sql,
-    tracks_forest,
 )
 from ultrack.core.segmentation.node import Node, intersects
-from ultrack.utils.estimation import estimate_drift
+from ultrack.tracks.graph import (
+    add_track_ids_to_tracks_df,
+    get_subtree,
+    tracks_df_forest,
+)
+from ultrack.tracks.stats import estimate_drift
+from ultrack.utils.data import validate_and_overwrite_path
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
@@ -163,7 +166,7 @@ def stitch_tracks_df(
 
         for prev_id, new_id in zip(neigh_df["neighbor"], neigh_df.index):
             track_id_mapping[int(prev_id)] = int(new_id)
-            selected_track_ids.update(connected_component(graph, prev_id))
+            selected_track_ids.update(get_subtree(graph, prev_id))
 
     LOG.info(f"track_id remapping {track_id_mapping}")
 
@@ -172,19 +175,6 @@ def stitch_tracks_df(
     df = df[df["track_id"].isin(selected_track_ids)]
 
     return df
-
-
-def connected_component(graph: Dict[int, int], index: int) -> Set[int]:
-    """Returns connected component (subtree) of `index` of tree `graph`."""
-    component = set()
-    queue = [index]
-    while queue:
-        index = queue.pop()
-        component.add(index)
-        for child in graph.get(index, []):
-            queue.append(child)
-
-    return component
 
 
 def select_tracks_from_first_frame(
@@ -223,11 +213,11 @@ def select_tracks_from_first_frame(
     _, root_ids = linear_sum_assignment(D)
 
     selected_track_ids = set()
-    graph = tracks_forest(df)
+    graph = tracks_df_forest(df)
 
     for root in tqdm(root_ids, "Selecting tracks from first trame"):
         track_id = df.loc[starting_nodes[root].id, "track_id"]
-        selected_track_ids.update(connected_component(graph, track_id))
+        selected_track_ids.update(get_subtree(graph, track_id))
 
     if stitch_tracks:
         selected_df = stitch_tracks_df(graph, df, selected_track_ids)
@@ -332,7 +322,7 @@ def to_ctc(
     tracks_path = output_dir / "res_track.txt"
 
     _validate_masks_path(output_dir, overwrite)
-    maybe_overwrite_path(tracks_path, overwrite)
+    validate_and_overwrite_path(tracks_path, overwrite, "cli")
 
     df = solution_dataframe_from_sql(config.data_config.database_path)
 
@@ -360,7 +350,7 @@ def to_ctc(
     if len(df) == 0:
         raise ValueError("Solution is empty after filtering.")
 
-    df = add_track_ids_to_forest(df)
+    df = add_track_ids_to_tracks_df(df)
 
     if first_frame is not None:
         if scale is not None:
@@ -427,10 +417,10 @@ def margin_filter_condition(
 
     LOG.info(f"Using limits {limits} from {margin}")
 
-    def condition(node: Node) -> bool:
+    def _condition(node: Node) -> bool:
         return not intersects(node.bbox, limits)
 
-    return condition
+    return _condition
 
 
 def rescale_size_condition(
@@ -450,8 +440,8 @@ def rescale_size_condition(
     """
     scale = np.asarray(scale)
 
-    def condition(node: Node) -> bool:
+    def _condition(node: Node) -> bool:
         ndim = node.mask.ndim
         return np.any(node.mask.shape * scale[-ndim:] < 1.0)
 
-    return condition
+    return _condition

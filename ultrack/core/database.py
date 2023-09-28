@@ -36,22 +36,22 @@ class MaybePickleType(PickleType):
     def bind_processor(self, dialect):
         processor = super().bind_processor(dialect)
 
-        def process(value):
+        def _process(value):
             if isinstance(value, (bytes, memoryview)):
                 return value
             return processor(value)
 
-        return process
+        return _process
 
     def result_processor(self, dialect, coltype):
         processor = super().result_processor(dialect, coltype)
 
-        def process(value):
+        def _process(value):
             if not isinstance(value, (bytes, memoryview)):
                 return value
             return processor(value)
 
-        return process
+        return _process
 
 
 class NodeAnnotation(enum.IntEnum):
@@ -111,7 +111,7 @@ class LinkDB(Base):
     annotation = Column(Enum(LinkAnnotation), default=LinkAnnotation.UNKNOWN)
 
 
-def maximum_time(data_config: DataConfig) -> int:
+def maximum_time_from_database(data_config: DataConfig) -> int:
     """Returns the maximum `t` found in the `NodesDB`."""
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:

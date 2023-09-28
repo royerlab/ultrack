@@ -15,7 +15,7 @@ def _run_command(command_and_args: List[str]) -> None:
     try:
         main(command_and_args)
     except SystemExit as exit:
-        assert exit.code == 0
+        assert exit.code == 0, f"{command_and_args} failed with exit code {exit.code}"
 
 
 @pytest.mark.usefixtures("zarr_dataset_paths")
@@ -102,6 +102,18 @@ class TestCommandLine:
                 "1",
                 "-o",
                 str(tmp_path / "01_RES"),
+            ]
+        )
+
+    def test_trackmate_export(self, instance_config_path: str, tmp_path: Path) -> None:
+        _run_command(
+            [
+                "export",
+                "trackmate",
+                "-cfg",
+                instance_config_path,
+                "-o",
+                str(tmp_path / "tracks.xml"),
             ]
         )
 
