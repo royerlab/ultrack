@@ -8,13 +8,14 @@ import numpy as np
 import sqlalchemy as sqla
 import zarr
 from numpy.typing import ArrayLike
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import MainConfig, SegmentationConfig
 from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
-from ultrack.core.segmentation.utils import check_array_chunk
+from ultrack.utils.array import check_array_chunk
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,
@@ -27,7 +28,7 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 LOG = logging.getLogger(__name__)
 
 
-def generate_id(index: int, time: int, max_segments: int) -> int:
+def _generate_id(index: int, time: int, max_segments: int) -> int:
     """Generates a unique id.
 
     Parameters
@@ -48,7 +49,7 @@ def generate_id(index: int, time: int, max_segments: int) -> int:
 
 
 def _insert_db(
-    db_path: str, time: int, nodes: List[NodeDB], overlaps: List[OverlapDB]
+    engine: Engine, time: int, nodes: List[NodeDB], overlaps: List[OverlapDB]
 ) -> None:
     """
     Helper function to insert data into database.
@@ -56,8 +57,8 @@ def _insert_db(
 
     Parameters
     ----------
-    db_path : str
-        Database path including URI.
+    engine : Engine
+        SQLAlchemy connection engine.
     time : int
         Current time.
     nodes : List[NodeDB]
@@ -65,8 +66,7 @@ def _insert_db(
     overlaps : List[OverlapDB]
         List of overlap of nodes to insert.
     """
-    LOG.info(f"Pushing some nodes from hier time {time} to {db_path}")
-    engine = sqla.create_engine(db_path, hide_parameters=True)
+    LOG.info(f"Pushing some nodes from hier time {time} to database.")
     with Session(engine) as session:
         session.add_all(nodes)
         session.add_all(overlaps)
@@ -125,6 +125,8 @@ def _process(
 
     LOG.info(f"Computing nodes of time {time}")
 
+    engine = sqla.create_engine(db_path, hide_parameters=True)
+
     index = 1
     nodes = []
     overlaps = []
@@ -134,7 +136,7 @@ def _process(
 
         hier_index_map = {}
         for hier_node in hierarchy.nodes:
-            hier_node.id = generate_id(index, time, max_segments_per_time)
+            hier_node.id = _generate_id(index, time, max_segments_per_time)
             hier_node.time = time
             hier_node._parent = None  # avoiding pickling parent hierarchy
             centroid = hier_node.centroid
@@ -200,16 +202,16 @@ def _process(
 
         # if lock is None it inserts at every iteration
         if write_lock is None:
-            _insert_db(db_path, time, nodes, overlaps)
+            _insert_db(engine, time, nodes, overlaps)
 
         # otherwise it inserts only when it can acquire the lock
         elif write_lock.acquire(blocking=False):
-            _insert_db(db_path, time, nodes, overlaps)
+            _insert_db(engine, time, nodes, overlaps)
             write_lock.release()
 
     # pushes any remaning data
     with write_lock if write_lock is not None else nullcontext():
-        _insert_db(db_path, time, nodes, overlaps)
+        _insert_db(engine, time, nodes, overlaps)
 
     LOG.info(f"DONE with time {time}.")
 

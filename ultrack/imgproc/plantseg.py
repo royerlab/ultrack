@@ -17,7 +17,7 @@ from ultrack.utils.cuda import import_module, to_cpu, torch_default_device
 
 class PlantSeg:
     """
-    A class for performing semantic segmentation using the Plant-Seg model.
+    A class for performing boundary detection using the Plant-Seg model.
     Plant-Seg documentation for more details, https://github.com/hci-unihd/plant-seg
 
     Parameters
@@ -105,7 +105,7 @@ class PlantSeg:
         transpose: Optional[Tuple[int]] = None,
     ) -> np.ndarray:
         """
-        Perform semantic segmentation using the PlantSeg model.
+        Perform boundary detection using the PlantSeg model.
 
         Parameters
         ----------

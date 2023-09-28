@@ -9,7 +9,7 @@ from ultrack.config import MainConfig, load_config
 
 
 def paths_argument(**kwargs) -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.argument(
             "paths",
             nargs=-1,
@@ -17,7 +17,7 @@ def paths_argument(**kwargs) -> Callable:
             **kwargs,
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def _config_callback(ctx: click.Context, opt: click.Option, value: str) -> MainConfig:
@@ -25,7 +25,7 @@ def _config_callback(ctx: click.Context, opt: click.Option, value: str) -> MainC
 
 
 def config_option() -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--config",
             "-cfg",
@@ -34,7 +34,7 @@ def config_option() -> Callable:
             callback=_config_callback,
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def _batch_index_callback(
@@ -48,7 +48,7 @@ def _batch_index_callback(
 
 
 def batch_index_option() -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--batch-index",
             "-b",
@@ -60,11 +60,11 @@ def batch_index_option() -> Callable:
             help="Batch index to process a subset of time points. ATTENTION: this it not the time index.",
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def overwrite_option() -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--overwrite",
             "-ow",
@@ -75,7 +75,7 @@ def overwrite_option() -> Callable:
             is_eager=True,
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def output_directory_option(**kwargs) -> Callable:
@@ -83,7 +83,7 @@ def output_directory_option(**kwargs) -> Callable:
     if "required" not in kwargs and "default" not in kwargs:
         kwargs["required"] = True
 
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--output-directory",
             "-o",
@@ -91,7 +91,7 @@ def output_directory_option(**kwargs) -> Callable:
             **kwargs,
         )(f)
 
-    return decorator
+    return _decorator
 
 
 @curry
@@ -130,7 +130,7 @@ def tuple_callback(
 
 
 def napari_reader_option() -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--reader-plugin",
             "-r",
@@ -140,11 +140,11 @@ def napari_reader_option() -> Callable:
             help="Napari reader plugin.",
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def layer_key_option() -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--layer-key",
             "-l",
@@ -154,11 +154,11 @@ def layer_key_option() -> Callable:
             help="Layer key to index multi-channel input.",
         )(f)
 
-    return decorator
+    return _decorator
 
 
 def channel_axis_option(default: Optional[int], help: str) -> Callable:
-    def decorator(f: Callable) -> Callable:
+    def _decorator(f: Callable) -> Callable:
         return click.option(
             "--channel-axis",
             "-cha",
@@ -169,4 +169,4 @@ def channel_axis_option(default: Optional[int], help: str) -> Callable:
             help=help,
         )(f)
 
-    return decorator
+    return _decorator

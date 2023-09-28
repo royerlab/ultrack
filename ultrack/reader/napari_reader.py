@@ -5,7 +5,7 @@ from typing import Callable, List, Union
 import pandas as pd
 from napari.types import LayerDataTuple
 
-from ultrack.core.export.utils import inv_tracks_forest
+from ultrack.tracks.graph import inv_tracks_df_forest
 
 LOG = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ def read_csv(path: Union[Path, str]) -> LayerDataTuple:
         tracks_cols.remove("z")
 
     if "parent_track_id" in df.columns:
-        graph = inv_tracks_forest(df)
+        graph = inv_tracks_df_forest(df)
         LOG.info(f"Track lineage graph with length {len(graph)}")
     else:
         graph = None

@@ -1,10 +1,11 @@
 import logging
 from typing import Optional
 
+import numpy as np
 import pytest
 from skimage.data import cells3d
 
-from ultrack.imgproc.segmentation import detect_foreground, robust_invert
+from ultrack.imgproc import Cellpose, detect_foreground, robust_invert
 from ultrack.utils.cuda import to_cpu
 
 LOG = logging.getLogger(__name__)
@@ -54,3 +55,10 @@ def test_foreground_detection(
         )
 
         napari.run()
+
+
+def test_cellpose() -> None:
+    pytest.importorskip("cellpose")
+    image = np.random.rand(100, 100)
+    cellpose_model = Cellpose()
+    cellpose_model(image)

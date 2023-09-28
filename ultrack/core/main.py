@@ -9,6 +9,7 @@ from ultrack.core.linking.utils import clear_linking_data
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
 from ultrack.core.solve.sqltracking import SQLTracking
+from ultrack.imgproc.flow import add_flow
 from ultrack.utils.edge import labels_to_edges
 
 
@@ -21,6 +22,7 @@ def track(
     edges: Optional[ArrayLike] = None,
     images: Sequence[ArrayLike] = tuple(),
     scale: Optional[Sequence[float]] = None,
+    vector_field: Optional[Union[ArrayLike, Sequence[ArrayLike]]] = None,
     overwrite: Literal["all", "links", "solutions", "none", True, False] = "none",
 ) -> None:
     """
@@ -46,6 +48,8 @@ def track(
         Optinal sequence of images (T, (Z), Y, X) for color space filtering.
     scale : Sequence[float]
         Optional scaling for nodes' distances.
+    vector_field : Union[ArrayLike, Sequence[ArrayLike]]
+        Vector field arrays. Each array per coordinate or a single (T, D, (Z), Y, X)-array.
     overwrite : Literal["all", "links", "solutions", "none"], optional
         Clear the corresponding data from the database, by default nothing is overwritten with "none"
         When not "none", only the cleared and subsequent parts of the pipeline is executed.
@@ -90,5 +94,7 @@ def track(
 
     if overwrite in ("all", "links", "none"):
         link(config, images=images, scale=scale)
+        if vector_field is not None:
+            add_flow(config, vector_field)
 
     solve(config)

@@ -133,6 +133,21 @@ class MicroSAM:
         self._halo_shape = halo_shape
 
     def __call__(self, image: ArrayLike) -> np.ndarray:
+        """
+        Estimate contour of objects of an image.
+
+        Background regions not assigned to any label are set to -1.
+
+        Parameters
+        ----------
+        image : ArrayLike
+            The input image to be processed.
+
+        Returns
+        -------
+        np.ndarray
+            The processed image with contours derived from the identified masks.
+        """
 
         image = np.asarray(image)
 

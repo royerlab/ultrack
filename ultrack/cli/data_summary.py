@@ -11,10 +11,8 @@ from sqlalchemy.orm import Session
 from ultrack.cli.utils import config_option
 from ultrack.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
-from ultrack.core.export.utils import (
-    add_track_ids_to_forest,
-    solution_dataframe_from_sql,
-)
+from ultrack.core.export.utils import solution_dataframe_from_sql
+from ultrack.tracks.graph import add_track_ids_to_tracks_df
 from ultrack.utils.printing import pretty_print_df
 
 
@@ -78,7 +76,7 @@ def _link_stats_over_time(database_path: str, out_dir: Path) -> None:
 def _solution_summary(database_path: str) -> None:
     """Computes some statistics from the solution."""
     df = solution_dataframe_from_sql(database_path)
-    df = add_track_ids_to_forest(df)
+    df = add_track_ids_to_tracks_df(df)
 
     total = len(df)
     no_parents = (df["parent_id"] == NO_PARENT).sum()

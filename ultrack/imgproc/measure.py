@@ -6,6 +6,7 @@ from numpy.typing import ArrayLike
 from skimage.measure import regionprops_table
 from toolz import curry
 
+from ultrack.utils.array import check_array_chunk
 from ultrack.utils.multiprocessing import multiprocessing_apply
 
 
@@ -169,6 +170,10 @@ def tracks_properties(
                 raise ValueError(
                     "Channel axis must be specified when multi-channel image is provided."
                 )
+            check_array_chunk(image)
+        else:
+            for channel in image:
+                check_array_chunk(channel)
 
         if "intensity_sum" in properties:
             extra_properties.append(intensity_sum)
