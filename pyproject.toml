@@ -40,6 +40,11 @@ asv = "^0.5.1"
 "testing.postgresql" = "^1.3.0"
 pytrackmate = {git = "https://github.com/hadim/pytrackmate.git"}
 
+[tool.poetry.extras]
+flow = [
+    "torch",
+]
+
 [tool.poetry.scripts]
 ultrack = "ultrack.cli.main:main"
 
