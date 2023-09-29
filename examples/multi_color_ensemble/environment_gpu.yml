@@ -18,3 +18,4 @@ dependencies:
     - napari==0.4.18
     - traccuracy
     - napari-arboretum
+    - pyift

@@ -10,6 +10,7 @@ dependencies:
   - gurobi
   - jupyter
   - pip
+  - pytorch
   - zarr
   - pip:
     - pyqt5

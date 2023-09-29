@@ -6,9 +6,7 @@ from uuid import uuid4
 import numpy as np
 import scipy.ndimage as ndi
 import torch as th
-from micro_sam import instance_segmentation, util
 from numpy.typing import ArrayLike
-from segment_anything.utils.amg import area_from_rle, rle_to_mask
 from skimage.feature import peak_local_max
 from skimage.segmentation import find_boundaries
 
@@ -92,6 +90,7 @@ class MicroSAM:
         tile_shape: Tuple[int, int] = (512, 512),
         halo_shape: Tuple[int, int] = (128, 128),
     ) -> None:
+        from micro_sam import instance_segmentation, util
 
         if device is None:
             device = torch_default_device()
@@ -148,6 +147,8 @@ class MicroSAM:
         np.ndarray
             The processed image with contours derived from the identified masks.
         """
+        from micro_sam.util import precompute_image_embeddings
+        from segment_anything.utils.amg import area_from_rle, rle_to_mask
 
         image = np.asarray(image)
 
@@ -159,7 +160,7 @@ class MicroSAM:
         if embedding_path.exists():
             shutil.rmtree(embedding_path)
 
-        embeddings = util.precompute_image_embeddings(
+        embeddings = precompute_image_embeddings(
             self._predictor,
             image,
             save_path=str(embedding_path),

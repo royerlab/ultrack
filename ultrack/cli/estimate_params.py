@@ -70,6 +70,8 @@ def estimate_params_cli(
     except (KeyError, ValueError):
         labels = viewer.layers[layer_key].data
 
+    del viewer
+
     df = estimate_parameters_from_labels(labels, is_timelapse=timelapse)
 
     covariables = {"area", "distance"}

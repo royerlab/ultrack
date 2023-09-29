@@ -49,8 +49,11 @@ def labels_to_edges_cli(
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)
 
+    labels = [layer.data for layer in viewer.layers]
+    del viewer
+
     labels_to_edges(
-        [layer.data for layer in viewer.layers],
+        labels,
         sigma=sigma,
         detection_store_or_path=detection_path,
         edges_store_or_path=edges_path,

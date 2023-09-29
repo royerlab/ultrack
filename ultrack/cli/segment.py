@@ -71,6 +71,8 @@ def segmentation_cli(
             {"scale": viewer.layers[edge_layer].scale.tolist()}
         )
 
+    del viewer
+
     segment(
         detection,
         edge,

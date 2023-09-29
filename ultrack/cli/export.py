@@ -151,6 +151,7 @@ def zarr_napari_cli(
                 layer.data[0] if layer.multiscale else layer.data
                 for layer in viewer.open(image_path, plugin=reader_plugin)
             ]
+            del viewer
 
         tracks_w_measures = tracks_properties(
             segments=segments,

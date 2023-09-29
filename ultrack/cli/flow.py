@@ -35,6 +35,7 @@ def add_flow_cli(
         layer.data[0] if layer.multiscale else layer.data
         for layer in viewer.open(paths, channel_axis=channel_axis, plugin=reader_plugin)
     ]
+    del viewer
 
     add_flow(
         config,
