@@ -1,12 +1,17 @@
 import numpy as np
 import pytest
 
-sam = pytest.importorskip("ultrack.imgproc.sam")
+from ultrack.imgproc import sam
 
 
 def test_sam() -> None:
     image = np.random.rand(100, 100)
-    seg_model = sam.MicroSAM()
+
+    try:
+        seg_model = sam.MicroSAM()
+    except ModuleNotFoundError:
+        pytest.skip("MicroSAM not installed")
+
     seg_model(image)
 
     # with maxima prompt

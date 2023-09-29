@@ -4,13 +4,6 @@ import dask.array as da
 import numpy as np
 import torch as th
 from numpy.typing import ArrayLike
-from plantseg.dataprocessing import fix_input_shape
-from plantseg.predictions.functional.array_predictor import ArrayPredictor
-from plantseg.predictions.functional.utils import (
-    get_array_dataset,
-    get_model_config,
-    get_patch_halo,
-)
 
 from ultrack.utils.cuda import import_module, to_cpu, torch_default_device
 
@@ -67,6 +60,12 @@ class PlantSeg:
         """
         Initialized Plant-Seg model.
         """
+        from plantseg.predictions.functional.array_predictor import ArrayPredictor
+        from plantseg.predictions.functional.utils import (
+            get_model_config,
+            get_patch_halo,
+        )
+
         if device is None:
             device = torch_default_device()
 
@@ -121,6 +120,8 @@ class PlantSeg:
         np.ndarray
             Segmentation boundary probability map as a numpy array.
         """
+        from plantseg.dataprocessing import fix_input_shape
+        from plantseg.predictions.functional.utils import get_array_dataset
 
         if isinstance(image, da.Array):
             # avoiding building a large compute graph

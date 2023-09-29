@@ -47,11 +47,12 @@ Usage examples can be found [here](examples), including their environment files 
 
 ## Documentation
 
-The `ultrack` library relies on a configuration schema, its description is [here](ultrack/config/README.md).
+The official documentation is available [here](https://royerlab.github.io/ultrack/).
 
-The segmentation and tracking data are stored in an SQL database, described [here](ultrack/core/README.md).
+These additional developer documentation are available:
 
-Helper functions to export to the cell tracking challenge and napari formats are available [here](ultrack/core/export).
+- Parameter [configuration schema](ultrack/config/README.md).
+- Intermediate segmentation and tracking SQL database are [here](ultrack/core/README.md).
 
 ## Citing
 

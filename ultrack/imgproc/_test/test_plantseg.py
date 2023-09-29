@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 import pytest
 
-plantseg = pytest.importorskip("ultrack.imgproc.plantseg")
+from ultrack.imgproc.plantseg import PlantSeg
 
 
 @pytest.mark.parametrize(
@@ -19,9 +19,13 @@ def test_plantseg(
 
     image = np.random.rand(100, 100, 100)
 
-    seg_model = plantseg.PlantSeg(
-        model_name="generic_light_sheet_3D_unet",
-        batch_size=1,
-        patch=image.shape,
-    )
+    try:
+        seg_model = PlantSeg(
+            model_name="generic_light_sheet_3D_unet",
+            batch_size=1,
+            patch=image.shape,
+        )
+    except ModuleNotFoundError:
+        pytest.skip("PlantSeg not installed")
+
     seg_model(image, transpose=transpose)

@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# Terminates if any command fails
+set -e
+
 # subject to change depending on your conda setup
 CONDA_SETUP_PATH=$HOME/miniconda3/etc/profile.d/conda.sh
 UPDATE_JUPYTER="jupyter nbconvert --execute --to notebook --inplace"
@@ -11,10 +14,6 @@ function install () {
 	conda activate $1
 	pip install -e ..
 }
-
-# stardist
-install ultrack-stardist stardist_2d
-$UPDATE_JUPYTER stardist_2d/2d_tracking.ipynb
 
 # multi color
 install ultrack-multi-color multi_color_ensemble
@@ -35,3 +34,7 @@ $UPDATE_JUPYTER neuromast_plantseg/neuromast_plantseg.ipynb
 # micro-sam
 install ultrack-micro-sam micro_sam
 $UPDATE_JUPYTER micro_sam/micro_sam_tracking.ipynb
+
+# stardist
+install ultrack-stardist stardist_2d
+$UPDATE_JUPYTER stardist_2d/2d_tracking.ipynb

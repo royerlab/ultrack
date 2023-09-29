@@ -51,6 +51,7 @@ def link_cli(
             layer.data[0] if layer.multiscale else layer.data
             for layer in viewer.open(paths, **kwargs, plugin=reader_plugin)
         ]
+        del viewer
 
     link(
         config,

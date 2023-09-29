@@ -1,7 +1,8 @@
 import logging
-from typing import List
+from typing import Iterator
 
 import numpy as np
+import scipy.ndimage as ndi
 from numpy.typing import ArrayLike
 from skimage import measure, morphology
 from skimage.measure._regionprops import RegionProperties
@@ -33,7 +34,7 @@ def create_hierarchies(
     binary_detection: ArrayLike,
     edge: ArrayLike,
     **kwargs,
-) -> List[Hierarchy]:
+) -> Iterator[Hierarchy]:
     """Computes a collection of hierarchical watersheds inside `binary_detection` mask.
 
     Parameters
@@ -46,11 +47,10 @@ def create_hierarchies(
 
     Returns
     -------
-    List[Hierarchy]
+    Iterator[Hierarchy]
         List of hierarchical watersheds.
     """
     binary_detection = np.asarray(binary_detection)
-    edge = np.asarray(edge)
 
     assert (
         issubclass(binary_detection.dtype.type, np.integer)
@@ -58,14 +58,14 @@ def create_hierarchies(
     )
 
     LOG.info("Labeling connected components.")
-    labels, num_labels = measure.label(
-        binary_detection, return_num=True, connectivity=1
-    )
-    labels = labels.astype(np.int32)
+    labels, num_labels = ndi.label(binary_detection, output=np.int32)
+    del binary_detection
 
     if "min_area" in kwargs and num_labels > 1:
         LOG.info("Filtering small connected components.")
-        labels = morphology.remove_small_objects(labels, min_size=kwargs["min_area"])
+        morphology.remove_small_objects(labels, min_size=kwargs["min_area"], out=labels)
+
+    edge = np.asarray(edge)
 
     if "max_area" in kwargs:
         LOG.info("Oversegmenting connected components.")
@@ -77,6 +77,5 @@ def create_hierarchies(
         )
 
     LOG.info("Creating hierarchies (lazy).")
-    return [
-        Hierarchy(c, **kwargs) for c in measure.regionprops(labels, edge, cache=True)
-    ]
+    for c in measure.regionprops(labels, edge, cache=True):
+        yield Hierarchy(c, **kwargs)
