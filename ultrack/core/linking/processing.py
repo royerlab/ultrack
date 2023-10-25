@@ -74,7 +74,8 @@ def _process(
     write_lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
     """
-    engine = sqla.create_engine(db_path)
+    connect_args = {"timeout": 45} if write_lock is not None else {}
+    engine = sqla.create_engine(db_path, connect_args=connect_args)
     with Session(engine) as session:
         current_nodes = [
             n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
@@ -170,7 +171,9 @@ def _process(
 
     with write_lock if write_lock is not None else nullcontext():
         LOG.info(f"Pushing links from time {time} to {db_path}")
-        engine = sqla.create_engine(db_path, hide_parameters=True)
+        engine = sqla.create_engine(
+            db_path, hide_parameters=True, connect_args=connect_args
+        )
         with engine.begin() as conn:
             df.to_sql(
                 name=LinkDB.__tablename__, con=conn, if_exists="append", index=False
