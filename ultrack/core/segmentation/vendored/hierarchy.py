@@ -129,6 +129,7 @@ class Hierarchy:
         graph: hg.UndirectedGraph,
         weights: ArrayLike,
         threshold: float,
+        max_area: float,
     ) -> Tuple[hg.Tree, ArrayLike]:
 
         LOG.info("Filtering hierarchy by contour strength.")
@@ -136,6 +137,11 @@ class Hierarchy:
         hg.set_attribute(graph, "no_border_vertex_out_degree", None)
         irrelevant_nodes = hg.attribute_contour_strength(tree, weights) < threshold
         hg.set_attribute(graph, "no_border_vertex_out_degree", 6)
+
+        if max_area is not None:
+            # Avoid filtering nodes where merge leads to a node with maximum area above threshold
+            parent_area = hg.attribute_area(tree)[tree.parents()]
+            irrelevant_nodes[parent_area > max_area] = False
 
         tree, node_map = hg.simplify_tree(tree, irrelevant_nodes)
         return tree, alt[node_map]
@@ -171,7 +177,12 @@ class Hierarchy:
 
         if self._min_frontier > 0.0:
             tree, alt = self._filter_contour_strength(
-                tree, alt, graph, weights, self._min_frontier
+                tree,
+                alt,
+                graph,
+                weights,
+                self._min_frontier,
+                self._max_area,
             )
 
         LOG.info("Filtering large nodes of hierarchy.")
