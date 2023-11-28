@@ -51,14 +51,7 @@ class SQLTracking:
 
         self.num_batches = math.ceil(self._max_t / self._window_size)
 
-    def __call__(self, index: int) -> None:
-        """Queries data from the given index, add it to the solver, run it and push to the database.
-
-        Parameters
-        ----------
-        index : int
-            Batch index.
-        """
+    def construct_model(self, index: int) -> MIPSolver:
         if index < 0 or index >= self.num_batches:
             raise ValueError(
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
@@ -81,6 +74,18 @@ class SQLTracking:
 
         self._add_overlap_constraints(solver=solver, index=index)
         self._add_boundary_constraints(solver=solver, index=index)
+
+        return solver
+
+    def __call__(self, index: int) -> None:
+        """Queries data from the given index, add it to the solver, run it and push to the database.
+
+        Parameters
+        ----------
+        index : int
+            Batch index.
+        """
+        solver = self.construct_model(index)
 
         print("Solving ILP ...")
 

@@ -138,7 +138,7 @@ class MIPSolver(BaseSolver):
 
         self._assert_same_length(sources=sources, targets=targets, weights=weights)
 
-        weights = self._config.apply_link_function(weights)
+        weights = self._config.apply_link_function(weights.astype(float))
 
         LOG.info(f"transformed edge weights {weights}")
 

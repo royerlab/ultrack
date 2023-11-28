@@ -5,6 +5,7 @@ import click
 from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 from tifffile import imread
+from tqdm import tqdm
 
 from ultrack.cli.utils import (
     config_option,
@@ -15,6 +16,7 @@ from ultrack.cli.utils import (
 )
 from ultrack.config import MainConfig
 from ultrack.core.export import to_ctc, to_trackmate, to_tracks_layer, tracks_to_zarr
+from ultrack.core.solve.sqltracking import SQLTracking
 from ultrack.imgproc.measure import tracks_properties
 from ultrack.utils.data import validate_and_overwrite_path
 
@@ -185,11 +187,48 @@ def trackmate_cli(
     to_trackmate(config, output_path, overwrite)
 
 
+@click.command("lp")
+@click.option(
+    "--output-path",
+    "-o",
+    required=True,
+    type=click.Path(path_type=Path),
+    show_default=True,
+    help="ILP model (.lp) output path.",
+)
+@config_option()
+@overwrite_option()
+def lp_cli(
+    config: MainConfig,
+    output_path: Path,
+    overwrite: bool,
+) -> None:
+    """
+    Exports tracking ILP to .lp format.
+    """
+    tracker = SQLTracking(config)
+
+    for batch_index in tqdm(range(tracker.num_batches), "Exporting ILP"):
+        ilp = tracker.construct_model(index=batch_index)
+
+        if tracker.num_batches == 1:
+            model_path = output_path
+        else:
+            name = f"{output_path.name.removesuffix('.lp')}_{batch_index:02d}.lp"
+            model_path = output_path.parent / name
+
+        if model_path.exists() and not overwrite:
+            raise ValueError(f"File {model_path} already exists. Set `--overwrite`.")
+
+        ilp._model.write(str(model_path))
+
+
 @click.group("export")
 def export_cli() -> None:
     """Exports tracking and segmentation results to selected format."""
 
 
 export_cli.add_command(ctc_cli)
+export_cli.add_command(lp_cli)
 export_cli.add_command(trackmate_cli)
 export_cli.add_command(zarr_napari_cli)
