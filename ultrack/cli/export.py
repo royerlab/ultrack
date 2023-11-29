@@ -209,7 +209,7 @@ def lp_cli(
     tracker = SQLTracking(config)
 
     for batch_index in tqdm(range(tracker.num_batches), "Exporting ILP"):
-        ilp = tracker.construct_model(index=batch_index)
+        tracker.construct_model(index=batch_index)
 
         if tracker.num_batches == 1:
             model_path = output_path
@@ -220,7 +220,7 @@ def lp_cli(
         if model_path.exists() and not overwrite:
             raise ValueError(f"File {model_path} already exists. Set `--overwrite`.")
 
-        ilp._model.write(str(model_path))
+        tracker.solver._model.write(str(model_path))
 
 
 @click.group("export")

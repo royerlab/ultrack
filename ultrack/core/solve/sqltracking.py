@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Tuple
+from typing import Optional, Tuple
 
 import pandas as pd
 import sqlalchemy as sqla
@@ -41,6 +41,7 @@ class SQLTracking:
 
         self._tracking_config = config.tracking_config
         self._data_config = config.data_config
+        self._solver: Optional[MIPSolver] = None
 
         self._max_t = maximum_time_from_database(self._data_config)
         if self._tracking_config.window_size is None:
@@ -51,7 +52,16 @@ class SQLTracking:
 
         self.num_batches = math.ceil(self._max_t / self._window_size)
 
-    def construct_model(self, index: int) -> MIPSolver:
+    def construct_model(self, index: int = 0) -> None:
+        """
+        Constructs ILP model for a given batch index.
+        Adding nodes, edges and slack variables, and biological, boundary and overlap constraints.
+
+        Parameters
+        ----------
+        index : int
+            Batch index, by default 0, which works for single batch tracking.
+        """
         if index < 0 or index >= self.num_batches:
             raise ValueError(
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
@@ -75,7 +85,13 @@ class SQLTracking:
         self._add_overlap_constraints(solver=solver, index=index)
         self._add_boundary_constraints(solver=solver, index=index)
 
-        return solver
+        self._solver = solver
+
+    @property
+    def solver(self) -> MIPSolver:
+        if self._solver is None:
+            raise ValueError("`construct_model` must be called first.")
+        return self._solver
 
     def __call__(self, index: int) -> None:
         """Queries data from the given index, add it to the solver, run it and push to the database.
@@ -85,16 +101,35 @@ class SQLTracking:
         index : int
             Batch index.
         """
-        solver = self.construct_model(index)
+        self.construct_model(index)
 
         print("Solving ILP ...")
-
-        solver.optimize()
+        self.solve()
 
         print("Saving solution ...")
-        self._update_solution(index, solver.solution())
+        self.add_solution(index)
 
         print("Done!")
+
+    def solve(self) -> None:
+        """Tracks by solving optimization model."""
+        self.solver.optimize()
+
+    def set_number_of_segments(self, time: int, number_of_segments: int) -> None:
+        """Sets as a constraint the number of segments for a given time point.
+
+        Parameters
+        ----------
+        time : int
+            Time point.
+        number_of_segments : int
+            Number of segments.
+        """
+        engine = sqla.create_engine(self._data_config.database_path)
+        with Session(engine) as session:
+            indices = [i for i, in session.query(NodeDB.id).where(NodeDB.t == time)]
+
+        self.solver.set_nodes_sum(indices, number_of_segments)
 
     def _window_limits(self, index: int, with_overlap: bool) -> Tuple[int, int]:
         """Computes time window of a given index, with or without overlap.
@@ -221,16 +256,16 @@ class SQLTracking:
         solver.enforce_node_to_solution(start_nodes)
         solver.enforce_node_to_solution(end_nodes)
 
-    def _update_solution(self, index: int, solution: pd.DataFrame) -> None:
-        """Updates solution in database.
+    def add_solution(self, index: int = 0) -> None:
+        """Adds selected nodes to solution in database.
 
         Parameters
         ----------
         index : int
-            Batch index.
-        solution : pd.DataFrame
-            Dataframe indexed by nodes' id containing parent_id column.
+            Batch index, by default 0, which works for single batch tracking.
         """
+        solution = self.solver.solution()
+
         solution["node_id"] = solution.index
 
         start_time, end_time = self._window_limits(index, False)
