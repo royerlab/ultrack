@@ -105,6 +105,18 @@ class TestCommandLine:
             ]
         )
 
+    def test_ilp_export(self, instance_config_path: str, tmp_path: Path) -> None:
+        _run_command(
+            [
+                "export",
+                "lp",
+                "-cfg",
+                instance_config_path,
+                "-o",
+                str(tmp_path / "model.lp"),
+            ]
+        )
+
     def test_trackmate_export(self, instance_config_path: str, tmp_path: Path) -> None:
         _run_command(
             [

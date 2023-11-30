@@ -166,6 +166,11 @@ def _process(
         LOG.info(f"Node {node.id} links {neighborhood}")
         links += neighborhood
 
+    if len(links) == 0:
+        raise ValueError(
+            f"No links found for time {time}. Increase `linking_config.max_distance` parameter."
+        )
+
     links = np.asarray(links)[:, [0, 2, 3]]  # ignoring index column
     df = pd.DataFrame(links, columns=["weight", "source_id", "target_id"])
 
