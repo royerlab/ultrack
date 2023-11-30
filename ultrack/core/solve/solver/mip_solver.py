@@ -220,6 +220,21 @@ class MIPSolver(BaseSolver):
         for i in indices:
             self._model.add_constr(self._nodes[i] >= 1)
 
+    def set_nodes_sum(self, indices: ArrayLike, total_sum: int) -> None:
+        """Set indices sum to total_sum as constraint.
+
+        sum_i nodes[i] = total_sum
+
+        Parameters
+        ----------
+        indices : ArrayLike
+            Nodes indices.
+        total_sum : int
+            Total sum of nodes' variables.
+        """
+        indices = self._forward_map[np.asarray(indices, dtype=int)]
+        self._model.add_constr(mip.xsum([self._nodes[i] for i in indices]) == total_sum)
+
     def _set_solution_guess(self) -> None:
         # TODO
         pass

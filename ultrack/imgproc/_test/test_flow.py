@@ -1,3 +1,5 @@
+import platform
+
 import numpy as np
 import pytest
 import sqlalchemy as sqla
@@ -13,6 +15,9 @@ from ultrack.imgproc.flow import (
 )
 
 
+@pytest.mark.skipif(
+    platform.machine() == "arm64", reason="Test skipped on Apple Silicon"
+)
 @pytest.mark.parametrize("ndim", [2, 3])
 def test_flow_field(ndim: int, request) -> None:
     th = pytest.importorskip("torch")
