@@ -124,6 +124,19 @@ class SQLTracking:
             Time point.
         number_of_segments : int
             Number of segments.
+
+        Examples
+        --------
+        >>> # creating tracking problem
+        >>> segment(detection, edges, config)
+        >>> link(config)
+        >>>
+        >>> # low level API tracking
+        >>> tracker = SQLTracking(config)
+        >>> tracker.construct_model()
+        >>> tracker.set_number_of_segments(0, 2)
+        >>> tracker.solve()
+        >>> tracker.add_solution()
         """
         engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
