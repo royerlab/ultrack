@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks.graph import get_subgraph
+from ultrack.tracks import get_paths_to_roots, get_subgraph
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def tracks_df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_get_subgraph_single_track_id(tracks_df: pd.DataFrame):
+def test_get_subgraph_single_track_id(tracks_df: pd.DataFrame) -> None:
     track_ids = [3]
     lineage_ids = [1, 2, 3, 4, 5]
     result_df = get_subgraph(tracks_df, track_ids)
@@ -23,7 +23,7 @@ def test_get_subgraph_single_track_id(tracks_df: pd.DataFrame):
     pd.testing.assert_frame_equal(result_df, expected_df)
 
 
-def test_get_subgraph_multiple_track_ids(tracks_df: pd.DataFrame):
+def test_get_subgraph_multiple_track_ids(tracks_df: pd.DataFrame) -> None:
     track_ids = [2, 3, 5]
     lineage_ids = [1, 2, 3, 4, 5]
     result_df = get_subgraph(tracks_df, track_ids)
@@ -31,13 +31,70 @@ def test_get_subgraph_multiple_track_ids(tracks_df: pd.DataFrame):
     pd.testing.assert_frame_equal(result_df, expected_df)
 
 
-def test_get_subgraph_from_different_trees(tracks_df: pd.DataFrame):
+def test_get_subgraph_from_different_trees(tracks_df: pd.DataFrame) -> None:
     track_ids = [3, 7]
     result_df = get_subgraph(tracks_df, track_ids)
     pd.testing.assert_frame_equal(result_df, tracks_df)
 
 
-def test_get_subgraph_empty_subgraph(tracks_df: pd.DataFrame):
+def test_get_subgraph_empty_subgraph(tracks_df: pd.DataFrame) -> None:
     track_ids = [9, 10, 11]
     result_df = get_subgraph(tracks_df, track_ids)
     assert result_df.empty
+
+
+def test_get_paths_to_roots() -> None:
+    tracks_df = pd.DataFrame(
+        {
+            "t": [1, 2, 3, 3, 4, 4, 5, 1, 2, 2],
+            "track_id": [1, 1, 2, 3, 4, 5, 5, 6, 7, 8],
+            "parent_track_id": [NO_PARENT, NO_PARENT, 1, 1, 2, 2, 2, NO_PARENT, 6, 6],
+        },
+        index=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    )
+    path_df = get_paths_to_roots(tracks_df, track_index=5)
+
+    single_path_df = pd.DataFrame(
+        {
+            "t": [1, 2, 3, 4, 5],
+            "track_id": [5] * 5,
+            "parent_track_id": [NO_PARENT] * 5,
+        },
+        index=[1, 2, 3, 6, 7],
+    )
+
+    pd.testing.assert_frame_equal(
+        path_df,
+        single_path_df,
+    )
+
+    path_df = get_paths_to_roots(tracks_df, node_index=6)
+
+    single_path_df = pd.DataFrame(
+        {
+            "t": [1, 2, 3, 4],
+            "track_id": [5] * 4,
+            "parent_track_id": [NO_PARENT] * 4,
+        },
+        index=[1, 2, 3, 6],
+    )
+
+    pd.testing.assert_frame_equal(
+        path_df,
+        single_path_df,
+    )
+
+    path_df = get_paths_to_roots(tracks_df)
+    all_paths_df = pd.DataFrame(
+        {
+            "t": [1, 2, 3, 1, 2, 3, 4, 1, 2, 3, 4, 5, 1, 2, 1, 2],
+            "track_id": [3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 7, 7, 8, 8],
+        },
+        index=[1, 2, 4, 1, 2, 3, 5, 1, 2, 3, 6, 7, 8, 9, 8, 10],
+    )
+    all_paths_df["parent_track_id"] = NO_PARENT
+
+    pd.testing.assert_frame_equal(
+        path_df,
+        all_paths_df,
+    )

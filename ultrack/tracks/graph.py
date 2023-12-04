@@ -1,4 +1,5 @@
-from typing import Dict, List, Set, Tuple
+import logging
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,8 @@ from numba import njit, typed, types
 from numpy.typing import ArrayLike
 
 from ultrack.core.database import NO_PARENT
+
+LOG = logging.getLogger(__name__)
 
 
 @njit
@@ -313,3 +316,84 @@ def get_subtree(graph: Dict[int, int], index: int) -> Set[int]:
             queue.append(child)
 
     return component
+
+
+def get_paths_to_roots(
+    tracks_df: pd.DataFrame,
+    graph: Optional[Dict[int, int]] = None,
+    *,
+    node_index: Optional[int] = None,
+    track_index: Optional[int] = None,
+) -> pd.DataFrame:
+    """
+    Returns paths from `node_index` or `track_index` to roots.
+    If `node_index` and `track_index` are None, returns all paths to roots.
+
+    Parameters
+    ----------
+    tracks_df : pd.DataFrame
+        DataFrame containing track information with columns:
+            "track_id" : Unique identifier for each track.
+            "parent_track_id" : Identifier of the parent track in the forest.
+            (Other columns may be present in the DataFrame but are not used in this function.)
+    graph : Optional[Dict[int, int]], optional
+        Inverted forest graph, if not provided it will be computed from `tracks_df`.
+    node_index : Optional[int], optional
+        Node (dataframe) index to compute path to roots.
+    track_index : Optional[int], optional
+        Track index (track_id column value) to compute path to roots.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing paths to roots.
+    """
+    if node_index is not None and track_index is not None:
+        raise ValueError("Only one of `node_index` and `track_index` can be specified.")
+
+    if graph is None:
+        graph = inv_tracks_df_forest(tracks_df)
+
+    if node_index is not None:
+        track_indices = [tracks_df.loc[node_index, "track_id"]]
+
+    elif track_index is not None:
+        track_indices = [track_index]
+
+    else:  # both are None, return all paths
+        LOG.info(
+            "Both `node_index` and `track_index` are None. Returning all paths to roots."
+        )
+        track_indices = tracks_df["track_id"].unique().astype(int)
+        parent_ids = np.asarray(list(graph.values()), dtype=int)
+        track_indices = track_indices[np.isin(track_indices, parent_ids, invert=True)]
+
+    df_by_track_id = tracks_df.groupby("track_id")
+
+    dfs = []
+    for track_id in track_indices:
+
+        current_dfs = []
+        idx = track_id
+        while idx != NO_PARENT:
+            current_dfs.append(df_by_track_id.get_group(idx))
+            idx = graph.get(idx, NO_PARENT)
+
+        # reverse order so that the root is the first row
+        path_df = pd.concat(reversed(current_dfs), axis=0)
+
+        # making it a single track
+        path_df["track_id"] = track_id
+        if "parent_track_id" in path_df.columns:
+            path_df["parent_track_id"] = NO_PARENT
+
+        dfs.append(path_df)
+
+    out_df = pd.concat(dfs, axis=0)
+
+    # remove nodes after node_index
+    if node_index is not None:
+        index = out_df.index.get_loc(node_index)
+        out_df = path_df.iloc[: index + 1]
+
+    return out_df
