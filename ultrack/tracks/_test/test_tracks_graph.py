@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks import get_paths_to_roots, get_subgraph
+from ultrack.tracks import filter_short_sibling_tracks, get_paths_to_roots, get_subgraph
 
 
 @pytest.fixture
@@ -97,4 +97,63 @@ def test_get_paths_to_roots() -> None:
     pd.testing.assert_frame_equal(
         path_df,
         all_paths_df,
+    )
+
+
+def test_filter_short_sibling_tracks() -> None:
+    """
+    Input:
+              4 -
+             /
+        / 3 -      6 ----
+        |    \\    /
+        |     5 -       8 -
+        |         \\    /
+    1 --|          7 -
+        |              \
+        |               9 -
+        |
+        \\ 2 -
+
+
+    Output:
+            6 ----
+           /
+    1 ----       8 -
+           \\    /
+            7 -
+                \
+                 9 -
+    """
+    tracks_df = pd.DataFrame(
+        {
+            "track_id": [1, 1, 2, 3, 4, 5, 6, 6, 6, 6, 7, 8, 9],
+            "parent_track_id": [NO_PARENT, NO_PARENT, 1, 1, 3, 3, 5, 5, 5, 5, 5, 7, 7],
+        }
+    )
+
+    filtered_df = filter_short_sibling_tracks(tracks_df, min_length=3)
+    expected_df = pd.DataFrame(
+        {
+            "track_id": [1, 1, 1, 1, 6, 6, 6, 6, 7, 8, 9],
+            "parent_track_id": [
+                NO_PARENT,
+                NO_PARENT,
+                NO_PARENT,
+                NO_PARENT,
+                1,
+                1,
+                1,
+                1,
+                1,
+                7,
+                7,
+            ],
+        },
+        index=[0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12],
+    )
+
+    pd.testing.assert_frame_equal(
+        filtered_df,
+        expected_df,
     )

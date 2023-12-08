@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -103,7 +103,7 @@ def _fast_forest_transverse(
 
 
 @njit
-def create_tracks_forest(
+def _create_tracks_forest(
     node_ids: np.ndarray, parent_ids: np.ndarray
 ) -> Dict[int, List[int]]:
     """Creates the forest graph of track lineages
@@ -149,7 +149,7 @@ def add_track_ids_to_tracks_df(df: pd.DataFrame) -> pd.DataFrame:
     df.index = df.index.astype(int)
     df["parent_id"] = df["parent_id"].astype(int)
 
-    forest = create_tracks_forest(df.index.values, df["parent_id"].values)
+    forest = _create_tracks_forest(df.index.values, df["parent_id"].values)
     roots = forest.pop(NO_PARENT)
 
     df["track_id"] = NO_PARENT
@@ -169,19 +169,47 @@ def add_track_ids_to_tracks_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def tracks_df_forest(df: pd.DataFrame) -> Dict[int, List[int]]:
+def tracks_df_forest(
+    df: pd.DataFrame,
+    remove_roots: bool = False,
+    numba_dict: bool = False,
+) -> Union[
+    Dict[int, List[int]], types.DictType(types.int64, types.ListType(types.int64))
+]:
     """
-    Returns `track_id` and `parent_track_id` root-to-leaves forest (set of trees) graph structure.
+    Creates the forest graph of track lineages
 
     Example:
     forest[parent_id] = [child_id_0, child_id_1]
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Tracks dataframe.
+    remove_roots : bool
+        If True, removes root nodes (nodes with no parent).
+    numba_dict: bool
+        If True, returns a numba typed dictionary.
+
+    Returns
+    -------
+    Dict[int, List[int]]
+        Forest graph where parent maps to their children (parent -> children)
     """
     df = df.drop_duplicates("track_id")
-    df = df[df["parent_track_id"] != NO_PARENT]
-    graph = {}
-    for parent_id, id in zip(df["parent_track_id"], df["track_id"]):
-        graph[parent_id] = graph.get(parent_id, []) + [id]
-    return graph
+
+    if remove_roots:
+        df = df[df["parent_track_id"] != NO_PARENT]
+
+    nb_dict = _create_tracks_forest(
+        df["track_id"].to_numpy(dtype=int),
+        df["parent_track_id"].to_numpy(dtype=int),
+    )
+
+    if numba_dict:
+        return nb_dict
+
+    return {k: v for k, v in nb_dict.items()}
 
 
 def inv_tracks_df_forest(df: pd.DataFrame) -> Dict[int, int]:
@@ -281,7 +309,7 @@ def get_subgraph(
     compressed_df = tracks_df.drop_duplicates("track_id")
 
     inv_graph = inv_tracks_df_forest(compressed_df)
-    roots = []
+    selected_roots = set()
     for id in track_ids:
 
         while True:
@@ -290,16 +318,16 @@ def get_subgraph(
                 break
             id = parent_id
 
-        roots.append(id)
+        selected_roots.add(id)
 
-    graph = create_tracks_forest(
+    graph = _create_tracks_forest(
         compressed_df["track_id"].to_numpy(dtype=int),
         compressed_df["parent_track_id"].to_numpy(dtype=int),
     )
-    roots = np.asarray(roots, dtype=int)
+    selected_roots = np.asarray(list(selected_roots), dtype=int)
 
     subforest = []
-    for root in roots:
+    for root in selected_roots:
         subforest += left_first_search(root, graph)
 
     return tracks_df[tracks_df["track_id"].isin(subforest)]
@@ -395,5 +423,133 @@ def get_paths_to_roots(
     if node_index is not None:
         index = out_df.index.get_loc(node_index)
         out_df = path_df.iloc[: index + 1]
+
+    return out_df
+
+
+def _get_children(
+    track_id: int,
+    graph: Dict[int, List[int]],
+) -> List[int]:
+    """
+    Returns children of `track_id` in `graph`.
+
+    NOTE: numba graph was not working with graph.get(track_id, []) so we use this function instead.
+    """
+    if track_id not in graph:
+        return []
+    else:
+        return graph[track_id]
+
+
+def _filter_short_tracks(
+    parent_track_id: int,
+    min_length: int,
+    child2parent: Dict[int, int],
+    parent2children: Dict[int, List[int]],
+    track_dict: Dict[int, pd.DataFrame],
+) -> None:
+    """
+    Recursive function to short tracks created from fake division tracks shorter than `min_length`.
+    All values are updated inplace.
+
+    Parameters
+    ----------
+    parent_track_id : int
+        Parent track id.
+    min_length : int
+        Minimum track length.
+    child2parent : Dict[int, int]
+        Child to parent track id mapping.
+    parent2children : Dict[int, List[int]]
+        Parent to children track id mapping.
+    track_dict : Dict[int, pd.DataFrame]
+        Dictionary of track dataframes.
+    """
+    children_id = _get_children(parent_track_id, parent2children)
+
+    if len(children_id) != 0 and len(children_id) != 2:
+        raise ValueError(
+            f"Track {parent_track_id} has {len(children_id)} children. "
+            "Only tracks with 0 or 2 children are supported."
+        )
+
+    # bottom up, first fix children
+    is_short_and_childless = []
+    for child_id in children_id:
+        # might update children length
+        _filter_short_tracks(
+            child_id,
+            min_length,
+            child2parent,
+            parent2children,
+            track_dict,
+        )
+        # check which children could be removed
+        length = len(track_dict[child_id])
+        is_short_and_childless.append(
+            length <= min_length and len(_get_children(child_id, parent2children)) == 0
+        )
+
+    # if there's no child or all pass the filtering criteria we do not remove them.
+    if sum(is_short_and_childless) == 1:
+
+        for child_id, to_remove in zip(children_id, is_short_and_childless):
+            if to_remove:
+                track_dict.pop(child_id)
+            else:
+                # mergin sibling track
+                child_track = track_dict.pop(child_id)
+                child_track["track_id"] = parent_track_id
+                child_track["parent_track_id"] = child2parent.get(
+                    parent_track_id, NO_PARENT
+                )  # parent of parent track id
+                track_dict[parent_track_id] = pd.concat(
+                    (track_dict[parent_track_id], child_track)
+                )
+
+                # fix sibling tracks children
+                child_children_id = _get_children(child_id, parent2children)
+
+                for child_child_id in child_children_id:
+                    child_child_track = track_dict[child_child_id]
+                    child_child_track["parent_track_id"] = parent_track_id
+                    child2parent[child_child_id] = parent_track_id
+
+                parent2children[parent_track_id] = child_children_id
+
+
+def filter_short_sibling_tracks(
+    tracks_df: pd.DataFrame,
+    min_length: int,
+) -> pd.DataFrame:
+    """
+    Filter short tracks created from fake division tracks shorter than `min_length`.
+
+    This function tranverse the graph bottom up and remove tracks that are shorter than `min_length`
+    upon divions, merging the remaining sibling track with their parent.
+
+    If both are shorter than `min_length`, they are not removed.
+    """
+    parent2children = tracks_df_forest(tracks_df)
+    child2parent = inv_tracks_df_forest(tracks_df)
+
+    roots = parent2children.pop(NO_PARENT)
+
+    track_dict = {
+        track_id: group.copy()
+        for track_id, group in tracks_df.groupby("track_id", as_index=False)
+    }
+
+    for root in roots:
+        _filter_short_tracks(
+            root,
+            min_length,
+            child2parent,
+            parent2children,
+            track_dict,
+        )
+
+    out_df = pd.concat(track_dict.values(), axis=0)
 
     return out_df
