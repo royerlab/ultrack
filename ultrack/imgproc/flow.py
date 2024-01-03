@@ -686,7 +686,7 @@ def add_flow(
     columns = ["x_shift", "y_shift", "z_shift"]
     coords_scaling = (vec_shape[1:] - 1) / (shape[1:] - 1)
     coordinate_columns = ["z", "y", "x"][-len(coords_scaling) :]
-    vec_index_iterator = reversed(range(nvecs))
+    vec_index_iterator = list(reversed(range(nvecs)))
     # vec_scaling varies depending on the number of vector field and image dimensions
     vec_scaling = np.asarray(shape[1 + len(coords_scaling) - nvecs :])[::-1]
 
