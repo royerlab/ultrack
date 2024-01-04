@@ -147,7 +147,7 @@ def tracks_layer_to_trackmate(
             spot_elem.set("ID", str(spot_id))
             spot_elem.set("QUALITY", "1.0")
             spot_elem.set("VISIBILITY", "1")
-            spot_elem.set("NAME", str(spot_id))
+            spot_elem.set("name", str(spot_id))
             spot_elem.set("FRAME", str(int(entry["t"])))
             spot_elem.set("RADIUS", "5.0")
             spot_elem.set("POSITION_X", str(entry["x"]))
