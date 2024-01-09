@@ -5,7 +5,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks.graph import create_tracks_forest, left_first_search
+from ultrack.tracks.graph import left_first_search, tracks_df_forest
 
 
 def _invert_forest(
@@ -159,12 +159,7 @@ def sort_track_ids(
     >>> print(sorted_track_ids)
     [4 2 5 1 6 3 7]
     """
-
-    tracks_df = tracks_df.drop_duplicates("track_id")
-    graph = create_tracks_forest(
-        tracks_df["track_id"].to_numpy(dtype=int),
-        tracks_df["parent_track_id"].to_numpy(dtype=int),
-    )
+    graph = tracks_df_forest(tracks_df, numba_dict=True)
     roots = graph.pop(NO_PARENT)
 
     sorted_track_ids = []
