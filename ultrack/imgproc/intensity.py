@@ -43,7 +43,7 @@ def normalize(
     ArrayLike
         Normalized array.
     """
-    frame = image
+    frame = image.astype(np.float32)
     frame = frame - np.quantile(frame, lower_q)
     frame = frame / np.quantile(frame, upper_q)
     frame = np.clip(frame, 0, 1)
