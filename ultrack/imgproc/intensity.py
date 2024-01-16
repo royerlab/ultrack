@@ -43,13 +43,14 @@ def normalize(
     ArrayLike
         Normalized array.
     """
-    frame = image.astype(np.float32)
-    frame = frame - np.quantile(frame, lower_q)
-    frame = frame / np.quantile(frame, upper_q)
-    frame = np.clip(frame, 0, 1)
+    frame = frame.astype(np.float32)
 
     if gamma != 1.0:
         frame = np.power(frame, gamma)
+    
+    frame = frame - np.quantile(frame, lower_q)
+    frame = frame / np.quantile(frame, upper_q)
+    frame = np.clip(frame, 0, 1)
 
     return frame
 
