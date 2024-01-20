@@ -146,6 +146,7 @@ def flow_field(
     num_iterations: int = 1000,
     lr: float = 1e-2,
     n_scales: int = 3,
+    init_grid: Optional[th.Tensor] = None,
 ) -> th.Tensor:
     """
     Compute the flow vector field `T` that minimizes the
@@ -178,12 +179,23 @@ def flow_field(
     assert n_scales > 0
     ndim = source.ndim - 1
 
+    if init_grid is not None:
+        if init_grid.ndim != ndim + 2:
+            raise ValueError(
+                f"Grid must have ndim dimensions ({ndim + 2}), (B, (Z), Y, X, D). Found {init_grid.ndim}."
+            )
+
+        if init_grid.shape[-1] != ndim:
+            raise ValueError(
+                f"Grid last channel must match input dimensions. Found {init_grid.shape[-1]} expected {ndim}."
+            )
+
     source = source.unsqueeze(0)
     target = target.unsqueeze(0)
 
     device = source.device
     scales = np.flip(np.power(2, np.arange(n_scales)))
-    grid = None
+    grid = init_grid
     norm_factor = None
     constant = 1_000  # scale of input affects the results, 1_000 is a good value
 
@@ -206,15 +218,16 @@ def flow_field(
             scaled_source *= norm_factor
             scaled_target *= norm_factor
 
+            grid_shape = tuple(
+                m.ceil(s / grid_factor) for s in scaled_source.shape[-ndim:]
+            )
+
             if grid is None:
-                grid_shape = tuple(
-                    m.ceil(s / grid_factor) for s in scaled_source.shape[-ndim:]
-                )
                 grid = identity_grid(grid_shape).to(device)
-                grid0 = grid.clone()
+                grid0 = identity_grid(grid_shape).to(device)
             else:
-                grid = _interpolate_grid(grid, scale_factor=2)
-                grid0 = identity_grid(grid.shape[-(ndim + 1) : -1]).to(device)
+                grid = _interpolate_grid(grid, size=grid_shape)
+                grid0 = identity_grid(grid_shape).to(device)
 
         grid.requires_grad_(True).retain_grad()
 
