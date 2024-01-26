@@ -36,7 +36,11 @@ class MIPSolver(BaseSolver):
 
     def reset(self) -> None:
         """Sets model to an empty state."""
-        self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
+        try:
+            self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
+        except mip.exceptions.InterfacingError as e:
+            LOG.warning(e)
+            self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=mip.CBC)
 
         if self._model.solver_name == mip.CBC:
             LOG.warning(
