@@ -39,9 +39,12 @@ def tracks_layer_to_trackmate(
 
     # Create XML root and child elements
     root = ET.Element("TrackMate")
-    root.set("version", "3.7.0")  # required by TrackMate, not significant
+    root.set("version", "7.11.1")  # required by TrackMate, not significant
 
     model_elem = ET.SubElement(root, "Model")
+    model_elem.set("spatialunits", "pixels")
+    model_elem.set("timeunits", "frames")
+
     all_tracks_elem = ET.SubElement(model_elem, "AllTracks")
     filtered_tracks_elem = ET.SubElement(model_elem, "FilteredTracks")
     all_spots_elem = ET.SubElement(model_elem, "AllSpots")
@@ -147,7 +150,7 @@ def tracks_layer_to_trackmate(
             spot_elem.set("ID", str(spot_id))
             spot_elem.set("QUALITY", "1.0")
             spot_elem.set("VISIBILITY", "1")
-            spot_elem.set("NAME", str(spot_id))
+            spot_elem.set("name", str(spot_id))
             spot_elem.set("FRAME", str(int(entry["t"])))
             spot_elem.set("RADIUS", "5.0")
             spot_elem.set("POSITION_X", str(entry["x"]))
