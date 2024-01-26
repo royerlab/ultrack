@@ -1,5 +1,6 @@
 import click
 
+from ultrack.cli.check_gurobi import check_gurobi_cli
 from ultrack.cli.clear_database import clear_database_cli
 from ultrack.cli.config import config_cli
 from ultrack.cli.data_summary import data_summary_cli
@@ -18,6 +19,7 @@ def main():
 
 
 main.add_command(add_flow_cli)
+main.add_command(check_gurobi_cli)
 main.add_command(clear_database_cli)
 main.add_command(config_cli)
 main.add_command(data_summary_cli)
