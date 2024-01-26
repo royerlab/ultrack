@@ -172,3 +172,7 @@ def test_labels_to_edges(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
     _run_command(
         ["labels_to_edges", zarr_dataset_paths[2], "-o", str(tmp_path / "output")]
     )
+
+
+def test_check_gurobi() -> None:
+    _run_command(["check_gurobi"])
