@@ -54,6 +54,38 @@ These additional developer documentation are available:
 - Parameter [configuration schema](ultrack/config/README.md).
 - Intermediate segmentation and tracking SQL database are [here](ultrack/core/README.md).
 
+## Gurobi setup
+
+Installing gurobi and setting up an academic license.
+
+### Install Gurobi using Conda
+
+In your existing Conda environment, install Gurobi with the following command:
+
+```bash
+conda install -c gurobi gurobi
+```
+
+### Obtain and Activate an Academic License
+
+**Obtain License:** register for an account using your academic email at [Gurobi's website](https://portal.gurobi.com/iam/login/). Navigate to the Gurobi's [named academic license page](https://www.gurobi.com/features/academic-named-user-license/), and follow instructions to get your academic license key.
+
+**Activate License:** In your Conda environment, run:
+
+```bash
+grbgetkey YOUR_LICENSE_KEY
+```
+
+Replace YOUR_LICENSE_KEY with the key you received. Follow the prompts to complete activation.
+
+### Test the Installation
+
+Verify Gurobi's installation by running:
+
+```bash
+ultrack check_gurobi
+```
+
 ## Citing
 
 ```
