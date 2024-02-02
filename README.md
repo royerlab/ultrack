@@ -68,7 +68,7 @@ conda install -c gurobi gurobi
 
 ### Obtain and Activate an Academic License
 
-**Obtain License:** register for an account using your academic email at [Gurobi's website](https://portal.gurobi.com/iam/login/). Navigate to the Gurobi's [named academic license page](https://www.gurobi.com/features/academic-named-user-license/), and follow instructions to get your academic license key.
+**Obtain License:** register for an account using your academic email at [Gurobi's website](https://portal.gurobi.com/iam/login/). Navigate to the Gurobi's [named academic license page](https://www.gurobi.com/features/academic-named-user-license/), and follow the instructions to get your academic license key.
 
 **Activate License:** In your Conda environment, run:
 
@@ -85,6 +85,10 @@ Verify Gurobi's installation by running:
 ```bash
 ultrack check_gurobi
 ```
+
+### Troubleshooting
+
+Depending on the operating system, the gurobi library might be missing and you need to install it from [here](https://www.gurobi.com/downloads/gurobi-software).
 
 ## Citing
 
