@@ -23,6 +23,11 @@ logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
 
+_KEY_TO_SOLVER_NAME = {
+    "CBC": "Coin-OR Branch and Cut",
+    "GRB": "Gurobi",
+}
+
 
 class SQLTracking:
     def __init__(
@@ -73,7 +78,7 @@ class SQLTracking:
             LOG.warning(e)
             solver = MIPSolver(self._tracking_config, "CBC")
 
-        print(f"Using {solver._model.solver_name} solver")
+        print(f"Using {_KEY_TO_SOLVER_NAME[solver._model.solver_name]} solver")
         print(f"Solving ILP batch {index}")
         print("Constructing ILP ...")
 
