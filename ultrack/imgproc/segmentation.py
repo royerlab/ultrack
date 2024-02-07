@@ -175,7 +175,7 @@ def detect_foreground(
 class Cellpose:
     def __init__(self, **kwargs) -> None:
         """See cellpose.models.Cellpose documentation for details."""
-        from cellpose.models import Cellpose as _Cellpose
+        from cellpose.models import CellposeModel as _Cellpose
 
         self.model = _Cellpose(**kwargs)
 
@@ -184,5 +184,5 @@ class Cellpose:
         Predicts image labels.
         See cellpose.models.Cellpose.eval documentation for details.
         """
-        labels, _, _, _ = self.model.eval(image, **kwargs)
+        labels, _, _  = self.model.eval(image, **kwargs)
         return labels
