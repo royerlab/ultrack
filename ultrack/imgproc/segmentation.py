@@ -177,6 +177,9 @@ class Cellpose:
         """See cellpose.models.Cellpose documentation for details."""
         from cellpose.models import CellposeModel as _Cellpose
 
+        if "pretrained_model" not in kwargs and "model_type" not in kwargs:
+            kwargs["model_type"] = "cyto"
+
         self.model = _Cellpose(**kwargs)
 
     def __call__(self, image: ArrayLike, **kwargs) -> np.ndarray:
@@ -184,5 +187,5 @@ class Cellpose:
         Predicts image labels.
         See cellpose.models.Cellpose.eval documentation for details.
         """
-        labels, _, _  = self.model.eval(image, **kwargs)
+        labels, _, _ = self.model.eval(image, **kwargs)
         return labels
