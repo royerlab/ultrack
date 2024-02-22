@@ -400,6 +400,30 @@ def split_trees(tracks_df: pd.DataFrame) -> List[pd.DataFrame]:
     return trees
 
 
+def split_tracks_df_by_lineage(
+    tracks_df: pd.DataFrame,
+) -> List[pd.DataFrame]:
+    """
+    Split tracks dataframe into a list of dataframes, one for each lineage, sorted by the root track id.
+
+    Parameters
+    ----------
+    tracks_df : pd.DataFrame
+        Tracks dataframe with columns:
+            "track_id" : Unique identifier for each track.
+            "parent_track_id" : Identifier of the parent track in the forest.
+            (Other columns may be present in the DataFrame but are not used in this function.)
+
+    Returns
+    -------
+    List[pd.DataFrame]
+        List of dataframes, one for each lineage.
+    """
+    roots = tracks_df[tracks_df["parent_track_id"] == NO_PARENT]["track_id"].to_numpy()
+    lineages = [get_subgraph(tracks_df, root) for root in np.sort(roots)]
+    return lineages
+
+
 def get_paths_to_roots(
     tracks_df: pd.DataFrame,
     graph: Optional[Dict[int, int]] = None,

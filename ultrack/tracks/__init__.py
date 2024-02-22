@@ -5,6 +5,7 @@ from ultrack.tracks.graph import (
     get_subgraph,
     inv_tracks_df_forest,
     left_first_search,
+    split_tracks_df_by_lineage,
     split_trees,
     tracks_df_forest,
 )

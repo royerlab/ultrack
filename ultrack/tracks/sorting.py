@@ -108,6 +108,9 @@ def sort_trees_by_length(
     List[pd.DataFrame]
         Sorted list of tracks dataframe.
     """
+    if graph is None:
+        graph = inv_tracks_df_forest(df)
+
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
         df.rename(columns={0: "track_id"}, inplace=True)
