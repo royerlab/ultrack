@@ -14,7 +14,8 @@ dependencies:
   - jupyter
   - pyqt
   - pytorch
-  - pytorch-cuda
+  - pytorch-cuda=12.1
+  - cudnn
   - plant-seg
   - napari
   - napari-ome-zarr
