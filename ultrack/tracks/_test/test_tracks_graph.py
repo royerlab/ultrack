@@ -2,7 +2,12 @@ import pandas as pd
 import pytest
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks import filter_short_sibling_tracks, get_paths_to_roots, get_subgraph
+from ultrack.tracks import (
+    filter_short_sibling_tracks,
+    get_paths_to_roots,
+    get_subgraph,
+    split_trees,
+)
 
 
 @pytest.fixture
@@ -157,3 +162,36 @@ def test_filter_short_sibling_tracks() -> None:
         filtered_df,
         expected_df,
     )
+
+
+def test_split_trees() -> None:
+    tracks_df = pd.DataFrame(
+        {
+            "track_id": [1, 2, 3, 4, 4],
+            "parent_track_id": [NO_PARENT, 1, 1, NO_PARENT, NO_PARENT],
+        }
+    )
+
+    forest = split_trees(tracks_df)
+    expected_forest = [
+        pd.DataFrame(
+            {
+                "track_id": [1, 2, 3],
+                "parent_track_id": [NO_PARENT, 1, 1],
+            },
+            index=[0, 1, 2],
+        ),
+        pd.DataFrame(
+            {
+                "track_id": [4, 4],
+                "parent_track_id": [NO_PARENT, NO_PARENT],
+            },
+            index=[3, 4],
+        ),
+    ]
+
+    for tree, expected_tree in zip(forest, expected_forest):
+        pd.testing.assert_frame_equal(
+            tree,
+            expected_tree,
+        )

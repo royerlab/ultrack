@@ -5,7 +5,12 @@ import pandas as pd
 from numba import typed, types
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks import left_first_search, sort_track_ids, sort_trees_by_length
+from ultrack.tracks import (
+    left_first_search,
+    sort_track_ids,
+    sort_trees_by_length,
+    sort_trees_by_max_radius,
+)
 
 
 def test_sortrees_by_length() -> None:
@@ -86,21 +91,21 @@ def _to_numba_dict(
     return nb_graph
 
 
-def test_left_first_search_single_node():
+def test_left_first_search_single_node() -> None:
     # Test for a single node binary tree
     graph = _to_numba_dict({})
     result = left_first_search(1, graph)
     assert result == [1]
 
 
-def test_left_first_search_complete_binary_tree():
+def test_left_first_search_complete_binary_tree() -> None:
     # Test for a complete binary tree (all nodes have two children)
     graph = _to_numba_dict({1: [2, 3], 2: [4, 5], 3: [6, 7]})
     result = left_first_search(1, graph)
     assert result == [4, 2, 5, 1, 6, 3, 7]
 
 
-def test_sort_track_ids_forest():
+def test_sort_track_ids_forest() -> None:
     # Test for multiple binary trees forming a forest
     data = {
         "track_id": np.repeat([1, 2, 3, 4, 5, 6, 7], 3),
@@ -110,3 +115,27 @@ def test_sort_track_ids_forest():
     tracks_df = pd.DataFrame(data)
     result = sort_track_ids(tracks_df)
     assert np.array_equal(result, np.array([2, 1, 3, 5, 4, 6, 7]))
+
+
+def test_sort_trees_by_max_radius() -> None:
+    tracks_df = pd.DataFrame(
+        {
+            "track_id": [1, 1, 2, 3, 4, 5, 6, 7],
+            "parent_track_id": [NO_PARENT, NO_PARENT, NO_PARENT, 2, 2, NO_PARENT, 5, 5],
+            "t": [0, 1, 0, 1, 1, 0, 1, 1],
+            "x": [1, 2, 0, 1, 3, 7, 1, 2],
+        }
+    )
+
+    expected_track_ids = [[2, 3, 4], [5, 6, 7], [1, 1]]
+
+    sorted_tracks = sort_trees_by_max_radius(tracks_df, scale=1.0)
+
+    for track_ids, expected_ids in zip(sorted_tracks, expected_track_ids):
+        assert np.array_equal(track_ids["track_id"].to_numpy(), expected_ids)
+
+    # no radius
+    sorted_tracks = sort_trees_by_max_radius(tracks_df)
+
+    for track_ids, expected_ids in zip(sorted_tracks, expected_track_ids):
+        assert np.array_equal(track_ids["track_id"].to_numpy(), expected_ids)

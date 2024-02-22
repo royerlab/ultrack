@@ -1,11 +1,21 @@
-from typing import Dict, List, Tuple, Union
+import logging
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from scipy.spatial.distance import pdist
+from tqdm import tqdm
 
 from ultrack.core.database import NO_PARENT
-from ultrack.tracks.graph import left_first_search, tracks_df_forest
+from ultrack.tracks.graph import (
+    inv_tracks_df_forest,
+    left_first_search,
+    split_trees,
+    tracks_df_forest,
+)
+
+LOG = logging.getLogger(__name__)
 
 
 def _invert_forest(
@@ -80,7 +90,7 @@ def _accumulate_length(
 
 def sort_trees_by_length(
     df: Union[ArrayLike, pd.DataFrame],
-    graph: Dict[int, int],
+    graph: Optional[Dict[int, int]] = None,
 ) -> List[pd.DataFrame]:
     """Sorts trees from the track graph by length (deepest tree path).
 
@@ -88,8 +98,10 @@ def sort_trees_by_length(
     ----------
     df : pd.DataFrame
         tracks dataframe.
-    graph : Dict[int, int]
+    graph : Dict[int, int], optional
         Child -> parent tracks graph.
+        Optional, if not provided it will be computed from the dataframe,
+        must have `track_id` and `parent_track_id` columns.
 
     Returns
     -------
@@ -99,6 +111,9 @@ def sort_trees_by_length(
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
         df.rename(columns={0: "track_id"}, inplace=True)
+
+    elif graph is None:
+        graph = inv_tracks_df_forest(df)
 
     groups = df.groupby("track_id", as_index=False)
 
@@ -166,4 +181,64 @@ def sort_track_ids(
     for root in roots:
         sorted_track_ids += left_first_search(root, graph)
 
-    return sorted_track_ids
+    return np.asarray(sorted_track_ids)
+
+
+def sort_trees_by_max_radius(
+    df: Union[ArrayLike, pd.DataFrame],
+    scale: Optional[ArrayLike] = None,
+    metric: Union[Callable, str] = "euclidean",
+) -> List[pd.DataFrame]:
+    """Sorts trees from the track graph by radius (distance between nodes at the same time point).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        tracks dataframe.
+    scale : ArrayLike, optional
+        Spatial domain scale.
+    metric : Union[Callable, str], optional
+        Distance metric, see scipy.spatial.distance.pdist for more information.
+
+    Returns
+    -------
+    List[pd.DataFrame]
+        Sorted list of tracks dataframe.
+    """
+    if not isinstance(df, pd.DataFrame):
+        if df.shape[1] == 4:
+            cols = ["track_id", "t", "y", "x"]
+        elif df.shape[1] == 5:
+            cols = ["track_id", "t", "z", "y", "x"]
+        else:
+            raise ValueError("Only 2D and 3D data is supported")
+        df = pd.DataFrame(df, columns=cols)
+
+    spatial_cols = [c for c in ("z", "y", "x") if c in df.columns]
+
+    if scale is not None:
+        df = df.copy()
+        df[spatial_cols] *= scale
+
+    LOG.info("Splitting trees")
+    trees = split_trees(df)
+    max_radii = []
+
+    def _max_dist(df: pd.DataFrame) -> float:
+        if df.shape[0] == 1:
+            return 0
+        return pdist(df, metric=metric).max()
+
+    LOG.info("Computing max radii per tree")
+    for tree in tqdm(trees, "Computing max radius per tree"):
+        max_radii.append(tree.groupby("t")[spatial_cols].apply(_max_dist).values.max())
+
+    LOG.info("Sorting trees")
+    sorted_trees = sorted(zip(max_radii, trees), reverse=True, key=lambda x: x[0])
+    sorted_trees = [tree for _, tree in sorted_trees]
+
+    if scale is not None:
+        for tree in sorted_trees:
+            tree.loc[:, spatial_cols] /= scale
+
+    return sorted_trees

@@ -219,6 +219,12 @@ def inv_tracks_df_forest(df: pd.DataFrame) -> Dict[int, int]:
     Example:
     forest[child_id] = parent_id
     """
+    for col in ["track_id", "parent_track_id"]:
+        if col not in df.columns:
+            raise ValueError(
+                f"The input dataframe does not contain the column '{col}'."
+            )
+
     df = df.drop_duplicates("track_id")
     df = df[df["parent_track_id"] != NO_PARENT]
     graph = {}
@@ -334,7 +340,21 @@ def get_subgraph(
 
 
 def get_subtree(graph: Dict[int, int], index: int) -> Set[int]:
-    """Returns connected component of directed graph (subtree) of `index` of tree `graph`."""
+    """
+    Returns connected component of directed graph (subtree) of `index` of tree `graph`.
+
+    Parameters
+    ----------
+    graph : Dict[int, int]
+        Directed graph (forest) from Parent -> Child.
+    index : int
+        Index of the root node.
+
+    Returns
+    -------
+    Set[int]
+        Set of nodes in the subtree.
+    """
     component = set()
     queue = [index]
     while queue:
@@ -344,6 +364,40 @@ def get_subtree(graph: Dict[int, int], index: int) -> Set[int]:
             queue.append(child)
 
     return component
+
+
+def split_trees(tracks_df: pd.DataFrame) -> List[pd.DataFrame]:
+    """
+    Split tracks forest into trees.
+
+    Parameters
+    ----------
+    tracks_df : pd.DataFrame
+        DataFrame containing track information with columns:
+            "track_id" : Unique identifier for each track.
+            "parent_track_id" : Identifier of the parent track in the forest.
+            (Other columns may be present in the DataFrame but are not used in this function.)
+
+    Returns
+    -------
+    List[pd.DataFrame]
+        List of dataframes, each representing a tree.
+    """
+    graph = tracks_df_forest(tracks_df, numba_dict=False)
+    roots = graph.pop(NO_PARENT)
+
+    tracks_by_id = tracks_df.groupby("track_id")
+
+    trees = []
+    for root in roots:
+        subtree_ids = get_subtree(graph, root)
+        # much faster than using pd.concat
+        if len(subtree_ids) == 1:
+            trees.append(tracks_by_id.get_group(root))
+        else:
+            trees.append(pd.concat([tracks_by_id.get_group(i) for i in subtree_ids]))
+
+    return trees
 
 
 def get_paths_to_roots(
