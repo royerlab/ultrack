@@ -1,6 +1,12 @@
 API
 ---
 
+Object Oriented API
+
+.. autosummary::
+
+    ultrack.Tracker
+
 Core functionalities
 
 .. autosummary::

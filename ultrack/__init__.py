@@ -23,4 +23,5 @@ from ultrack.core.linking.processing import link
 from ultrack.core.main import track
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
+from ultrack.core.tracker import Tracker
 from ultrack.imgproc.flow import add_flow
