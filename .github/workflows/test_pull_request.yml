@@ -40,20 +40,13 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Set up poetry
-        uses: Gr1N/setup-poetry@v8
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cache/pypoetry/virtualenvs
-          key: ${{ matrix.python }}-${{ matrix.platform }}-${{ matrix.backend }}-poetry-${{ hashFiles('pyproject.toml') }}
+          cache: 'pip'
 
       - uses: tlambert03/setup-qt-libs@v1
 
@@ -71,8 +64,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install setuptools tox tox-gh-actions
-          poetry install
-          pip install gurobipy
+          pip install .
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
