@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from skimage.data import cells3d
 
-from ultrack.imgproc import Cellpose, detect_foreground, robust_invert
+from ultrack.imgproc import Cellpose, detect_foreground, inverted_edt, robust_invert
 from ultrack.utils.cuda import to_cpu
 
 LOG = logging.getLogger(__name__)
@@ -55,6 +55,15 @@ def test_foreground_detection(
         )
 
         napari.run()
+
+
+def test_inverted_edt() -> None:
+    mask = np.array([[0, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=bool)
+    expected_output = np.array(
+        [[1.0, 1.0, 0.292893], [1.0, 0.646447, 0.209431], [0.646447, 0.292893, 0.0]]
+    )
+    output = inverted_edt(mask, voxel_size=(1, 2))
+    np.testing.assert_array_almost_equal(output, expected_output)
 
 
 def test_cellpose() -> None:

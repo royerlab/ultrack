@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+import edt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -170,6 +171,44 @@ def detect_foreground(
         napari.run()
 
     return output
+
+
+def inverted_edt(
+    mask: ArrayLike,
+    voxel_size: Optional[ArrayLike] = None,
+    axis: Optional[int] = None,
+) -> ArrayLike:
+    """
+    Computes Euclidean distance transform (EDT), inverts and normalizes it.
+
+    Parameters
+    ----------
+    mask : ArrayLike
+        Cell detection mask.
+    voxel_size : Optional[ArrayLike], optional
+        Voxel size, by default None
+    axis : Optional[int], optional
+        Axis to compute the EDT, by default None
+
+    Returns
+    -------
+    ArrayLike
+        Inverted and normalized EDT.
+    """
+    if axis is None:
+        dist = edt.edt(mask, anisotropy=voxel_size)
+    else:
+        dist = np.stack(
+            [
+                edt.edt(np.take(mask, i, axis=axis), anisotropy=voxel_size)
+                for i in range(mask.shape[axis])
+            ],
+            axis=axis,
+        )
+    dist = dist / dist.max()
+    dist = 1.0 - dist
+    dist[~mask] = 1
+    return dist
 
 
 class Cellpose:
