@@ -7,7 +7,7 @@ channels:
 dependencies:
   - coin-or-cbc
   - cucim
-  - cupy
+  - cupy!=13.0.*
   - gurobi
   - jupyter
   - pip
