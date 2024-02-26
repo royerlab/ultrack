@@ -10,7 +10,7 @@ dependencies:
   - conda-forge::cudatoolkit=11.2
   - conda-forge::cudnn=8.4.1
   - conda-forge::tensorflow-gpu=2.11.0
-  - conda-forge::cupy
+  - conda-forge::cupy!=13.0.*
   - coin-or-cbc
   - gurobi
   - jupyter
