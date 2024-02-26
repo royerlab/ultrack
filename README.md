@@ -24,7 +24,7 @@ Install [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/instal
 Create a conda environment.
 
 ```bash
-conda create --name tracking python=3.10
+conda create --name tracking -c conda-forge python=3.10 pyqt
 ```
 
 And activate it.

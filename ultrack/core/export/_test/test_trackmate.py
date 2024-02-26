@@ -2,10 +2,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pytrackmate import trackmate_peak_import
+import pytest
 
 from ultrack.core.database import NO_PARENT
 from ultrack.core.export.trackmate import tracks_layer_to_trackmate
+
+pytrackmate = pytest.importorskip("pytrackmate")
 
 
 def test_trackmate_writer(tmp_path: Path) -> None:
@@ -27,7 +29,7 @@ def test_trackmate_writer(tmp_path: Path) -> None:
     with open(tracks_outpath, "w") as f:
         f.write(xml_str)
 
-    trackmate_df = trackmate_peak_import(tracks_outpath)
+    trackmate_df = pytrackmate.trackmate_peak_import(tracks_outpath)
     print(trackmate_df)
 
     assert trackmate_df.shape[0] == tracks_df.shape[0]
