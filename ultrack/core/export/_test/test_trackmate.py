@@ -10,7 +10,11 @@ from ultrack.core.export.trackmate import tracks_layer_to_trackmate
 pytrackmate = pytest.importorskip("pytrackmate")
 
 
-def test_trackmate_writer(tmp_path: Path) -> None:
+def test_trackmate_export_spot_match(tmp_path: Path) -> None:
+    """Check if the spots (objects) match between the tracks and the exported trackmate xml file.
+
+    This test cannot check if the exported tracking is valid.
+    """
     tracks_outpath = tmp_path / "tracks.xml"
 
     tracks_df = pd.DataFrame(
