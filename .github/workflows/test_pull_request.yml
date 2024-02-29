@@ -14,22 +14,22 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python: ["3.9", "3.10"]
+        python: ["3.10", "3.11"]
         backend: [pyqt5]
         include:
-          - python: 3.9
+          - python: 3.11
             platform: windows-latest
             backend: pyqt5
-          - python: 3.9
+          - python: 3.11
             platform: macos-latest
             backend: pyside2
-          - python: 3.9
+          - python: 3.11
             platform: ubuntu-latest
             backend: pyqt6
-          - python: 3.9
+          - python: 3.11
             platform: ubuntu-latest
             backend: pyside2
-          - python: 3.9  # only this run execute coverage
+          - python: 3.11  # only this run execute coverage
             platform: ubuntu-latest
             backend: pyside6
             coverage: true
