@@ -21,12 +21,13 @@ def tracks_layer_to_trackmate(
 ) -> str:
     """
     Convert a pandas DataFrame representation of Napari track layer to TrackMate XML format.
+    `<ImageData/>` need to be set manually in the output XML.
 
     Parameters
     ----------
     tracks_df : pd.DataFrame
         A DataFrame with columns `track_id, id, parent_id, t, z, y, x`. Cells that belong to the same track
-        have the same `track_id`. `tracks_df.index` is used as the spot ID in the TrackMate XML.
+        have the same `track_id`.
 
     Returns
     -------
@@ -52,10 +53,10 @@ def tracks_layer_to_trackmate(
         <Model spatialunits="pixels" timeunits="frames">
             <AllTracks>
                 <Track TRACK_ID="1" NUMBER_SPOTS="2" NUMBER_GAPS="0" TRACK_START="0" TRACK_STOP="1" name="Track_1">
-                    <Edge SPOT_SOURCE_ID="0" SPOT_TARGET_ID="1" EDGE_TIME="0.5"/>
+                    <Edge SPOT_SOURCE_ID="1000001" SPOT_TARGET_ID="2000001" EDGE_TIME="0.5"/>
                 </Track>
                 <Track TRACK_ID="2" NUMBER_SPOTS="1" NUMBER_GAPS="0" TRACK_START="1" TRACK_STOP="1" name="Track_2">
-                    <Edge SPOT_SOURCE_ID="0" SPOT_TARGET_ID="2" EDGE_TIME="0.5"/>
+                    <Edge SPOT_SOURCE_ID="1000001" SPOT_TARGET_ID="2000002" EDGE_TIME="0.5"/>
                 </Track>
             </AllTracks>
             <FilteredTracks>
@@ -64,11 +65,11 @@ def tracks_layer_to_trackmate(
             </FilteredTracks>
             <AllSpots>
                 <SpotsInFrame frame="0">
-                    <Spot ID="0" QUALITY="1.0" VISIBILITY="1" name="0" FRAME="0" RADIUS="5.0" POSITION_X="49.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
+                    <Spot ID="1000001" QUALITY="1.0" VISIBILITY="1" name="1000001" FRAME="0" RADIUS="5.0" POSITION_X="49.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
                 </SpotsInFrame>
                 <SpotsInFrame frame="1">
-                    <Spot ID="1" QUALITY="1.0" VISIBILITY="1" name="1" FRAME="1" RADIUS="5.0" POSITION_X="32.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
-                    <Spot ID="2" QUALITY="1.0" VISIBILITY="1" name="2" FRAME="1" RADIUS="5.0" POSITION_X="66.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
+                    <Spot ID="2000001" QUALITY="1.0" VISIBILITY="1" name="2000001" FRAME="1" RADIUS="5.0" POSITION_X="32.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
+                    <Spot ID="2000002" QUALITY="1.0" VISIBILITY="1" name="2000002" FRAME="1" RADIUS="5.0" POSITION_X="66.0" POSITION_Y="49.0" POSITION_Z="12.0"/>
                 </SpotsInFrame>
             </AllSpots>
             <FeatureDeclarations>
@@ -83,11 +84,10 @@ def tracks_layer_to_trackmate(
         </Settings>
     </TrackMate>
     """
-    if not pd.api.types.is_integer_dtype(tracks_df.index.dtype):
-        raise ValueError("The DataFrame index will be TrackMate spot IDs and must be an integer type.")
     tracks_df["id"] = tracks_df["id"].astype(int)
     if not tracks_df["id"].is_unique:
         raise ValueError("The 'id' column must be unique.")
+    tracks_df.set_index("id", inplace=True)
     tracks_df["parent_id"] = tracks_df["parent_id"].astype(int)
     tracks_df["track_id"] = tracks_df["track_id"].astype(int)
 
@@ -230,8 +230,7 @@ def tracks_layer_to_trackmate(
             if parent_id == NO_PARENT:
                 continue
             edge_elem = ET.SubElement(track_elem, "Edge")
-            parent_spot_id = tracks_df.index[tracks_df['id'] == parent_id][0]  # uniqueness checked above
-            edge_elem.set("SPOT_SOURCE_ID", str(parent_spot_id))
+            edge_elem.set("SPOT_SOURCE_ID", str(parent_id))
             edge_elem.set("SPOT_TARGET_ID", str(spot_id))
             edge_elem.set("EDGE_TIME", str(entry["t"] - 0.5))
 
