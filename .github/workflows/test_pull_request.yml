@@ -19,7 +19,7 @@ jobs:
         include:
           - python: 3.11
             platform: windows-latest
-            backend: pyqt5
+            backend: pyside2
           - python: 3.11
             platform: macos-latest
             backend: pyside2
