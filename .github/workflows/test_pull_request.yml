@@ -42,7 +42,16 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Set up Python ${{ matrix.python }} 64-bit for Windows
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: 'x64'
+          cache: 'pip'
+
       - name: Set up Python ${{ matrix.python }}
+        if: runner.os != 'Windows'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
