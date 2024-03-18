@@ -14,22 +14,22 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python: ["3.9", "3.10"]
+        python: ["3.10", "3.11"]
         backend: [pyqt5]
         include:
-          - python: 3.9
+          - python: 3.11
             platform: windows-latest
-            backend: pyqt5
-          - python: 3.9
+            backend: pyside2
+          - python: 3.11
             platform: macos-latest
             backend: pyside2
-          - python: 3.9
+          - python: 3.11
             platform: ubuntu-latest
             backend: pyqt6
-          - python: 3.9
+          - python: 3.11
             platform: ubuntu-latest
             backend: pyside2
-          - python: 3.9  # only this run execute coverage
+          - python: 3.11  # only this run execute coverage
             platform: ubuntu-latest
             backend: pyside6
             coverage: true
@@ -42,7 +42,16 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Set up Python ${{ matrix.python }} 64-bit for Windows
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: 'x64'
+          cache: 'pip'
+
       - name: Set up Python ${{ matrix.python }}
+        if: runner.os != 'Windows'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -56,7 +65,6 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
           powershell gl-ci-helpers/appveyor/install_opengl.ps1
-          if (Test-Path -Path "C:\Windows\system32\opengl32.dll" -PathType Leaf) {Exit 0} else {Exit 1}
 
       # tox and tox-gh-actions will take care of the "actual" installation
       # of python dependendencies into a virtualenv.  see tox.ini for more
