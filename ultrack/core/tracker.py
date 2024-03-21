@@ -91,6 +91,7 @@ class Tracker:
     @functools.wraps(track)
     def track(self, *args, **kwargs) -> None:
         track(config=self.config, *args, **kwargs)
+        self.status = TrackerStatus.SOLVED
 
     def _assert_solved(self) -> None:
         """Raise an error if the tracking is not solved."""
@@ -117,14 +118,13 @@ class Tracker:
         return tracks_df
 
     @functools.wraps(tracks_to_zarr)
-    def to_zarr(
-        self, *, tracks_df: Optional[pd.DataFrame] = None, **kwargs
-    ) -> zarr.Array:
+    def to_zarr(self, **kwargs) -> zarr.Array:
         self._assert_solved()
+        tracks_df = kwargs.pop("tracks_df", None)
         if tracks_df is None:
             tracks_df, _ = to_tracks_layer(self.config)
-        z = tracks_to_zarr(self.config, tracks_df=tracks_df, **kwargs)
-        return z
+        segments = tracks_to_zarr(self.config, tracks_df=tracks_df, **kwargs)
+        return segments
 
     @functools.wraps(tracks_layer_to_trackmate)
     def to_trackmate(self, tracks_df: Optional[pd.DataFrame] = None) -> str:
