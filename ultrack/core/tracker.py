@@ -120,7 +120,7 @@ class Tracker:
     @functools.wraps(tracks_to_zarr)
     def to_zarr(self, **kwargs) -> zarr.Array:
         self._assert_solved()
-        tracks_df = kwargs.pop("tracks_df")
+        tracks_df = kwargs.pop("tracks_df", None)
         if tracks_df is None:
             tracks_df, _ = to_tracks_layer(self.config)
         segments = tracks_to_zarr(self.config, tracks_df=tracks_df, **kwargs)
