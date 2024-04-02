@@ -153,7 +153,8 @@ def tracks_properties(
     if scale is None:
         spatial_scale = None
     else:
-        spatial_scale = scale[1:]
+        # excluding non-spatial dimensions
+        spatial_scale = scale[-segments.ndim + 1 :]
 
     rename_map = {"label": "track_id"}
     extra_properties = []
