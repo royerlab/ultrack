@@ -147,7 +147,7 @@ class HeuristicSolver(BaseSolver):
             (mask, (sources, targets)), shape=(size, size), dtype=bool
         )
 
-    def enforce_node_to_solution(self, indices: ArrayLike) -> None:
+    def enforce_nodes_solution_value(self, indices: ArrayLike) -> None:
         """Constraints given nodes' variables to 1.
 
         Parameters

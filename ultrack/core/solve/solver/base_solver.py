@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Literal
 
 import pandas as pd
 from numpy.typing import ArrayLike
@@ -83,13 +84,22 @@ class BaseSolver(ABC):
         """
 
     @abstractmethod
-    def enforce_node_to_solution(self, indices: ArrayLike) -> None:
+    def enforce_nodes_solution_value(
+        self,
+        indices: ArrayLike,
+        variable: Literal["appear", "disappear", "division", "node"],
+        value: bool,
+    ) -> None:
         """Constraints given nodes' variables to 1.
 
         Parameters
         ----------
         indices : ArrayLike
             Nodes indices.
+        variable : str
+            Slack variable to constraint.
+        value : bool
+            Value to constraint to.
         """
 
     @abstractmethod

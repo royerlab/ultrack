@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
-from ultrack.core.database import DivisionAnnotation, NodeDB
+from ultrack.core.database import NodeDB, VarAnnotation
 from ultrack.widgets import DivisionAnnotationWidget
 
 
@@ -52,11 +52,11 @@ def test_division_annotation_widget(
 
     assert widget.list_index == 0
 
-    widget._annot_w.value = DivisionAnnotation.TRUE
+    widget._annot_w.value = VarAnnotation.REAL
     widget._confirm_btn.clicked.emit()
     assert widget.list_index == 1
 
-    widget._annot_w.value = DivisionAnnotation.FALSE
+    widget._annot_w.value = VarAnnotation.FAKE
     widget._confirm_btn.clicked.emit()
     assert widget.list_index == 1  # there are only two divisions
 
@@ -65,10 +65,10 @@ def test_division_annotation_widget(
         div_annot = [
             annot
             for annot, in session.query(NodeDB.division).where(
-                NodeDB.division != DivisionAnnotation.UNKNOWN
+                NodeDB.division != VarAnnotation.UNKNOWN
             )
         ]
 
     assert len(div_annot) == 2
-    assert DivisionAnnotation.TRUE in div_annot
-    assert DivisionAnnotation.FALSE in div_annot
+    assert VarAnnotation.REAL in div_annot
+    assert VarAnnotation.FAKE in div_annot

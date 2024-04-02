@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from ultrack.core.database import (
     NO_PARENT,
-    DivisionAnnotation,
     NodeDB,
+    VarAnnotation,
     get_node_values,
     set_node_values,
 )
@@ -19,7 +19,7 @@ class DivisionAnnotationWidget(GenericAnnotationWidget):
     def __init__(self, viewer: napari.Viewer) -> None:
         # before init due to config initialization
         super().__init__(
-            viewer, "Division Annotation", DivisionAnnotation, " ~ division annot."
+            viewer, "Division Annotation", VarAnnotation, " ~ division annot."
         )
 
     def _query_samples(self) -> List[Node]:
@@ -40,8 +40,8 @@ class DivisionAnnotationWidget(GenericAnnotationWidget):
 
         return [node for node, in nodes]
 
-    def get_annotation(self, index: int) -> DivisionAnnotation:
+    def get_annotation(self, index: int) -> VarAnnotation:
         return get_node_values(self.config, index, NodeDB.division)
 
-    def set_annotation(self, index: int, annot: DivisionAnnotation) -> None:
+    def set_annotation(self, index: int, annot: VarAnnotation) -> None:
         set_node_values(self.config, index, division=annot)
