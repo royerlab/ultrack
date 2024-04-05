@@ -6,6 +6,7 @@ Therefore, conda environment files are provided, they can be installed using:
 ```
 conda env create -f <environment-file.yml>
 conda activate <your new env>
+pip install git+https://github.com/royerlab/ultrack
 ```
 
 The existing examples are:

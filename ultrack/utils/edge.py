@@ -90,6 +90,7 @@ def labels_to_edges(
 
         if sigma is not None:
             edges_frame = ndi.gaussian_filter(edges_frame, sigma)
+            edges_frame = edges_frame / edges_frame.max()
 
         detection[t] = to_cpu(detection_frame)
         edges[t] = to_cpu(edges_frame)

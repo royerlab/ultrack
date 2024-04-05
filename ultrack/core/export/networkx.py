@@ -33,6 +33,13 @@ def tracks_layer_to_networkx(
     """
     graph = nx.DiGraph()
 
+    if "id" not in tracks_df.columns:
+        LOG.warning(
+            "`id` not found in tracks dataframe. Assuming `id` is dataframe index."
+        )
+    else:
+        tracks_df = tracks_df.set_index("id")
+
     for index, row in tracks_df.iterrows():
         graph.add_node(index, **row.to_dict())
 

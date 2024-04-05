@@ -20,7 +20,7 @@ def test_to_networkx(
             "x": [1, 2, 3, 1],
         }
     )
-    tracks_df.set_index("id", inplace=True)
+    tracks_df.set_index("id", drop=False, inplace=True)
 
     graph = tracks_layer_to_networkx(tracks_df, children_to_parent=children_to_parent)
 
@@ -51,7 +51,7 @@ def test_to_networkx_without_parent_id() -> None:
             "x": [1, 2, 3, 1],
         }
     )
-    tracks_df.set_index("id", inplace=True)
+    tracks_df.set_index("id", drop=False, inplace=True)
 
     graph = tracks_layer_to_networkx(tracks_df)
 

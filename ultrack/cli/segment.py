@@ -44,6 +44,13 @@ def _get_layer_data(viewer: ViewerModel, key: str) -> ArrayLike:
     type=str,
     help="Cell edges layer index on napari.",
 )
+@click.option(
+    "--insertion-throttle-rate",
+    required=False,
+    type=int,
+    help="Rate at which to insert new hierarchies (group of competing segments) into the database.",
+    default=50,
+)
 @batch_index_option()
 @overwrite_option()
 def segmentation_cli(
@@ -52,6 +59,7 @@ def segmentation_cli(
     config: MainConfig,
     detection_layer: str,
     edge_layer: str,
+    insertion_throttle_rate: int,
     batch_index: Optional[int],
     overwrite: bool,
 ) -> None:
@@ -79,4 +87,5 @@ def segmentation_cli(
         config,
         batch_index=batch_index,
         overwrite=overwrite,
+        insertion_throttle_rate=insertion_throttle_rate,
     )

@@ -85,6 +85,8 @@ def _process(
     db_path: str,
     max_segments_per_time: int,
     write_lock: Optional[fasteners.InterProcessLock] = None,
+    catch_duplicates_expection: bool = False,
+    insertion_throttle_rate: int = 50,
 ) -> None:
     """Process `detection` and `edge` of current time and add data to database.
 
@@ -104,6 +106,10 @@ def _process(
         Upper bound of segments per time point.
     lock : Optional[fasteners.InterProcessLock], optional
         Lock object for SQLite multiprocessing, optional otherwise, by default None.
+    catch_duplicates_expection : bool
+        If True, catches duplicates exception, by default False.
+    insertion_throttle_rate : int
+        Throttling rate for insertion, by default 50.
     """
     np.random.seed(time)
 
@@ -200,14 +206,29 @@ def _process(
                 f"Number of segments exceeds upper bound of {max_segments_per_time} per time."
             )
 
-        # if lock is None it inserts at every iteration
-        if write_lock is None:
-            _insert_db(engine, time, nodes, overlaps)
+        try:
+            # if lock is None it inserts at every iteration
+            if write_lock is None:
+                if (h + 1) % insertion_throttle_rate == 0:  # throttling insertions
+                    _insert_db(engine, time, nodes, overlaps)
 
-        # otherwise it inserts only when it can acquire the lock
-        elif write_lock.acquire(blocking=False):
-            _insert_db(engine, time, nodes, overlaps)
-            write_lock.release()
+            # otherwise it inserts only when it can acquire the lock
+            elif write_lock.acquire(blocking=False):
+                _insert_db(engine, time, nodes, overlaps)
+                write_lock.release()
+
+        except sqla.exc.IntegrityError as e:
+            if (
+                catch_duplicates_expection
+                and "duplicate key value violates unique constraint" in str(e).lower()
+            ):
+                LOG.warning(
+                    f"IntegrityError: {e}\nSkipping batch {time}.\n"
+                    "Cannot guarantee image was entirely processed.\nSEGMENTS MIGHT BE MISSING!"
+                )
+                return
+            else:
+                raise e
 
     # pushes any remaning data
     with write_lock if write_lock is not None else nullcontext():
@@ -231,6 +252,7 @@ def segment(
     max_segments_per_time: int = 1_000_000,
     batch_index: Optional[int] = None,
     overwrite: bool = False,
+    insertion_throttle_rate: int = 50,
 ) -> None:
     """Add candidate segmentation (nodes) from `detection` and `edge` to database.
 
@@ -248,6 +270,9 @@ def segment(
         Batch index for processing a subset of nodes, by default everything is processed.
     overwrite : bool
         Cleans up segmentation, linking, and tracking database content before processing.
+    insertion_throttle_rate : int
+        Throttling rate for insertion, by default 50.
+        Only used with non-sqlite databases.
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
@@ -288,6 +313,8 @@ def segment(
             db_path=config.data_config.database_path,
             write_lock=lock,
             max_segments_per_time=max_segments_per_time,
+            catch_duplicates_expection=batch_index is not None,
+            insertion_throttle_rate=insertion_throttle_rate,
         )
 
         multiprocessing_apply(

@@ -9,13 +9,13 @@ channels:
 dependencies:
   - coin-or-cbc
   - cucim
-  - cupy
+  - cupy!=13.0.*
   - gurobi
   - jupyter
+  - napari
   - pip
   - pyqt
   - pytorch
   - pytorch-cuda
   - pip:
-    - napari==0.4.18
     - traccuracy

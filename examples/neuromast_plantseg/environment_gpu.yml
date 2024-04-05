@@ -6,18 +6,16 @@ channels:
   - rapidsai
   - conda-forge
   - defaults
-  - lcerrone
 dependencies:
   - coin-or-cbc
   - cucim
-  - cupy
+  - cupy!=13.0.*
   - gurobi
   - jupyter
-  - pip
   - pyqt
   - pytorch
-  - pytorch-cuda
-  - plantseg
-  - pip:
-    - napari==0.4.18
-    - napari-ome-zarr
+  - pytorch-cuda=12.1
+  - cudnn
+  - plant-seg
+  - napari
+  - napari-ome-zarr

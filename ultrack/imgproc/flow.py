@@ -67,7 +67,7 @@ def _interpolate(tensor: th.Tensor, antialias: bool = False, **kwargs) -> th.Ten
         if scale_factor < 1.0:
             ndi = import_module("scipy", "ndimage")
             orig_shape = tensor.shape
-            array = xp.asarray(tensor.squeeze())
+            array = xp.asarray(tensor.squeeze().contiguous())
             blurred = ndi.gaussian_filter(
                 array,
                 sigma=0.5 / scale_factor,
