@@ -1,5 +1,6 @@
 import random
 import shutil
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional, Union
 
@@ -226,6 +227,11 @@ def tracks_df_to_videos(
 
     if num_lineages is None:
         num_lineages = len(trees)
+
+    if len(trees) < num_lineages:
+        warnings.warn(
+            f"Requested {num_lineages} lineages, but only {len(trees)} available."
+        )
 
     for i, tree in tqdm(enumerate(trees), total=num_lineages):
         if i >= num_lineages:
