@@ -22,6 +22,15 @@ if not os.path.exists("examples"):
 if not os.path.exists("plugin"):
     os.symlink("../../plugin-imagej", "plugin", target_is_directory=True)
 
+if not os.path.exists("benchmarks"):
+    os.symlink("../../benchmarks", "benchmarks", target_is_directory=True)
+
+if not os.path.exists("plugin/plugin.rst"):
+    os.symlink("plugin/plugin.rst", "plugin/plugin.rst")
+
+if not os.path.exists("ultrack_source"):
+    os.symlink("../../ultrack", "ultrack_source", target_is_directory=True)
+
 # -- Project information -----------------------------------------------------
 
 project = "ultrack"

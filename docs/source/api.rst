@@ -42,6 +42,9 @@ Exporting
 Core functionalities
 ====================
 
+.. include:: ultrack_source/core/README.md
+    :parser: myst
+
 .. automodule:: ultrack
     :members:
     :imported-members:
