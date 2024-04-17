@@ -16,6 +16,9 @@ from importlib.metadata import version as libversion
 
 sys.path.insert(0, os.path.abspath("../.."))
 
+if not os.path.exists("examples"):
+    os.symlink("../../examples", "examples", target_is_directory=True)
+
 # -- Project information -----------------------------------------------------
 
 project = "ultrack"
@@ -30,7 +33,13 @@ release = libversion("ultrack")
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx_click.ext", "sphinx.ext.autosummary"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx_click.ext",
+    "sphinx.ext.autosummary",
+    "nbsphinx",
+    "sphinx_gallery.load_style"
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
