@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.abspath("../.."))
 if not os.path.exists("examples"):
     os.symlink("../../examples", "examples", target_is_directory=True)
 
+if not os.path.exists("plugin"):
+    os.symlink("../../plugin-imagej", "plugin", target_is_directory=True)
+
 # -- Project information -----------------------------------------------------
 
 project = "ultrack"
@@ -38,8 +41,14 @@ extensions = [
     "sphinx_click.ext",
     "sphinx.ext.autosummary",
     "nbsphinx",
+    "myst_parser",
     "sphinx_gallery.load_style"
 ]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

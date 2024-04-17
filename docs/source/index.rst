@@ -21,6 +21,7 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
    quickstart
    theory
    examples
+   plugin
    faq
 
 .. toctree::
