@@ -145,6 +145,7 @@ def close_tracks_gaps(
 
     new_nodes = []
     track_id_map = {}
+    track_ids_in_queue = set()
 
     for gap in range(1, max_gap + 1):
 
@@ -153,7 +154,8 @@ def close_tracks_gaps(
         to_remove_from_start = []
         to_remove_from_end = []
 
-        for t, end_group in ends.groupby("t"):
+        # backwards so multiple corrections are allowed
+        for t, end_group in reversed(tuple(ends.groupby("t"))):
 
             try:
                 start_group = starts_by_t.get_group(t + gap + 1)
@@ -169,6 +171,20 @@ def close_tracks_gaps(
                 end_node = end_group.iloc[i]
                 start_node = start_group.iloc[j]
 
+                if int(start_node["track_id"]) in track_ids_in_queue:
+                    # forcing addition of new nodes before update
+                    tracks_df = pd.concat(
+                        [tracks_df, pd.DataFrame(new_nodes)], ignore_index=True
+                    )
+                    for int_cols in ("track_id", "parent_track_id"):
+                        tracks_df[int_cols] = tracks_df[int_cols].astype(int)
+
+                    tracks_df = tracks_df.sort_values(["track_id", "t"])
+
+                    # reset
+                    new_nodes = []
+                    track_ids_in_queue = set()
+
                 update_track_id(
                     tracks_df,
                     start_node["track_id"],
@@ -176,9 +192,9 @@ def close_tracks_gaps(
                     end_node["parent_track_id"],
                 )
 
-                track_id_map[start_node["track_id"].item()] = end_node[
-                    "track_id"
-                ].item()
+                track_id_map[int(start_node["track_id"].item())] = int(
+                    end_node["track_id"].item()
+                )
 
                 for t in range(int(end_node["t"] + 1), int(start_node["t"])):
                     new_node = end_node.copy()
@@ -189,6 +205,7 @@ def close_tracks_gaps(
                     new_node["t"] = t
                     new_node[spatial_columns] = end_node[spatial_columns] + step
                     new_nodes.append(new_node)
+                    track_ids_in_queue.add(int(new_node["track_id"].item()))
 
             to_remove_from_start.extend(start_group.index[col_ind[valid_matches]])
             to_remove_from_end.extend(end_group.index[row_ind[valid_matches]])
