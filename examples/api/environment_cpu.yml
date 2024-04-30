@@ -1,0 +1,23 @@
+name: ultrack-api
+channels:
+  - gurobi
+  - conda-forge
+  - defaults
+dependencies:
+  - coin-or-cbc
+  - cucim
+  - gurobi
+  - jupyter
+  - pip
+  - pyqt
+  - tifffile
+  - pip:
+    - napari==0.4.18
+    - fastapi >= 0.109.2
+    - websocket >= 0.2.1
+    - urllib3 < 2.0
+    - ome-zarr >= 0.8.3
+    - uvicorn >= 0.27.0.post1
+    - httpx >= 0.26.0
+    - websockets >= 12.0
+    - networkx
