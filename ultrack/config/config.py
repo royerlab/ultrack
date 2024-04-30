@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import toml
 from pydantic import BaseModel, Extra, Field
@@ -24,7 +24,9 @@ class LinkingConfig(BaseModel):
 
 
 class MainConfig(BaseModel):
-    data_config: DataConfig = Field(default_factory=DataConfig, alias="data")
+    data_config: Optional[DataConfig] = Field(
+        default_factory=DataConfig, alias="data", nullable=True
+    )
     segmentation_config: SegmentationConfig = Field(
         default_factory=SegmentationConfig, alias="segmentation"
     )
