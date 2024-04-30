@@ -85,10 +85,11 @@ def record_tracks(
                 continue
             new_order = order[:-3] + (order[-2], order[-3], order[-1])
             viewer.dims.order = new_order
-            viewer.camera.zoom = zoom
             center_idx = [-3, -1]
         else:
             center_idx = [-2, -1]
+
+        viewer.camera.zoom = zoom
 
         for track_id, tracklet in tracks_df.groupby("track_id", sort=True):
             out_path = output_directory / f"{track_id}_axis_{axis_order}_roi.mp4"
