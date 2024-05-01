@@ -132,7 +132,7 @@ def robust_invert(
             im_max = flat_small_img.max()
         del flat_small_img
 
-        im_max = im_max.astype(np.float32)
+        im_max = np.maximum(im_max.astype(np.float32), 1e-8)
         _image = (1 / im_max) * norm_factor * _image
         LOG.info(f"Maximum {im_max}")
 

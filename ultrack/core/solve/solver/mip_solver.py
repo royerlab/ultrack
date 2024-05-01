@@ -212,17 +212,82 @@ class MIPSolver(BaseSolver):
                 self._nodes[sources[i]] + self._nodes[targets[i]] <= 1
             )
 
-    def enforce_node_to_solution(self, indices: ArrayLike) -> None:
+    def enforce_nodes_solution_value(
+        self,
+        indices: ArrayLike,
+        variable: Literal["appear", "disappear", "division", "node"],
+        value: bool,
+    ) -> None:
         """Constraints given nodes' variables to 1.
 
         Parameters
         ----------
         indices : ArrayLike
             Nodes indices.
+        variable : str
+            Slack variable to constraint.
+        value : bool
+            Value to constraint to.
         """
         indices = self._forward_map[np.asarray(indices, dtype=int)]
-        for i in indices:
-            self._model.add_constr(self._nodes[i] >= 1)
+
+        variable_arr = {
+            "appear": self._appearances,
+            "disappear": self._disappearances,
+            "division": self._divisions,
+            "node": self._nodes,
+        }[variable]
+
+        if value:
+            for i in indices:
+                self._model.add_constr(variable_arr[i] >= 1)
+        else:
+            for i in indices:
+                self._model.add_constr(variable_arr[i] <= 0)
+
+    def enforce_edges_solution_value(
+        self,
+        sources: ArrayLike,
+        targets: ArrayLike,
+        value: bool,
+    ) -> None:
+        """Constraints given nodes' variables to 1.
+
+        Parameters
+        ----------
+        source : ArrayLike
+            Array of integers indicating source indices (at time T - 1).
+        targets : ArrayLike
+            Array of integers indicating target indices (at time T).
+        value : bool
+            Value to constraint to.
+        """
+        if self._edges_df is None:
+            raise ValueError("Edges must be added before enforcing their value.")
+
+        sources = self._forward_map[np.asarray(sources, dtype=int)]
+        targets = self._forward_map[np.asarray(targets, dtype=int)]
+
+        # saving indices
+        df = self._edges_df.reset_index()
+
+        match = pd.merge(
+            df,
+            pd.DataFrame({"sources": sources, "targets": targets}),
+            on=["sources", "targets"],
+            validate="1:1",
+        )
+        if len(match) != len(sources):
+            raise ValueError(
+                f"{len(sources) - len(match)} edges were not found at `enforce_edges_solution_value`."
+            )
+
+        if value:
+            for i in match["index"]:
+                self._model.add_constr(self._edges[i] >= 1)
+        else:
+            for i in match["index"]:
+                self._model.add_constr(self._edges[i] <= 0)
 
     def set_nodes_sum(self, indices: ArrayLike, total_sum: int) -> None:
         """Set indices sum to total_sum as constraint.

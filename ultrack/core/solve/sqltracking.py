@@ -1,3 +1,4 @@
+import itertools
 import logging
 import math
 from typing import Optional, Tuple
@@ -13,6 +14,7 @@ from ultrack.core.database import (
     LinkDB,
     NodeDB,
     OverlapDB,
+    VarAnnotation,
     maximum_time_from_database,
 )
 from ultrack.core.solve.solver import MIPSolver
@@ -98,15 +100,21 @@ class SQLTracking:
             raise ValueError("`construct_model` must be called first.")
         return self._solver
 
-    def __call__(self, index: int) -> None:
+    def __call__(self, index: int, use_annotations: bool = False) -> None:
         """Queries data from the given index, add it to the solver, run it and push to the database.
 
         Parameters
         ----------
         index : int
             Batch index.
+        use_annotations : bool
+            Fix ILP variables using annotations, by default False.
         """
         self.construct_model(index)
+
+        if use_annotations:
+            print("Fixing annotations ...")
+            self.fix_annotations(index)
 
         print("Solving ILP ...")
         self.solve()
@@ -115,6 +123,54 @@ class SQLTracking:
         self.add_solution(index)
 
         print("Done!")
+
+    def fix_annotations(self, index: int) -> None:
+        """
+        Fix ILP variables using annotations.
+
+        Parameters
+        ----------
+        index : int
+            Batch index.
+        """
+
+        engine = sqla.create_engine(self._data_config.database_path)
+
+        start_time, end_time = self._window_limits(index, True)
+
+        with Session(engine) as session:
+            # setting extra slack variables
+            for mode, value in itertools.product(
+                ["appear", "disappear", "division", "node"],
+                [True, False],
+            ):
+                column = getattr(NodeDB, f"{mode}_annot")
+                enum_value = VarAnnotation.REAL if value else VarAnnotation.FAKE
+                indices = [
+                    i
+                    for i, in session.query(NodeDB.id).where(
+                        NodeDB.t.between(start_time, end_time), column == enum_value
+                    )
+                ]
+                self.solver.enforce_nodes_solution_value(indices, mode, value)
+
+            # setting links
+            for value in (True, False):
+                enum_value = VarAnnotation.REAL if value else VarAnnotation.FAKE
+                query = (
+                    session.query(LinkDB.source_id, LinkDB.target_id)
+                    .join(NodeDB, NodeDB.id == LinkDB.source_id)
+                    .where(
+                        NodeDB.t.between(start_time, end_time),
+                        LinkDB.annotation == enum_value,
+                    )
+                )
+                df = pd.read_sql(query.statement, session.bind)
+                self.solver.enforce_edges_solution_value(
+                    df["source_id"],
+                    df["target_id"],
+                    value,
+                )
 
     def solve(self) -> None:
         """Tracks by solving optimization model."""
@@ -271,8 +327,8 @@ class SQLTracking:
         )
         LOG.info(f"# {len(end_nodes)} boundary constraints found at at t = {end_time}")
 
-        solver.enforce_node_to_solution(start_nodes)
-        solver.enforce_node_to_solution(end_nodes)
+        solver.enforce_nodes_solution_value(start_nodes, variable="node", value=True)
+        solver.enforce_nodes_solution_value(end_nodes, variable="node", value=True)
 
     def add_solution(self, index: int = 0) -> None:
         """Adds selected nodes to solution in database.

@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
-from ultrack.core.database import NodeAnnotation, NodeDB
+from ultrack.core.database import NodeDB, NodeSegmAnnotation
 from ultrack.widgets import NodeAnnotationWidget
 
 
@@ -53,7 +53,7 @@ def test_node_annotation_widget(
     assert not widget._prev_btn.enabled
     assert widget.list_index == 0
 
-    widget._annot_w.value = NodeAnnotation.OVERSEGMENTED
+    widget._annot_w.value = NodeSegmAnnotation.OVERSEGMENTED
     widget._confirm_btn.clicked.emit()
     assert widget.list_index == 1
 
@@ -67,7 +67,7 @@ def test_node_annotation_widget(
 
     assert widget.list_index == table_length - 1
 
-    widget._annot_w.value = NodeAnnotation.CORRECT
+    widget._annot_w.value = NodeSegmAnnotation.CORRECT
     widget._confirm_btn.clicked.emit()
 
     # checking if index won't advance when confirming the last node
@@ -75,12 +75,14 @@ def test_node_annotation_widget(
 
     with Session(engine) as session:
         query = session.query(NodeDB.id)
-        n_correct = query.where(NodeDB.annotation == NodeAnnotation.CORRECT).count()
+        n_correct = query.where(
+            NodeDB.segm_annotation == NodeSegmAnnotation.CORRECT
+        ).count()
         n_oversegmented = query.where(
-            NodeDB.annotation == NodeAnnotation.OVERSEGMENTED
+            NodeDB.segm_annotation == NodeSegmAnnotation.OVERSEGMENTED
         ).count()
         n_undersegmented = query.where(
-            NodeDB.annotation == NodeAnnotation.UNDERSEGMENTED
+            NodeDB.segm_annotation == NodeSegmAnnotation.UNDERSEGMENTED
         ).count()
 
     assert n_correct == 1

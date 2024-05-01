@@ -4,9 +4,9 @@ import pytest
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
-from ultrack import solve
+from ultrack import solve, to_tracks_layer
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, VarAnnotation
 from ultrack.core.solve.sqltracking import SQLTracking
 
 _CONFIG_PARAMS = {
@@ -111,3 +111,31 @@ def test_clear_solution(
         assert session.query(NodeDB).count() > 0
         assert session.query(NodeDB).where(NodeDB.selected).count() == 0
         assert session.query(NodeDB).where(NodeDB.parent_id != NO_PARENT).count() == 0
+
+
+@pytest.mark.parametrize(
+    "config_content,timelapse_mock_data",
+    _TEST_PARAMS,
+    indirect=True,
+)
+def test_annotations_sql_tracking(
+    linked_database_mock_data: MainConfig,
+) -> None:
+    config = linked_database_mock_data
+
+    solve(config, overwrite=True, use_annotations=True)
+    tracks_df, _ = to_tracks_layer(config)
+    print(tracks_df)
+
+    engine = sqla.create_engine(config.data_config.database_path)
+    with Session(engine) as session:
+        session.query(NodeDB).where(NodeDB.t == 0).update(
+            {"node_annot": VarAnnotation.FAKE}
+        )
+        session.commit()
+
+    solve(config, overwrite=True, use_annotations=True)
+    tracks_df_annot, _ = to_tracks_layer(config)
+    print(tracks_df_annot)
+
+    assert len(tracks_df) > len(tracks_df_annot)

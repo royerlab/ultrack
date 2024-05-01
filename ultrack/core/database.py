@@ -54,20 +54,14 @@ class MaybePickleType(PickleType):
         return _process
 
 
-class NodeAnnotation(enum.IntEnum):
+class NodeSegmAnnotation(enum.IntEnum):
     UNKNOWN = 0
     CORRECT = 1
     UNDERSEGMENTED = 2
     OVERSEGMENTED = 3
 
 
-class DivisionAnnotation(enum.IntEnum):
-    UNKNOWN = 0
-    TRUE = 1
-    FALSE = 2
-
-
-class LinkAnnotation(enum.IntEnum):
+class VarAnnotation(enum.IntEnum):
     UNKNOWN = 0
     REAL = 1
     FAKE = 2
@@ -91,8 +85,11 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
-    annotation = Column(Enum(NodeAnnotation), default=NodeAnnotation.UNKNOWN)
-    division = Column(Enum(DivisionAnnotation), default=DivisionAnnotation.UNKNOWN)
+    segm_annot = Column(Enum(NodeSegmAnnotation), default=NodeSegmAnnotation.UNKNOWN)
+    node_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
+    appear_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
+    disappear_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
+    division_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
 
 
 class OverlapDB(Base):
@@ -108,7 +105,7 @@ class LinkDB(Base):
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     weight = Column(Float)
-    annotation = Column(Enum(LinkAnnotation), default=LinkAnnotation.UNKNOWN)
+    annotation = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
 
 
 def maximum_time_from_database(data_config: DataConfig) -> int:
