@@ -85,6 +85,22 @@ def update_track_id(
     ] = new_track_id
 
 
+def _add_new_nodes(
+    tracks_df: pd.DataFrame,
+    new_nodes: List[pd.Series],
+) -> pd.DataFrame:
+    """
+    Helper function to add `new_nodes` to `tracks_df`.
+    """
+    tracks_df = pd.concat([tracks_df, pd.DataFrame(new_nodes)], ignore_index=True)
+    for int_cols in ("track_id", "parent_track_id"):
+        tracks_df[int_cols] = tracks_df[int_cols].astype(int)
+
+    tracks_df = tracks_df.sort_values(["track_id", "t"])
+
+    return tracks_df
+
+
 def close_tracks_gaps(
     tracks_df: pd.DataFrame,
     max_gap: int,
@@ -111,6 +127,8 @@ def close_tracks_gaps(
         The scaling factors for the spatial columns.
     segments : Optional[ArrayLike]
         When provided, the function will update the segments labels to match the tracks.
+    segments_store_or_path : Union[Store, Path, str, None]
+        The store or path to save the updated segments, if not provided in memory store is used.
 
     Returns
     -------
@@ -121,8 +139,6 @@ def close_tracks_gaps(
     if segments is None:
         out_segments = None
     else:
-        raise NotImplementedError("The segments argument is not implemented yet.")
-        # TODO: continue implementation
         out_segments = create_zarr(
             segments.shape,
             segments.dtype,
@@ -133,7 +149,9 @@ def close_tracks_gaps(
         if isinstance(segments, zarr.Array):
             zarr.copy(segments, out_segments, if_exists="replace")
         else:
-            out_segments[...] = segments
+            # iterating to avoid loading the whole array into memory at once
+            for t in range(segments.shape[0]):
+                out_segments[t] = segments[t]
 
     tracks_df = tracks_df.copy()
 
@@ -172,15 +190,8 @@ def close_tracks_gaps(
                 start_node = start_group.iloc[j]
 
                 if int(start_node["track_id"]) in track_ids_in_queue:
-                    # forcing addition of new nodes before update
-                    tracks_df = pd.concat(
-                        [tracks_df, pd.DataFrame(new_nodes)], ignore_index=True
-                    )
-                    for int_cols in ("track_id", "parent_track_id"):
-                        tracks_df[int_cols] = tracks_df[int_cols].astype(int)
-
-                    tracks_df = tracks_df.sort_values(["track_id", "t"])
-
+                    # forcing addition of new nodes to avoid inconsistencies
+                    tracks_df = _add_new_nodes(tracks_df, new_nodes)
                     # reset
                     new_nodes = []
                     track_ids_in_queue = set()
@@ -213,11 +224,8 @@ def close_tracks_gaps(
         starts = starts.drop(to_remove_from_start)
         ends = ends.drop(to_remove_from_end)
 
-    tracks_df = pd.concat([tracks_df, pd.DataFrame(new_nodes)], ignore_index=True)
-    for int_cols in ("track_id", "parent_track_id"):
-        tracks_df[int_cols] = tracks_df[int_cols].astype(int)
-
-    tracks_df = tracks_df.sort_values(["track_id", "t"])
+    # adding remaining nodes
+    tracks_df = _add_new_nodes(tracks_df, new_nodes)
 
     if scale is not None:
         tracks_df[spatial_columns] /= scale
