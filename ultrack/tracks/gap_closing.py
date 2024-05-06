@@ -2,15 +2,13 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
-import zarr
 from numpy.typing import ArrayLike
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
 from zarr.storage import Store
 
 from ultrack.core.database import NO_PARENT
-from ultrack.utils.array import create_zarr
-from ultrack.utils.segmentation import SegmentationPainter
+from ultrack.utils.segmentation import SegmentationPainter, copy_segments
 
 
 def tracks_starts(tracks_df: pd.DataFrame) -> pd.DataFrame:
@@ -153,23 +151,7 @@ def close_tracks_gaps(
         out_segments = None
         segm_painter = None
     else:
-        out_segments = create_zarr(
-            segments.shape,
-            segments.dtype,
-            segments_store_or_path,
-            chunks=segments.chunks if hasattr(segments, "chunks") else None,
-            overwrite=overwrite,
-        )
-
-        print("Copying segments...")
-        if isinstance(segments, zarr.Array):
-            # not very clean because we just created the array above
-            zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
-        else:
-            # iterating to avoid loading the whole array into memory at once
-            for t in range(segments.shape[0]):
-                out_segments[t] = segments[t]
-
+        out_segments = copy_segments(segments, segments_store_or_path, overwrite)
         segm_painter = SegmentationPainter(out_segments)
 
     tracks_df = tracks_df.copy()
@@ -213,9 +195,6 @@ def close_tracks_gaps(
                     # reset
                     new_nodes = []
                     track_ids_in_queue = set()
-
-                    if segm_painter is not None:
-                        segm_painter.apply_changes()
 
                 update_track_id(
                     tracks_df,

@@ -1,12 +1,16 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import scipy.ndimage as ndi
 import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
+from zarr.storage import Store
+
+from ultrack.utils.array import create_zarr
 
 
 @dataclass
@@ -78,7 +82,9 @@ class SegmentationPainter:
 
     def __init__(self, segments: ArrayLike) -> None:
         self._segments = segments
-        self._changes: Dict[int, List[SegmentationChange]] = defaultdict(list)
+        self.src_tp_to_changes: Dict[int, List[SegmentationChange]] = defaultdict(list)
+        self.dst_tp_to_changes: Dict[int, List[SegmentationChange]] = defaultdict(list)
+        self._remap: Dict[Tuple[int, int], int] = {}
 
     def add_relabel(self, time_pt: int, src_label: int, dst_label: int) -> None:
         """
@@ -93,15 +99,28 @@ class SegmentationPainter:
         dst_label : int
             The new label of the segment.
         """
-        self._changes[time_pt].append(
-            SegmentationChange(
-                int(time_pt),
-                int(src_label),
-                int(time_pt),
-                int(dst_label),
-                np.zeros(self._segments.ndim - 1),
-            ),
+        time_pt = int(time_pt)
+        src_label = int(src_label)
+        dst_label = int(dst_label)
+
+        # check if it's accumulating changes
+        for change in self.dst_tp_to_changes[time_pt]:
+            # accumulate changes and returns without adding
+            # this could happen in consecutive changes to the same label
+            if change.dst_label == src_label:
+                change.dst_label = dst_label
+                return
+
+        segm_change = SegmentationChange(
+            time_pt,
+            src_label,
+            time_pt,
+            dst_label,
+            np.zeros(self._segments.ndim - 1),
         )
+
+        self.src_tp_to_changes[time_pt].append(segm_change)
+        self.dst_tp_to_changes[time_pt].append(segm_change)
 
     def add_new(
         self,
@@ -127,21 +146,28 @@ class SegmentationPainter:
         shift : ArrayLike
             The shift of the new segment.
         """
-        self._changes[src_time_pt].append(
-            SegmentationChange(
-                int(src_time_pt),
-                int(src_label),
-                int(dst_time_pt),
-                int(dst_label),
-                shift,
-            ),
+        segm_change = SegmentationChange(
+            int(src_time_pt),
+            int(src_label),
+            int(dst_time_pt),
+            int(dst_label),
+            shift,
         )
+
+        self.src_tp_to_changes[src_time_pt].append(segm_change)
+        self.dst_tp_to_changes[dst_time_pt].append(segm_change)
 
     def apply_changes(self) -> None:
         """
         Apply the changes to the segmentation.
+
+        It's optimized to avoid reloading the same time point multiple times.
         """
-        for t, changes in tqdm(self._changes.items(), "Loading references masks"):
+
+        # Loading source time points masks
+        for t, changes in tqdm(
+            self.src_tp_to_changes.items(), "Loading references masks"
+        ):
             frame = self._segments[t]
             label_to_slicing = {
                 idx + 1: slicing
@@ -167,7 +193,8 @@ class SegmentationPainter:
                 else:
                     raise ValueError(f"Label {change.src_label} not found in frame {t}")
 
-        for t, changes in tqdm(self._changes.items(), "Applying changes"):
+        # Applying changes to destination
+        for t, changes in tqdm(self.dst_tp_to_changes.items(), "Applying changes"):
             for change in changes:
                 dst_indices = change.dst_mask_indices(include_time_pt=True)
                 if isinstance(self._segments, zarr.Array):
@@ -175,4 +202,47 @@ class SegmentationPainter:
                 else:
                     self._segments[dst_indices] = change.dst_label
 
-        self._changes.clear()
+        self.src_tp_to_changes.clear()
+        self.dst_tp_to_changes.clear()
+
+
+def copy_segments(
+    segments: ArrayLike,
+    segments_store_or_path: Union[Store, Path, str, None] = None,
+    overwrite: bool = False,
+) -> zarr.Array:
+    """
+    Copy the segments to a new zarr array.
+
+    Parameters
+    ----------
+    segments : ArrayLike
+        The segments to copy.
+    segments_store_or_path : Union[Store, Path, str, None]
+        The store or path to save the new segments.
+    overwrite : bool
+        If True, overwrite the existing array.
+
+    Returns
+    -------
+    zarr.Array
+        The new segments array.
+    """
+    out_segments = create_zarr(
+        segments.shape,
+        segments.dtype,
+        segments_store_or_path,
+        chunks=segments.chunks if hasattr(segments, "chunks") else None,
+        overwrite=overwrite,
+    )
+
+    print("Copying segments...")
+    if isinstance(segments, zarr.Array):
+        # not very clean because we just created the array above
+        zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
+    else:
+        # iterating to avoid loading the whole array into memory at once
+        for t in range(segments.shape[0]):
+            out_segments[t] = segments[t]
+
+    return out_segments
