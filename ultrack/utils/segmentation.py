@@ -67,6 +67,15 @@ class SegmentationChange:
 
 
 class SegmentationPainter:
+    """
+    Class to apply in-place changes to a segmentation time lapse.
+
+    Parameters
+    ----------
+    segments : ArrayLike
+        The segmentation to be updated.
+    """
+
     def __init__(self, segments: ArrayLike) -> None:
         self._segments = segments
         self._changes: Dict[int, List[SegmentationChange]] = defaultdict(list)
