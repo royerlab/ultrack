@@ -119,6 +119,7 @@ def close_tracks_gaps(
     scale: Optional[ArrayLike] = None,
     segments: Optional[ArrayLike] = None,
     segments_store_or_path: Union[Store, Path, str, None] = None,
+    overwrite: bool = False,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, ArrayLike]]:
     """
     Close gaps between tracklets in the given DataFrame.
@@ -139,6 +140,8 @@ def close_tracks_gaps(
         When provided, the function will update the segments labels to match the tracks.
     segments_store_or_path : Union[Store, Path, str, None]
         The store or path to save the updated segments, if not provided in memory store is used.
+    overwrite : bool
+        If True, overwrites the segments store if it already exists.
 
     Returns
     -------
@@ -155,11 +158,14 @@ def close_tracks_gaps(
             segments.dtype,
             segments_store_or_path,
             chunks=segments.chunks if hasattr(segments, "chunks") else None,
+            overwrite=overwrite,
         )
 
         print("Copying segments...")
         if isinstance(segments, zarr.Array):
-            zarr.copy(segments, out_segments, if_exists="replace")
+            # not very clean because we just created the array above
+            group = zarr.group(out_segments.store, overwrite=True)
+            zarr.copy(segments, group, name="", if_exists="replace")
         else:
             # iterating to avoid loading the whole array into memory at once
             for t in range(segments.shape[0]):

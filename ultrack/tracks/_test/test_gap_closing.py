@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import zarr
 
 from ultrack.core.database import NO_PARENT
 from ultrack.tracks import close_tracks_gaps
@@ -50,6 +51,7 @@ def test_gap_closing() -> None:
     segments_with_gap[
         tracks_df_with_gap["t"].astype(int), tracks_df_with_gap["x"].astype(int)
     ] = tracks_df_with_gap["track_id"].values
+    segments_with_gap = zarr.array(segments_with_gap)
 
     tracks_df, segments = close_tracks_gaps(
         tracks_df_with_gap,
