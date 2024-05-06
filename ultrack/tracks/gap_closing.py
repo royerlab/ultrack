@@ -157,6 +157,7 @@ def close_tracks_gaps(
             chunks=segments.chunks if hasattr(segments, "chunks") else None,
         )
 
+        print("Copying segments...")
         if isinstance(segments, zarr.Array):
             zarr.copy(segments, out_segments, if_exists="replace")
         else:
