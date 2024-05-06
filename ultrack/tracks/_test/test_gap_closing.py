@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from ultrack.core.database import NO_PARENT
@@ -19,6 +20,8 @@ def test_gap_closing() -> None:
             \
              - 6
     """
+
+    segments_with_gap = np.zeros((8, 7), dtype=np.uint8)
 
     # Create a DataFrame with tracks
     tracks_df_with_gap = pd.DataFrame(
@@ -44,8 +47,16 @@ def test_gap_closing() -> None:
         }
     )
 
-    tracks_df = close_tracks_gaps(
-        tracks_df_with_gap, max_gap=2, max_radius=1.5, spatial_columns=["x"]
+    segments_with_gap[
+        tracks_df_with_gap["t"].astype(int), tracks_df_with_gap["x"].astype(int)
+    ] = tracks_df_with_gap["track_id"].values
+
+    tracks_df, segments = close_tracks_gaps(
+        tracks_df_with_gap,
+        max_gap=2,
+        max_radius=1.5,
+        spatial_columns=["x"],
+        segments=segments_with_gap,
     )
     expected_tracks_df = pd.DataFrame(
         {
@@ -74,6 +85,11 @@ def test_gap_closing() -> None:
         }
     )
 
+    expected_segments = np.zeros((8, 7), dtype=np.uint8)
+    expected_segments[
+        expected_tracks_df["t"].astype(int), expected_tracks_df["x"].round().astype(int)
+    ] = expected_tracks_df["track_id"].values
+
     # +1 of 9 to 7
     # +2 of 7 to 2
     # +1 of 4 to 3
@@ -83,3 +99,5 @@ def test_gap_closing() -> None:
     expected_tracks_df.index = tracks_df.index
 
     pd.testing.assert_frame_equal(tracks_df, expected_tracks_df, check_like=True)
+
+    np.testing.assert_array_equal(segments, expected_segments)

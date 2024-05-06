@@ -10,6 +10,7 @@ from zarr.storage import Store
 
 from ultrack.core.database import NO_PARENT
 from ultrack.utils.array import create_zarr
+from ultrack.utils.segmentation import SegmentationPainter
 
 
 def tracks_starts(tracks_df: pd.DataFrame) -> pd.DataFrame:
@@ -59,6 +60,7 @@ def update_track_id(
     old_track_id: int,
     new_track_id: int,
     new_track_id_parent: int,
+    segmentation_painter: Optional[SegmentationPainter] = None,
 ) -> None:
     """
     Update track_id in `tracks_df` from `old_track_id` to `new_track_id`.
@@ -76,6 +78,8 @@ def update_track_id(
         New track id to replace the old one.
     new_track_id_parent : int
         Existing parent of new track id.
+    segmentation_painter : Optional[SegmentationPainter]
+        The painter to update the segments, if not provided the segments are not updated.
     """
     mask = tracks_df["track_id"] == old_track_id
     tracks_df.loc[mask, "track_id"] = new_track_id
@@ -83,6 +87,12 @@ def update_track_id(
     tracks_df.loc[
         tracks_df["parent_track_id"] == old_track_id, "parent_track_id"
     ] = new_track_id
+
+    if segmentation_painter is not None:
+        for t in tracks_df.loc[mask, "t"]:
+            segmentation_painter.add_relabel(
+                time_pt=int(t), src_label=old_track_id, dst_label=new_track_id
+            )
 
 
 def _add_new_nodes(
@@ -138,12 +148,13 @@ def close_tracks_gaps(
 
     if segments is None:
         out_segments = None
+        segm_painter = None
     else:
         out_segments = create_zarr(
             segments.shape,
             segments.dtype,
             segments_store_or_path,
-            chunks=segments.chunks,
+            chunks=segments.chunks if hasattr(segments, "chunks") else None,
         )
 
         if isinstance(segments, zarr.Array):
@@ -152,6 +163,8 @@ def close_tracks_gaps(
             # iterating to avoid loading the whole array into memory at once
             for t in range(segments.shape[0]):
                 out_segments[t] = segments[t]
+
+        segm_painter = SegmentationPainter(out_segments)
 
     tracks_df = tracks_df.copy()
 
@@ -162,7 +175,6 @@ def close_tracks_gaps(
     ends = tracks_ends(tracks_df)
 
     new_nodes = []
-    track_id_map = {}
     track_ids_in_queue = set()
 
     for gap in range(1, max_gap + 1):
@@ -196,15 +208,15 @@ def close_tracks_gaps(
                     new_nodes = []
                     track_ids_in_queue = set()
 
+                    if segm_painter is not None:
+                        segm_painter.apply_changes()
+
                 update_track_id(
                     tracks_df,
                     start_node["track_id"],
                     end_node["track_id"],
                     end_node["parent_track_id"],
-                )
-
-                track_id_map[int(start_node["track_id"].item())] = int(
-                    end_node["track_id"].item()
+                    segm_painter,
                 )
 
                 for t in range(int(end_node["t"] + 1), int(start_node["t"])):
@@ -217,6 +229,15 @@ def close_tracks_gaps(
                     new_node[spatial_columns] = end_node[spatial_columns] + step
                     new_nodes.append(new_node)
                     track_ids_in_queue.add(int(new_node["track_id"].item()))
+
+                    if segm_painter is not None:
+                        segm_painter.add_new(
+                            src_time_pt=int(end_node["t"]),
+                            src_label=int(end_node["track_id"]),
+                            dst_time_pt=t,
+                            dst_label=int(new_node["track_id"]),
+                            shift=step,
+                        )
 
             to_remove_from_start.extend(start_group.index[col_ind[valid_matches]])
             to_remove_from_end.extend(end_group.index[row_ind[valid_matches]])
@@ -233,7 +254,6 @@ def close_tracks_gaps(
     if out_segments is None:
         return tracks_df
 
-    # TODO:
-    #   update segments using `track_id_map` and add new segments
+    segm_painter.apply_changes()
 
     return tracks_df, out_segments
