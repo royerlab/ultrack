@@ -164,8 +164,7 @@ def close_tracks_gaps(
         print("Copying segments...")
         if isinstance(segments, zarr.Array):
             # not very clean because we just created the array above
-            group = zarr.group(out_segments.store, overwrite=True)
-            zarr.copy(segments, group, name="", if_exists="replace")
+            zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
         else:
             # iterating to avoid loading the whole array into memory at once
             for t in range(segments.shape[0]):
