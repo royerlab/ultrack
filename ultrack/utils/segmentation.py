@@ -1,3 +1,4 @@
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,6 +69,17 @@ class SegmentationChange:
             return (np.full_like(indices[i], self.dst_time_pt), *indices)
         else:
             return tuple(indices)
+
+    def __str__(self) -> str:
+        return (
+            "Segmentation update"
+            f"from {self.src_label} at {self.src_time_pt}\n"
+            f"to {self.dst_label} at {self.dst_time_pt}\n"
+            f"with shift {self.shift}"
+        )
+
+    def __repr__(self) -> str:
+        return str(self)
 
 
 class SegmentationPainter:
@@ -168,7 +180,7 @@ class SegmentationPainter:
         for t, changes in tqdm(
             self.src_tp_to_changes.items(), "Loading references masks"
         ):
-            frame = self._segments[t]
+            frame = np.asarray(self._segments[t])
             label_to_slicing = {
                 idx + 1: slicing
                 for idx, slicing in enumerate(ndi.find_objects(frame))
@@ -191,16 +203,21 @@ class SegmentationPainter:
                         [s.start for s in slicing] + [s.stop for s in slicing]
                     )
                 else:
-                    raise ValueError(f"Label {change.src_label} not found in frame {t}")
+                    if frame.sum() == 0:
+                        raise ValueError(f"Frame {t} is empty. Something went wrong.")
+
+                    print(f"{change} not found in frame {t}")
 
         # Applying changes to destination
         for t, changes in tqdm(self.dst_tp_to_changes.items(), "Applying changes"):
+            frame = np.asarray(self._segments[t])
             for change in changes:
-                dst_indices = change.dst_mask_indices(include_time_pt=True)
-                if isinstance(self._segments, zarr.Array):
-                    self._segments.vindex[dst_indices] = change.dst_label
-                else:
-                    self._segments[dst_indices] = change.dst_label
+                if change.mask is None:
+                    print(f"Mask not found for {change}")
+                    continue
+                dst_indices = change.dst_mask_indices()
+                frame[dst_indices] = change.dst_label
+            self._segments[t] = frame
 
         self.src_tp_to_changes.clear()
         self.dst_tp_to_changes.clear()
@@ -228,21 +245,26 @@ def copy_segments(
     zarr.Array
         The new segments array.
     """
+    is_zarr = isinstance(segments, zarr.Array)
     out_segments = create_zarr(
         segments.shape,
         segments.dtype,
         segments_store_or_path,
-        chunks=segments.chunks if hasattr(segments, "chunks") else None,
+        chunks=segments.chunks if is_zarr else None,
         overwrite=overwrite,
     )
 
-    print("Copying segments...")
-    if isinstance(segments, zarr.Array):
+    if is_zarr:
+        print("Copying segments...")
         # not very clean because we just created the array above
-        zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
+        zarr.copy_store(
+            segments.store, out_segments.store, if_exists="replace", log=sys.stdout
+        )
+        out_segments = zarr.open(
+            out_segments.store
+        )  # not sure why this is necessary in large datasets
     else:
-        # iterating to avoid loading the whole array into memory at once
-        for t in range(segments.shape[0]):
+        for t in tqdm(range(segments.shape[0]), "Copying segments"):
             out_segments[t] = segments[t]
 
     return out_segments

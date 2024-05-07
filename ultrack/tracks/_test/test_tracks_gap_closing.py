@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import zarr
+import zarr.storage
 
 from ultrack.core.database import NO_PARENT
 from ultrack.tracks import close_tracks_gaps
