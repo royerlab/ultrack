@@ -1,4 +1,3 @@
-import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,9 +71,9 @@ class SegmentationChange:
 
     def __str__(self) -> str:
         return (
-            "Segmentation update"
-            f"from {self.src_label} at {self.src_time_pt}\n"
-            f"to {self.dst_label} at {self.dst_time_pt}\n"
+            "Segmentation update\n"
+            f"from src_time_pt={self.src_time_pt} to dst_time_pt={self.dst_time_pt}\n"
+            f"from src_label={self.src_label} to dst_label={self.dst_label}\n"
             f"with shift {self.shift}"
         )
 
@@ -257,9 +256,7 @@ def copy_segments(
     if is_zarr:
         print("Copying segments...")
         # not very clean because we just created the array above
-        zarr.copy_store(
-            segments.store, out_segments.store, if_exists="replace", log=sys.stdout
-        )
+        zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
         out_segments = zarr.open(
             out_segments.store
         )  # not sure why this is necessary in large datasets
