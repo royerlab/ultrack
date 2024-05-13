@@ -1,4 +1,6 @@
 import logging
+import uuid
+from pathlib import Path
 from typing import Literal
 
 import mip
@@ -324,6 +326,13 @@ class MIPSolver(BaseSolver):
         if self._model.status == mip.OptimizationStatus.FEASIBLE:
             LOG.warning(
                 f"Solver status {self._model.status}. Search interrupted before conclusion."
+            )
+
+        elif self._model.status == mip.OptimizationStatus.INFEASIBLE:
+            model_path = Path(".") / f"{uuid.uuid4()}_tracking.lp"
+            self._model.write(str(model_path.absolute()))
+            raise ValueError(
+                f"Infeasible solution found. Exported tracking LP to {model_path.absolute()} for debugging."
             )
 
         elif self._model.status != mip.OptimizationStatus.OPTIMAL:
