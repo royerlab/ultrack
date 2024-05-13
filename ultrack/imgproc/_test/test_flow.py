@@ -38,7 +38,7 @@ def test_flow_field(ndim: int, request) -> None:
     frames = th.stack([th.exp(-th.square(grid - mu).sum(dim=-1) / sigma) for mu in mus])
 
     fields = timelapse_flow(
-        frames.numpy(),
+        frames.cpu().numpy(),
         im_factor=im_factor,
         grid_factor=grid_factor,
         num_iterations=2_000,
