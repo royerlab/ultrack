@@ -516,7 +516,7 @@ async def auto_from_labels(websocket: WebSocket) -> None:
 
             labels_to_edges(
                 label_data,
-                detection_store_or_path=detection_path,
+                foreground_store_or_path=detection_path,
                 edges_store_or_path=edges_path,
                 **label_to_edges_kwargs,
             )
@@ -564,7 +564,7 @@ async def segment_link_and_solve(experiment: Experiment, ws: WebSocket) -> None:
         experiment.status = ExperimentStatus.SEGMENTING
         update_experiment(experiment)
         segment(
-            detection=detection,
+            foreground=detection,
             edge=edges,
             config=config,
         )

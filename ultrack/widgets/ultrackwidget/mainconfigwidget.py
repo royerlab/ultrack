@@ -11,8 +11,8 @@ class MainConfigWidget(BaseConfigWidget):
         super().__init__(label="ULTRACK", config=config)
 
     def _setup_widgets(self) -> None:
-        self._detection_layer_w = create_widget(annotation=Image, label="Detection")
-        self.append(self._detection_layer_w)
+        self._foreground_layer_w = create_widget(annotation=Image, label="Foreground")
+        self.append(self._foreground_layer_w)
 
         self._edge_layer_w = create_widget(annotation=Image, label="Edge")
         self.append(self._edge_layer_w)

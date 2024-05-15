@@ -56,7 +56,7 @@ def test_track(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
-    detection, edges, labels = timelapse_mock_data
+    foreground, edges, labels = timelapse_mock_data
 
     # 1st track call using labels
     track(config_instance, labels=labels)
@@ -70,11 +70,11 @@ def test_track(
     assert graph_original == graph_tracker
 
     # 2nd track call using detection and edges
-    track(config_instance, detection=detection, edges=edges, overwrite=True)
+    track(config_instance, foreground=foreground, edges=edges, overwrite=True)
     df_original, graph_original = to_tracks_layer(config_instance)
 
     tracker = ultrack.Tracker(config_instance)
-    tracker.track(detection=detection, edges=edges, overwrite=True)
+    tracker.track(foreground=foreground, edges=edges, overwrite=True)
     df_tracker, graph_tracker = to_tracks_layer(config_instance)
 
     assert df_original.equals(df_tracker)
@@ -93,16 +93,16 @@ def test_link_segment_and_solve(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
-    detection, edges, _ = timelapse_mock_data
+    foreground, edges, _ = timelapse_mock_data
 
     tracker = ultrack.Tracker(config_instance)
-    tracker.segment(detection=detection, edges=edges)
+    tracker.segment(foreground=foreground, edges=edges)
     tracker.link()
     tracker.solve()
 
     df, graph = to_tracks_layer(config_instance)
 
-    segment(detection=detection, edge=edges, config=config_instance, overwrite=True)
+    segment(foreground=foreground, edge=edges, config=config_instance, overwrite=True)
     link(config_instance, overwrite=True)
     solve(config_instance, overwrite=True)
 
@@ -126,10 +126,10 @@ def test_outputs(
     tmp_path: str,
 ) -> None:
     tmp_path = Path(tmp_path)
-    detection, edges, labels = timelapse_mock_data
+    foreground, edges, _ = timelapse_mock_data
 
     tracker = ultrack.Tracker(config_instance)
-    tracker.segment(detection=detection, edges=edges)
+    tracker.segment(foreground=foreground, edges=edges)
     tracker.link()
     tracker.solve()
 
@@ -193,17 +193,17 @@ def test_flow(
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
     mock_flow_field: np.ndarray,
 ) -> None:
-    detection, edges, _ = timelapse_mock_data
+    foreground, edges, _ = timelapse_mock_data
 
     tracker = ultrack.Tracker(config_instance)
-    tracker.segment(detection=detection, edges=edges)
+    tracker.segment(foreground=foreground, edges=edges)
     tracker.add_flow(mock_flow_field)
     tracker.link()
     tracker.solve()
 
     df, graph = to_tracks_layer(config_instance)
 
-    segment(detection=detection, edge=edges, config=config_instance, overwrite=True)
+    segment(foreground=foreground, edge=edges, config=config_instance, overwrite=True)
     add_flow(config_instance, mock_flow_field)
     link(config_instance, overwrite=True)
     solve(config_instance, overwrite=True)

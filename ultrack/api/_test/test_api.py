@@ -25,11 +25,11 @@ from ultrack.utils.cuda import on_gpu
 
 
 def _get_ultrack_solution(
-    config: MainConfig, detection: np.ndarray, edges: np.ndarray
+    config: MainConfig, foreground: np.ndarray, edges: np.ndarray
 ) -> Tuple[pd.DataFrame, Dict, zarr.Array]:
     clear_all_data(settings.ultrack_data_config.database_path)
 
-    segment(detection=detection, edge=edges, config=config)
+    segment(foreground=foreground, edge=edges, config=config)
     link(config)
     solve(config)
 
@@ -271,7 +271,7 @@ def test_from_labels(experiment_instance: Experiment, label_to_edges_kwargs: dic
     # compare the results with the ones obtained from the ultrack module
     detection, edges = labels_to_edges(
         label_data,
-        detection_store_or_path=zarr.MemoryStore(),
+        foreground_store_or_path=zarr.MemoryStore(),
         edges_store_or_path=zarr.MemoryStore(),
         **label_to_edges_kwargs,
     )

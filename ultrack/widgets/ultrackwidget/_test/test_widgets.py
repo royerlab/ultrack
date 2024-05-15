@@ -18,14 +18,14 @@ def test_ultrack_widget(
     viewer = make_napari_viewer()
     widget = UltrackWidget(viewer)
 
-    layers = viewer.open(zarr_dataset_paths)  # detection, edge
+    layers = viewer.open(zarr_dataset_paths)  # foreground, edge
 
     # setting combobox choices manually, because they were not working automatically
-    widget._main_config_w._detection_layer_w.choices = layers
+    widget._main_config_w._foreground_layer_w.choices = layers
     widget._main_config_w._edge_layer_w.choices = layers
 
     # selecting layers
-    widget._main_config_w._detection_layer_w.value = layers[0]
+    widget._main_config_w._foreground_layer_w.value = layers[0]
     widget._main_config_w._edge_layer_w.value = layers[1]
 
     # checking if widget changes are propagated to children config from multiple interfaces

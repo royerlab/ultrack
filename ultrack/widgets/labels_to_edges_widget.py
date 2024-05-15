@@ -37,7 +37,7 @@ class LabelsToEdgesWidget(Container):
 
         sigma = self._sigma_w.value if self._sigma_w.value > 0 else None
 
-        detection, edges = labels_to_edges(selection, sigma)
+        foreground, edges = labels_to_edges(selection, sigma)
 
-        self._viewer.add_image(detection, name="detection")
+        self._viewer.add_image(foreground, name="foreground")
         self._viewer.add_image(edges, name="edges")

@@ -25,9 +25,9 @@ def test_labels_to_edges_widget(
 
     assert "edges" in viewer.layers
 
-    detection = viewer.layers["detection"].data
+    foreground = viewer.layers["foreground"].data
 
     for lb in multiple_labels:
-        for t in range(detection.shape[0]):
+        for t in range(foreground.shape[0]):
             mask = lb[t] > 0
-            assert np.all(detection[t][mask] > 0)
+            assert np.all(foreground[t][mask] > 0)

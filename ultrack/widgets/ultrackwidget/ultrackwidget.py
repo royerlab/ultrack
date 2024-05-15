@@ -67,7 +67,7 @@ class UltrackWidget(QWidget):
     def _setup_signals(self) -> None:
         self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
         self._main_config_w._config_loader_w.changed.connect(self._update_widget_status)
-        self._main_config_w._detection_layer_w.changed.connect(
+        self._main_config_w._foreground_layer_w.changed.connect(
             self._update_widget_status
         )
         self._main_config_w._edge_layer_w.changed.connect(self._update_widget_status)
@@ -126,7 +126,7 @@ class UltrackWidget(QWidget):
     @wait_cursor()
     def _make_segmentation_worker(self) -> None:
         segment(
-            detection=self._main_config_w._detection_layer_w.value.data,
+            foreground=self._main_config_w._foreground_layer_w.value.data,
             edge=self._main_config_w._edge_layer_w.value.data,
             config=self.config,
             overwrite=True,
@@ -166,7 +166,7 @@ class UltrackWidget(QWidget):
     def _update_widget_status(self) -> None:
         LOG.info("Update widget status")
         self._segmentation_w._segment_btn.enabled = (
-            self._main_config_w._detection_layer_w.value is not None
+            self._main_config_w._foreground_layer_w.value is not None
             and self._main_config_w._edge_layer_w.value is not None
         )
         data_config = self._data_config_w.config

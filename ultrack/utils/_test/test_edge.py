@@ -32,11 +32,11 @@ def multiple_labels(
 def test_labels_to_edges(multiple_labels: List[np.ndarray]) -> None:
     """Tests merge and convertion of multiple labels into detection and edges."""
 
-    detection, _ = to_cpu(labels_to_edges(multiple_labels, sigma=1.5))
+    foreground, _ = to_cpu(labels_to_edges(multiple_labels, sigma=1.5))
 
     shape = multiple_labels[0].shape
 
     for lb in multiple_labels:
         for t in range(shape[0]):
             mask = lb[t] > 0
-            assert np.all(detection[t][mask] > 0)
+            assert np.all(foreground[t][mask] > 0)

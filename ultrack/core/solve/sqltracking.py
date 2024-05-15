@@ -189,7 +189,7 @@ class SQLTracking:
         Examples
         --------
         >>> # creating tracking problem
-        >>> segment(detection, edges, config)
+        >>> segment(foreground, edges, config)
         >>> link(config)
         >>>
         >>> # low level API tracking

@@ -16,6 +16,7 @@ from ultrack.config.config import MainConfig, SegmentationConfig
 from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.utils.array import check_array_chunk
+from ultrack.utils.deprecation import rename_argument
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,
@@ -79,7 +80,7 @@ def _insert_db(
 @curry
 def _process(
     time: int,
-    detection: ArrayLike,
+    foreground: ArrayLike,
     edge: ArrayLike,
     config: SegmentationConfig,
     db_path: str,
@@ -88,14 +89,14 @@ def _process(
     catch_duplicates_expection: bool = False,
     insertion_throttle_rate: int = 50,
 ) -> None:
-    """Process `detection` and `edge` of current time and add data to database.
+    """Process `foreground` and `edge` of current time and add data to database.
 
     Parameters
     ----------
     time : int
         Current time.
-    detection : ArrayLike
-        Detection array.
+    foreground : ArrayLike
+        Foreground array.
     edge : ArrayLike
         Edge array.
     config : SegmentationConfig
@@ -121,7 +122,7 @@ def _process(
         edge_map = edge_map + noise
 
     hiers = create_hierarchies(
-        detection[time] > config.threshold,
+        foreground[time] > config.threshold,
         edge_map,
         hierarchy_fun=config.ws_hierarchy,
         max_area=config.max_area,
@@ -245,8 +246,9 @@ def _check_zarr_memory_store(arr: ArrayLike) -> None:
         )
 
 
+@rename_argument("detection", "foreground")
 def segment(
-    detection: ArrayLike,
+    foreground: ArrayLike,
     edge: ArrayLike,
     config: MainConfig,
     max_segments_per_time: int = 1_000_000,
@@ -254,12 +256,12 @@ def segment(
     overwrite: bool = False,
     insertion_throttle_rate: int = 50,
 ) -> None:
-    """Add candidate segmentation (nodes) from `detection` and `edge` to database.
+    """Add candidate segmentation (nodes) from `foreground` and `edge` to database.
 
     Parameters
     ----------
-    detection : ArrayLike
-        Fuzzy detection array of shape (T, (Z), Y, X)
+    foreground : ArrayLike
+        Foreground probability array of shape (T, (Z), Y, X)
     edge : ArrayLike
         Edge array of shape (T, (Z), Y, X)
     config : MainConfig
@@ -276,21 +278,21 @@ def segment(
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
-    if detection.shape != edge.shape:
+    if foreground.shape != edge.shape:
         raise ValueError(
-            f"`detection` and `edge` shape must match. Found {detection.shape} and {edge.shape}"
+            f"`foreground` and `edge` shape must match. Found {foreground.shape} and {edge.shape}"
         )
 
-    check_array_chunk(detection)
+    check_array_chunk(foreground)
     check_array_chunk(edge)
 
-    _check_zarr_memory_store(detection)
+    _check_zarr_memory_store(foreground)
     _check_zarr_memory_store(edge)
 
-    LOG.info(f"Detection array with shape {detection.shape}")
+    LOG.info(f"Foreground array with shape {foreground.shape}")
     LOG.info(f"Edge array with shape {edge.shape}")
 
-    length = detection.shape[0]
+    length = foreground.shape[0]
     time_points = batch_index_range(
         length, config.segmentation_config.n_workers, batch_index
     )
@@ -303,11 +305,11 @@ def segment(
             clear_all_data(config.data_config.database_path)
 
         Base.metadata.create_all(engine)
-        config.data_config.metadata_add({"shape": detection.shape})
+        config.data_config.metadata_add({"shape": foreground.shape})
 
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
-            detection=detection,
+            foreground=foreground,
             edge=edge,
             config=config.segmentation_config,
             db_path=config.data_config.database_path,

@@ -7,6 +7,7 @@ from zarr.storage import Store
 
 from ultrack.utils.array import create_zarr
 from ultrack.utils.cuda import import_module, to_cpu
+from ultrack.utils.deprecation import rename_argument
 
 LOG = logging.getLogger(__name__)
 
@@ -19,15 +20,16 @@ except ImportError as e:
     import numpy as xp
 
 
+@rename_argument("detection_store_or_path", "foreground_store_or_path")
 def labels_to_edges(
     labels: Union[ArrayLike, Sequence[ArrayLike]],
     sigma: Optional[Union[Sequence[float], float]] = None,
-    detection_store_or_path: Union[Store, str, None] = None,
+    foreground_store_or_path: Union[Store, str, None] = None,
     edges_store_or_path: Union[Store, str, None] = None,
     overwrite: bool = False,
 ) -> Tuple[ArrayLike, ArrayLike]:
     """
-    Converts and merges a sequence of labels into ultrack input format (detection and edges)
+    Converts and merges a sequence of labels into ultrack input format (foreground and edges)
 
     Parameters
     ----------
@@ -35,7 +37,7 @@ def labels_to_edges(
         List of labels with equal shape.
     sigma : Optional[Union[Sequence[float], float]], optional
         Edges smoothing parameter (gaussian blur), edges aren't smoothed if not provided
-    detection_store_or_path : str, zarr.storage.Store, optional
+    foreground_store_or_path : str, zarr.storage.Store, optional
         Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
         By default it loads the data into memory.
     edges_store_or_path : str, zarr.storage.Store, optional
@@ -47,7 +49,7 @@ def labels_to_edges(
     Returns
     -------
     Tuple[ArrayLike, ArrayLike]
-        Detection and edges array.
+        Combined foreground and edges arrays.
     """
     ndi = import_module("scipy", "ndimage")
     segm = import_module("skimage", "segmentation")
@@ -64,10 +66,10 @@ def labels_to_edges(
 
     LOG.info(f"Labels shape {shape}")
 
-    detection = create_zarr(
+    foreground = create_zarr(
         shape=shape,
         dtype=bool,
-        store_or_path=detection_store_or_path,
+        store_or_path=foreground_store_or_path,
         overwrite=overwrite,
     )
     edges = create_zarr(
@@ -78,12 +80,12 @@ def labels_to_edges(
     )
 
     for t in tqdm(range(shape[0]), "Converting labels to edges"):
-        detection_frame = xp.zeros(shape[1:], dtype=detection.dtype)
+        foreground_frame = xp.zeros(shape[1:], dtype=foreground.dtype)
         edges_frame = xp.zeros(shape[1:], dtype=edges.dtype)
 
         for lb in labels:
             lb_frame = xp.asarray(lb[t])
-            detection_frame |= lb_frame > 0
+            foreground_frame |= lb_frame > 0
             edges_frame += segm.find_boundaries(lb_frame, mode="outer")
 
         edges_frame /= len(labels)
@@ -92,7 +94,7 @@ def labels_to_edges(
             edges_frame = ndi.gaussian_filter(edges_frame, sigma)
             edges_frame = edges_frame / edges_frame.max()
 
-        detection[t] = to_cpu(detection_frame)
+        foreground[t] = to_cpu(foreground_frame)
         edges[t] = to_cpu(edges_frame)
 
-    return detection, edges
+    return foreground, edges

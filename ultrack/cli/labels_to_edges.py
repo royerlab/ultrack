@@ -38,8 +38,8 @@ def labels_to_edges_cli(
     """
     Converts and merges a sequence of labels into ultrack input format (detection and edges)
     """
-    detection_path = output_directory / "detection.zarr"
-    validate_and_overwrite_path(detection_path, overwrite, "cli")
+    foreground_path = output_directory / "foreground.zarr"
+    validate_and_overwrite_path(foreground_path, overwrite, "cli")
 
     edges_path = output_directory / "edges.zarr"
     validate_and_overwrite_path(edges_path, overwrite, "cli")
@@ -55,6 +55,6 @@ def labels_to_edges_cli(
     labels_to_edges(
         labels,
         sigma=sigma,
-        detection_store_or_path=detection_path,
+        foreground_store_or_path=foreground_path,
         edges_store_or_path=edges_path,
     )

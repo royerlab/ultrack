@@ -82,7 +82,7 @@ def make_cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     Returns
     -------
     Tuple[np.ndarray, np.ndarray, np.ndarray]
-        Detection, edges, labels maps.
+        Foreground, edges, labels maps.
     """
     cells = np.zeros((5, 64, 64, 64), dtype=bool)
     ball = morph.ball(radius=5, dtype=bool)

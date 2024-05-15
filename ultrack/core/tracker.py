@@ -20,6 +20,7 @@ from ultrack.core.main import track
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
 from ultrack.imgproc.flow import add_flow
+from ultrack.utils.deprecation import rename_argument
 
 
 class TrackerStatus(Flag):
@@ -49,11 +50,11 @@ class Tracker:
     >>> import ultrack
     >>> from ultrack import MainConfig
     >>> config = MainConfig()
-    >>> detection = ...
+    >>> foreground = ...
     >>> edges = ...
     >>> vector_field = ...
     >>> tracker = ultrack.Tracker(config)
-    >>> tracker.segment(detection=detection, edges=edges)
+    >>> tracker.segment(foreground=foreground, edges=edges)
     >>> tracker.add_flow(vector_field=vector_field)
     >>> tracker.link()
     >>> tracker.solve()
@@ -64,8 +65,9 @@ class Tracker:
         self.status = TrackerStatus.NOT_COMPUTED
 
     @functools.wraps(segment)
-    def segment(self, detection: ArrayLike, edges: ArrayLike, **kwargs) -> None:
-        segment(detection=detection, edge=edges, config=self.config, **kwargs)
+    @rename_argument("detection", "foreground")
+    def segment(self, foreground: ArrayLike, edges: ArrayLike, **kwargs) -> None:
+        segment(foreground=foreground, edge=edges, config=self.config, **kwargs)
         self.status = TrackerStatus.SEGMENTED
 
     @functools.wraps(add_flow)

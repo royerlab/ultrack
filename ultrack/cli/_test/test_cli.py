@@ -56,8 +56,8 @@ class TestCommandLine:
                 "segment",
                 "-cfg",
                 instance_config_path,
-                "-dl",
-                "detection",
+                "-fl",
+                "foreground",
                 "-el",
                 "edges",
             ]
