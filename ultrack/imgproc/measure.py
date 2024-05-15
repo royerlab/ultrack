@@ -20,6 +20,14 @@ def intensity_std(mask: np.ndarray, intensities: np.ndarray) -> float:
     return intensities[mask].std(axis=0, dtype=float)
 
 
+def num_pixels(mask: np.ndarray) -> int:
+    """Number of pixels in the mask.
+    NOTE: should be removed in the future, this was a bug in scikit-image
+          https://github.com/scikit-image/scikit-image/issues/7038
+    """
+    return mask.sum()
+
+
 @curry
 def _extract_measurements(
     t: int,
@@ -150,6 +158,9 @@ def tracks_properties(
 
     rename_map = {"label": "track_id"}
     extra_properties = []
+
+    if "num_pixels" in properties:
+        extra_properties.append(num_pixels)
 
     if image is None:
         properties = tuple(p for p in properties if "intensity" not in p)
