@@ -58,8 +58,8 @@ class TestCommandLine:
                 instance_config_path,
                 "-fl",
                 "foreground",
-                "-el",
-                "edges",
+                "-cl",
+                "contours",
             ]
             + zarr_dataset_paths
         )
@@ -76,7 +76,7 @@ class TestCommandLine:
     def test_link_with_images(
         self, instance_config_path: str, zarr_dataset_paths: List[str]
     ) -> None:
-        # using detection and edges layer to simulate image channel
+        # using foreground and contours layer to simulate image channel
         _run_command(
             ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
         )
@@ -170,9 +170,9 @@ def test_estimate_params(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
     _run_command(["estimate_params", zarr_dataset_paths[2], "-o", str(tmp_path)])
 
 
-def test_labels_to_edges(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
+def test_labels_to_contours(zarr_dataset_paths: List[str], tmp_path: Path) -> None:
     _run_command(
-        ["labels_to_edges", zarr_dataset_paths[2], "-o", str(tmp_path / "output")]
+        ["labels_to_contours", zarr_dataset_paths[2], "-o", str(tmp_path / "output")]
     )
 
 

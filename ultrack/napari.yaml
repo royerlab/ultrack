@@ -18,8 +18,8 @@ contributions:
       title: Ultrack
 
     - id: ultrack.labels_to_edges_widget
-      python_name: ultrack.widgets:LabelsToEdgesWidget
-      title: Convert labels into edges map
+      python_name: ultrack.widgets:LabelsToContoursWidget
+      title: Convert labels into contours map
 
     - id: ultrack.hypotheses_viz_widget
       python_name: ultrack.widgets:HypothesesVizWidget

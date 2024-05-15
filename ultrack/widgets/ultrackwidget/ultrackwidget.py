@@ -127,7 +127,7 @@ class UltrackWidget(QWidget):
     def _make_segmentation_worker(self) -> None:
         segment(
             foreground=self._main_config_w._foreground_layer_w.value.data,
-            edge=self._main_config_w._edge_layer_w.value.data,
+            contours=self._main_config_w._edge_layer_w.value.data,
             config=self.config,
             overwrite=True,
         )

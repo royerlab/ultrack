@@ -51,10 +51,10 @@ class Tracker:
     >>> from ultrack import MainConfig
     >>> config = MainConfig()
     >>> foreground = ...
-    >>> edges = ...
+    >>> contours = ...
     >>> vector_field = ...
     >>> tracker = ultrack.Tracker(config)
-    >>> tracker.segment(foreground=foreground, edges=edges)
+    >>> tracker.segment(foreground=foreground, contours=contours)
     >>> tracker.add_flow(vector_field=vector_field)
     >>> tracker.link()
     >>> tracker.solve()
@@ -66,8 +66,9 @@ class Tracker:
 
     @functools.wraps(segment)
     @rename_argument("detection", "foreground")
-    def segment(self, foreground: ArrayLike, edges: ArrayLike, **kwargs) -> None:
-        segment(foreground=foreground, edge=edges, config=self.config, **kwargs)
+    @rename_argument("edges", "contours")
+    def segment(self, foreground: ArrayLike, contours: ArrayLike, **kwargs) -> None:
+        segment(foreground=foreground, contours=contours, config=self.config, **kwargs)
         self.status = TrackerStatus.SEGMENTED
 
     @functools.wraps(add_flow)

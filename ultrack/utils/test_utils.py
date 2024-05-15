@@ -62,7 +62,7 @@ def zarr_dataset_paths(
 
     paths = []
     for src_array, filename in zip(
-        timelapse_mock_data, ("foreground.zarr", "edges.zarr", "labels.zarr")
+        timelapse_mock_data, ("foreground.zarr", "contours.zarr", "labels.zarr")
     ):
         path = tmp_path / filename
         dst_store = zarr.NestedDirectoryStore(path)
@@ -149,11 +149,11 @@ def tracked_cell_division_mock_data(
     cell_division_mock_data: Tuple[np.ndarray, np.ndarray, np.ndarray],
     config_instance: MainConfig,
 ) -> MainConfig:
-    foreground, edges, _ = cell_division_mock_data
+    foreground, contours, _ = cell_division_mock_data
 
     segment(
         foreground,
-        edges,
+        contours,
         config_instance,
     )
     link(config_instance)

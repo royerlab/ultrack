@@ -32,7 +32,7 @@ from ultrack.api.utils.zarr import get_channels_from_ome_zarr
 from ultrack.config import MainConfig
 from ultrack.core.export import tracks_layer_to_networkx, tracks_layer_to_trackmate
 from ultrack.imgproc import detect_foreground, robust_invert
-from ultrack.utils import labels_to_edges
+from ultrack.utils import labels_to_contours
 from ultrack.utils.array import array_apply, create_zarr
 from ultrack.utils.cuda import on_gpu
 
@@ -514,10 +514,10 @@ async def auto_from_labels(websocket: WebSocket) -> None:
             detection_path = str(Path(temp_path) / "detection.zarr")
             edges_path = str(Path(temp_path) / "edges.zarr")
 
-            labels_to_edges(
+            labels_to_contours(
                 label_data,
                 foreground_store_or_path=detection_path,
-                edges_store_or_path=edges_path,
+                contours_store_or_path=edges_path,
                 **label_to_edges_kwargs,
             )
 
@@ -565,7 +565,7 @@ async def segment_link_and_solve(experiment: Experiment, ws: WebSocket) -> None:
         update_experiment(experiment)
         segment(
             foreground=detection,
-            edge=edges,
+            contours=edges,
             config=config,
         )
     except Exception as e:

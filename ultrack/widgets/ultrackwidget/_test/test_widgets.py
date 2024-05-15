@@ -73,7 +73,7 @@ def test_ultrack_widget(
 
     # checking linking with features edge weight
     widget._linking_w._images_w.value = True
-    viewer.layers.selection.select_only(viewer.layers["edges"])
+    viewer.layers.selection.select_only(viewer.layers["contours"])
 
     widget._linking_w._link_btn.clicked.emit()
     time.sleep(delay)

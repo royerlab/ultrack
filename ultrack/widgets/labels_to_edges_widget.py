@@ -2,10 +2,10 @@ import napari
 from magicgui.widgets import Container, FloatSpinBox, PushButton, SpinBox
 from napari.layers import Labels
 
-from ultrack.utils.edge import labels_to_edges
+from ultrack.utils.edge import labels_to_contours
 
 
-class LabelsToEdgesWidget(Container):
+class LabelsToContoursWidget(Container):
     def __init__(self, viewer: napari.Viewer) -> None:
         super().__init__()
         self._viewer = viewer
@@ -37,7 +37,7 @@ class LabelsToEdgesWidget(Container):
 
         sigma = self._sigma_w.value if self._sigma_w.value > 0 else None
 
-        foreground, edges = labels_to_edges(selection, sigma)
+        foreground, contours = labels_to_contours(selection, sigma)
 
         self._viewer.add_image(foreground, name="foreground")
-        self._viewer.add_image(edges, name="edges")
+        self._viewer.add_image(contours, name="contours")

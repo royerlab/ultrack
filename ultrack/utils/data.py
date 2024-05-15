@@ -82,7 +82,7 @@ def make_cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     Returns
     -------
     Tuple[np.ndarray, np.ndarray, np.ndarray]
-        Foreground, edges, labels maps.
+        Foreground, contours, labels maps.
     """
     cells = np.zeros((5, 64, 64, 64), dtype=bool)
     ball = morph.ball(radius=5, dtype=bool)
@@ -103,17 +103,17 @@ def make_cell_division_mock_data() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     cells[(4,) + tuple(slice(37, 37 + s) for s in ball.shape)] |= ball
     cells[(4,) + tuple(slice(27, 27 + s) for s in ball.shape)] |= ball
 
-    edges = np.zeros_like(cells, dtype=np.float32)
+    contours = np.zeros_like(cells, dtype=np.float32)
     labels = np.zeros_like(cells, dtype=np.int32)
 
     for t in range(cells.shape[0]):
         edt = ndi.distance_transform_edt(cells[t])
         markers, _ = ndi.label(morph.h_maxima(edt, 2))
         label = watershed(-edt, markers, mask=cells[t])
-        edges[t] = find_boundaries(label)
+        contours[t] = find_boundaries(label)
         labels[t] = label
 
-    return cells, edges, labels
+    return cells, contours, labels
 
 
 def validate_and_overwrite_path(

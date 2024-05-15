@@ -62,10 +62,10 @@ def test_tracks_properties_merge(
     mock_tracks_df: pd.DataFrame,
 ) -> None:
     # Test case for merging with existing tracks DataFrame
-    _, edges, segmentation = timelapse_mock_data
+    _, contours, segmentation = timelapse_mock_data
     result_df = tracks_properties(
         segments=segmentation,
-        image=edges,
+        image=contours,
         tracks_df=mock_tracks_df,
     )
 

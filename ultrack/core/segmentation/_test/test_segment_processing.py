@@ -37,15 +37,15 @@ def test_multiprocessing_segment(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
-    foreground, edges, _ = timelapse_mock_data
+    foreground, contours, _ = timelapse_mock_data
 
     segment(
         foreground,
-        edges,
+        contours,
         config_instance,
     )
 
-    assert config_instance.data_config.metadata["shape"] == list(edges.shape)
+    assert config_instance.data_config.metadata["shape"] == list(contours.shape)
 
     df = pd.read_sql_table(
         NodeDB.__tablename__, con=config_instance.data_config.database_path

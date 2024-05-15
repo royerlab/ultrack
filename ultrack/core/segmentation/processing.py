@@ -81,7 +81,7 @@ def _insert_db(
 def _process(
     time: int,
     foreground: ArrayLike,
-    edge: ArrayLike,
+    contours: ArrayLike,
     config: SegmentationConfig,
     db_path: str,
     max_segments_per_time: int,
@@ -97,8 +97,8 @@ def _process(
         Current time.
     foreground : ArrayLike
         Foreground array.
-    edge : ArrayLike
-        Edge array.
+    contours : ArrayLike
+        Contours array.
     config : SegmentationConfig
         Segmentation configuration parameters.
     db_path : str
@@ -114,7 +114,7 @@ def _process(
     """
     np.random.seed(time)
 
-    edge_map = edge[time]
+    edge_map = contours[time]
     if config.max_noise > 0:
         noise = np.random.uniform(0, config.max_noise, size=edge_map.shape)
         # promoting edge_map to smallest float
@@ -247,9 +247,10 @@ def _check_zarr_memory_store(arr: ArrayLike) -> None:
 
 
 @rename_argument("detection", "foreground")
+@rename_argument("edge", "contours")
 def segment(
     foreground: ArrayLike,
-    edge: ArrayLike,
+    contours: ArrayLike,
     config: MainConfig,
     max_segments_per_time: int = 1_000_000,
     batch_index: Optional[int] = None,
@@ -262,8 +263,8 @@ def segment(
     ----------
     foreground : ArrayLike
         Foreground probability array of shape (T, (Z), Y, X)
-    edge : ArrayLike
-        Edge array of shape (T, (Z), Y, X)
+    contours : ArrayLike
+        Contours array of shape (T, (Z), Y, X)
     config : MainConfig
         Configuration parameters.
     max_segments_per_time : int
@@ -278,19 +279,19 @@ def segment(
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
-    if foreground.shape != edge.shape:
+    if foreground.shape != contours.shape:
         raise ValueError(
-            f"`foreground` and `edge` shape must match. Found {foreground.shape} and {edge.shape}"
+            f"`foreground` and `contours` shape must match. Found {foreground.shape} and {contours.shape}"
         )
 
     check_array_chunk(foreground)
-    check_array_chunk(edge)
+    check_array_chunk(contours)
 
     _check_zarr_memory_store(foreground)
-    _check_zarr_memory_store(edge)
+    _check_zarr_memory_store(contours)
 
     LOG.info(f"Foreground array with shape {foreground.shape}")
-    LOG.info(f"Edge array with shape {edge.shape}")
+    LOG.info(f"Edge array with shape {contours.shape}")
 
     length = foreground.shape[0]
     time_points = batch_index_range(
@@ -310,7 +311,7 @@ def segment(
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
             foreground=foreground,
-            edge=edge,
+            contours=contours,
             config=config.segmentation_config,
             db_path=config.data_config.database_path,
             write_lock=lock,
