@@ -1,3 +1,4 @@
+from ultrack.tracks.gap_closing import close_tracks_gaps
 from ultrack.tracks.graph import (
     add_track_ids_to_tracks_df,
     filter_short_sibling_tracks,

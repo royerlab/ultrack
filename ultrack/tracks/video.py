@@ -1,5 +1,6 @@
 import random
 import shutil
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional, Union
 
@@ -84,10 +85,11 @@ def record_tracks(
                 continue
             new_order = order[:-3] + (order[-2], order[-3], order[-1])
             viewer.dims.order = new_order
-            viewer.camera.zoom = zoom
             center_idx = [-3, -1]
         else:
             center_idx = [-2, -1]
+
+        viewer.camera.zoom = zoom
 
         for track_id, tracklet in tracks_df.groupby("track_id", sort=True):
             out_path = output_directory / f"{track_id}_axis_{axis_order}_roi.mp4"
@@ -226,6 +228,11 @@ def tracks_df_to_videos(
 
     if num_lineages is None:
         num_lineages = len(trees)
+
+    if len(trees) < num_lineages:
+        warnings.warn(
+            f"Requested {num_lineages} lineages, but only {len(trees)} available."
+        )
 
     for i, tree in tqdm(enumerate(trees), total=num_lineages):
         if i >= num_lineages:

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -130,16 +131,27 @@ def test_filter_short_sibling_tracks() -> None:
                 \
                  9 -
     """
+    segm = np.zeros((8, 6), dtype=np.uint8)
+
     tracks_df = pd.DataFrame(
         {
+            "t": [0, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 5, 5],
+            "x": [2, 2, 0, 4, 5, 3, 4, 4, 4, 4, 2, 3, 1],
             "track_id": [1, 1, 2, 3, 4, 5, 6, 6, 6, 6, 7, 8, 9],
             "parent_track_id": [NO_PARENT, NO_PARENT, 1, 1, 3, 3, 5, 5, 5, 5, 5, 7, 7],
         }
     )
+    segm[tracks_df["t"].astype(int), tracks_df["x"].astype(int)] = tracks_df[
+        "track_id"
+    ].values
 
-    filtered_df = filter_short_sibling_tracks(tracks_df, min_length=3)
+    filtered_df, filtered_segm = filter_short_sibling_tracks(
+        tracks_df, min_length=3, segments=segm
+    )
     expected_df = pd.DataFrame(
         {
+            "t": [0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 5],
+            "x": [2, 2, 4, 3, 4, 4, 4, 4, 2, 3, 1],
             "track_id": [1, 1, 1, 1, 6, 6, 6, 6, 7, 8, 9],
             "parent_track_id": [
                 NO_PARENT,
@@ -157,10 +169,18 @@ def test_filter_short_sibling_tracks() -> None:
         },
         index=[0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12],
     )
+    expected_segm = np.zeros((8, 6), dtype=np.uint8)
+    expected_segm[
+        expected_df["t"].astype(int), expected_df["x"].astype(int)
+    ] = expected_df["track_id"].values
 
     pd.testing.assert_frame_equal(
         filtered_df,
         expected_df,
+    )
+    np.testing.assert_array_equal(
+        filtered_segm,
+        expected_segm,
     )
 
 

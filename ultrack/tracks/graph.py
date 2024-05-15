@@ -1,12 +1,15 @@
 import logging
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from numba import njit, typed, types
 from numpy.typing import ArrayLike
+from zarr.storage import Store
 
 from ultrack.core.database import NO_PARENT
+from ultrack.utils.segmentation import SegmentationPainter, copy_segments
 
 LOG = logging.getLogger(__name__)
 
@@ -526,6 +529,7 @@ def _filter_short_tracks(
     child2parent: Dict[int, int],
     parent2children: Dict[int, List[int]],
     track_dict: Dict[int, pd.DataFrame],
+    segm_painter: Optional[SegmentationPainter] = None,
 ) -> None:
     """
     Recursive function to short tracks created from fake division tracks shorter than `min_length`.
@@ -543,6 +547,8 @@ def _filter_short_tracks(
         Parent to children track id mapping.
     track_dict : Dict[int, pd.DataFrame]
         Dictionary of track dataframes.
+    segm_painter : Optional[SegmentationPainter]
+        Segmentation painter to update tracks segmentation label.
     """
     children_id = _get_children(parent_track_id, parent2children)
 
@@ -562,6 +568,7 @@ def _filter_short_tracks(
             child2parent,
             parent2children,
             track_dict,
+            segm_painter,
         )
         # check which children could be removed
         length = len(track_dict[child_id])
@@ -573,12 +580,14 @@ def _filter_short_tracks(
     if sum(is_short_and_childless) == 1:
 
         for child_id, to_remove in zip(children_id, is_short_and_childless):
+            child_track = track_dict.pop(child_id)
+
             if to_remove:
-                track_dict.pop(child_id)
+                new_child_track_id = 0
             else:
                 # mergin sibling track
-                child_track = track_dict.pop(child_id)
-                child_track["track_id"] = parent_track_id
+                new_child_track_id = parent_track_id
+                child_track["track_id"] = new_child_track_id
                 child_track["parent_track_id"] = child2parent.get(
                     parent_track_id, NO_PARENT
                 )  # parent of parent track id
@@ -596,11 +605,18 @@ def _filter_short_tracks(
 
                 parent2children[parent_track_id] = child_children_id
 
+            # relabeling
+            for t in child_track["t"]:
+                segm_painter.add_relabel(t, child_id, new_child_track_id)
+
 
 def filter_short_sibling_tracks(
     tracks_df: pd.DataFrame,
     min_length: int,
-) -> pd.DataFrame:
+    segments: Optional[ArrayLike] = None,
+    segments_store_or_path: Union[Store, Path, str, None] = None,
+    overwrite: bool = False,
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, ArrayLike]]:
     """
     Filter short tracks created from fake division tracks shorter than `min_length`.
 
@@ -608,7 +624,37 @@ def filter_short_sibling_tracks(
     upon divions, merging the remaining sibling track with their parent.
 
     If both are shorter than `min_length`, they are not removed.
+
+    Parameters
+    ----------
+
+    tracks_df : pd.DataFrame
+        DataFrame containing track information with columns:
+            "track_id" : Unique identifier for each track.
+            "parent_track_id" : Identifier of the parent track in the forest.
+            (Other columns may be present in the DataFrame but are not used in this function.)
+    min_length : int
+        Minimum track length, below this value the track is removed.
+    segments : Optional[ArrayLike]
+        Segmentation array to update the tracks.
+    segments_store_or_path : Union[Store, Path, str, None]
+        Store or path to save the new segments.
+    overwrite : bool
+        If True, overwrite the existing segmentation array.
+
+    Returns
+    -------
+    Union[pd.DataFrame, Tuple[pd.DataFrame, ArrayLike]]
+        If `segments` is None, returns the modified tracks dataframe.
+        If `segments` is provided, returns the modified tracks dataframe and the updated segments.
     """
+    if segments is None:
+        out_segments = None
+        segm_painter = None
+    else:
+        out_segments = copy_segments(segments, segments_store_or_path, overwrite)
+        segm_painter = SegmentationPainter(out_segments)
+
     parent2children = tracks_df_forest(tracks_df)
     child2parent = inv_tracks_df_forest(tracks_df)
 
@@ -626,8 +672,14 @@ def filter_short_sibling_tracks(
             child2parent,
             parent2children,
             track_dict,
+            segm_painter,
         )
 
     out_df = pd.concat(track_dict.values(), axis=0)
 
-    return out_df
+    if out_segments is None:
+        return out_df
+
+    segm_painter.apply_changes()
+
+    return out_df, out_segments
