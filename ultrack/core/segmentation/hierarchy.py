@@ -31,15 +31,15 @@ class Hierarchy(_Hierarchy):
 
 
 def create_hierarchies(
-    binary_detection: ArrayLike,
+    binary_foreground: ArrayLike,
     edge: ArrayLike,
     **kwargs,
 ) -> Iterator[Hierarchy]:
-    """Computes a collection of hierarchical watersheds inside `binary_detection` mask.
+    """Computes a collection of hierarchical watersheds inside `binary_foreground` mask.
 
     Parameters
     ----------
-    binary_detection : ArrayLike
+    binary_foreground : ArrayLike
         Binary array showing regions of interest.
 
     edge : ArrayLike
@@ -50,16 +50,16 @@ def create_hierarchies(
     Iterator[Hierarchy]
         List of hierarchical watersheds.
     """
-    binary_detection = np.asarray(binary_detection)
+    binary_foreground = np.asarray(binary_foreground)
 
     assert (
-        issubclass(binary_detection.dtype.type, np.integer)
-        or binary_detection.dtype == bool
+        issubclass(binary_foreground.dtype.type, np.integer)
+        or binary_foreground.dtype == bool
     )
 
     LOG.info("Labeling connected components.")
-    labels, num_labels = ndi.label(binary_detection, output=np.int32)
-    del binary_detection
+    labels, num_labels = ndi.label(binary_foreground, output=np.int32)
+    del binary_foreground
 
     if "min_area" in kwargs and num_labels > 1:
         LOG.info("Filtering small connected components.")

@@ -16,6 +16,7 @@ from ultrack.config.config import MainConfig, SegmentationConfig
 from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.utils.array import check_array_chunk
+from ultrack.utils.deprecation import rename_argument
 from ultrack.utils.multiprocessing import (
     batch_index_range,
     multiprocessing_apply,
@@ -79,8 +80,8 @@ def _insert_db(
 @curry
 def _process(
     time: int,
-    detection: ArrayLike,
-    edge: ArrayLike,
+    foreground: ArrayLike,
+    contours: ArrayLike,
     config: SegmentationConfig,
     db_path: str,
     max_segments_per_time: int,
@@ -88,16 +89,16 @@ def _process(
     catch_duplicates_expection: bool = False,
     insertion_throttle_rate: int = 50,
 ) -> None:
-    """Process `detection` and `edge` of current time and add data to database.
+    """Process `foreground` and `edge` of current time and add data to database.
 
     Parameters
     ----------
     time : int
         Current time.
-    detection : ArrayLike
-        Detection array.
-    edge : ArrayLike
-        Edge array.
+    foreground : ArrayLike
+        Foreground array.
+    contours : ArrayLike
+        Contours array.
     config : SegmentationConfig
         Segmentation configuration parameters.
     db_path : str
@@ -113,7 +114,7 @@ def _process(
     """
     np.random.seed(time)
 
-    edge_map = edge[time]
+    edge_map = contours[time]
     if config.max_noise > 0:
         noise = np.random.uniform(0, config.max_noise, size=edge_map.shape)
         # promoting edge_map to smallest float
@@ -121,7 +122,7 @@ def _process(
         edge_map = edge_map + noise
 
     hiers = create_hierarchies(
-        detection[time] > config.threshold,
+        foreground[time] > config.threshold,
         edge_map,
         hierarchy_fun=config.ws_hierarchy,
         max_area=config.max_area,
@@ -245,23 +246,25 @@ def _check_zarr_memory_store(arr: ArrayLike) -> None:
         )
 
 
+@rename_argument("detection", "foreground")
+@rename_argument("edge", "contours")
 def segment(
-    detection: ArrayLike,
-    edge: ArrayLike,
+    foreground: ArrayLike,
+    contours: ArrayLike,
     config: MainConfig,
     max_segments_per_time: int = 1_000_000,
     batch_index: Optional[int] = None,
     overwrite: bool = False,
     insertion_throttle_rate: int = 50,
 ) -> None:
-    """Add candidate segmentation (nodes) from `detection` and `edge` to database.
+    """Add candidate segmentation (nodes) from `foreground` and `edge` to database.
 
     Parameters
     ----------
-    detection : ArrayLike
-        Fuzzy detection array of shape (T, (Z), Y, X)
-    edge : ArrayLike
-        Edge array of shape (T, (Z), Y, X)
+    foreground : ArrayLike
+        Foreground probability array of shape (T, (Z), Y, X)
+    contours : ArrayLike
+        Contours array of shape (T, (Z), Y, X)
     config : MainConfig
         Configuration parameters.
     max_segments_per_time : int
@@ -276,21 +279,21 @@ def segment(
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
-    if detection.shape != edge.shape:
+    if foreground.shape != contours.shape:
         raise ValueError(
-            f"`detection` and `edge` shape must match. Found {detection.shape} and {edge.shape}"
+            f"`foreground` and `contours` shape must match. Found {foreground.shape} and {contours.shape}"
         )
 
-    check_array_chunk(detection)
-    check_array_chunk(edge)
+    check_array_chunk(foreground)
+    check_array_chunk(contours)
 
-    _check_zarr_memory_store(detection)
-    _check_zarr_memory_store(edge)
+    _check_zarr_memory_store(foreground)
+    _check_zarr_memory_store(contours)
 
-    LOG.info(f"Detection array with shape {detection.shape}")
-    LOG.info(f"Edge array with shape {edge.shape}")
+    LOG.info(f"Foreground array with shape {foreground.shape}")
+    LOG.info(f"Edge array with shape {contours.shape}")
 
-    length = detection.shape[0]
+    length = foreground.shape[0]
     time_points = batch_index_range(
         length, config.segmentation_config.n_workers, batch_index
     )
@@ -303,12 +306,12 @@ def segment(
             clear_all_data(config.data_config.database_path)
 
         Base.metadata.create_all(engine)
-        config.data_config.metadata_add({"shape": detection.shape})
+        config.data_config.metadata_add({"shape": foreground.shape})
 
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         process = _process(
-            detection=detection,
-            edge=edge,
+            foreground=foreground,
+            contours=contours,
             config=config.segmentation_config,
             db_path=config.data_config.database_path,
             write_lock=lock,

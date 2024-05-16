@@ -23,7 +23,7 @@ Basic Usage
    from ultrack import MainConfig, track, to_tracks_layer
 
    # Load your data
-   detection = ...
+   foreground = ...
    boundaries = ...
 
    # Create a config
@@ -31,7 +31,7 @@ Basic Usage
 
    # Run the tracking
    track(
-      detection=detection,
+      foreground=foreground,
       edges=boundaries,
       config=config,
    )

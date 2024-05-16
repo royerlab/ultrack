@@ -31,18 +31,18 @@ def _get_layer_data(viewer: ViewerModel, key: str) -> ArrayLike:
 @napari_reader_option()
 @config_option()
 @click.option(
-    "--detection-layer",
-    "-dl",
+    "--foreground-layer",
+    "-fl",
     required=True,
     type=str,
-    help="Cell detection layer index on napari.",
+    help="Cell foreground layer index on napari.",
 )
 @click.option(
-    "--edge-layer",
-    "-el",
+    "--contours-layer",
+    "-cl",
     required=True,
     type=str,
-    help="Cell edges layer index on napari.",
+    help="Cell contours layer index on napari.",
 )
 @click.option(
     "--insertion-throttle-rate",
@@ -57,8 +57,8 @@ def segmentation_cli(
     paths: Sequence[Path],
     reader_plugin: str,
     config: MainConfig,
-    detection_layer: str,
-    edge_layer: str,
+    foreground_layer: str,
+    contours_layer: str,
     insertion_throttle_rate: int,
     batch_index: Optional[int],
     overwrite: bool,
@@ -69,20 +69,20 @@ def segmentation_cli(
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)
 
-    detection = _get_layer_data(viewer, detection_layer)
-    edge = _get_layer_data(viewer, edge_layer)
+    foreground = _get_layer_data(viewer, foreground_layer)
+    edge = _get_layer_data(viewer, contours_layer)
 
     if batch_index is None or batch_index == 0:
         # this is not saved inside the `segment` function because this info
         # isn't available there
         config.data_config.metadata_add(
-            {"scale": viewer.layers[edge_layer].scale.tolist()}
+            {"scale": viewer.layers[contours_layer].scale.tolist()}
         )
 
     del viewer
 
     segment(
-        detection,
+        foreground,
         edge,
         config,
         batch_index=batch_index,

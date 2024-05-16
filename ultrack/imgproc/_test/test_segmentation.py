@@ -35,13 +35,13 @@ def test_foreground_detection(
         nuclei = xp.stack([nuclei] * 2, axis=channel_axis)
         membrane = xp.stack([membrane] * 2, axis=channel_axis)
 
-    edges = robust_invert(membrane, [1, 1, 1], channel_axis=channel_axis)
+    contours = robust_invert(membrane, [1, 1, 1], channel_axis=channel_axis)
     foreground = detect_foreground(
         nuclei, [1, 1, 1], sigma=50, channel_axis=channel_axis
     )
 
-    assert edges.min() == 0.0
-    assert edges.max() == 1.0
+    assert contours.min() == 0.0
+    assert contours.max() == 1.0
 
     if request.config.getoption("--show-napari-viewer"):
         import napari
@@ -51,7 +51,7 @@ def test_foreground_detection(
         viewer.add_image(cells, blending="additive", channel_axis=1)
         viewer.add_labels(to_cpu(foreground))
         viewer.add_image(
-            to_cpu(edges), blending="additive", colormap="gray_r", rendering="minip"
+            to_cpu(contours), blending="additive", colormap="gray_r", rendering="minip"
         )
 
         napari.run()
