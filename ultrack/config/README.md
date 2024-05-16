@@ -17,7 +17,7 @@ Configurations have default values, therefore you don't need to set them all fro
         - max_area: Maximum segments area, regions larger than this value are removed;
         - min_frontier: Minimum average contour value, neighboring regions with values below this are merged;
         - max_noise: Upper limit of uniform distribution for additive noise on contour map;
-        - threshold: Threshold used to binary the cell detection map;
+        - threshold: Threshold used to binary the cell foreground map;
         - ws_hierarchy: Watershed hierarchy function from [higra](https://higra.readthedocs.io/en/stable/python/watershed_hierarchy.html) used to construct the hierarchy;
 
     - linking_config:

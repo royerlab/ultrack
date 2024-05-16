@@ -17,9 +17,9 @@ from ultrack.core.segmentation.vendored.hierarchy import to_labels
 def test_horizontal_cut(
     segmentation_mock_data: Tuple[np.ndarray, np.ndarray, np.ndarray]
 ) -> None:
-    detection, edge, _ = segmentation_mock_data
+    foreground, edge, _ = segmentation_mock_data
     hierarchies = create_hierarchies(
-        detection,
+        foreground,
         edge,
         hierarchy_fun=hg.watershed_hierarchy_by_dynamics,
         min_area=0,

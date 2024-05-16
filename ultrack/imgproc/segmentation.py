@@ -184,7 +184,7 @@ def inverted_edt(
     Parameters
     ----------
     mask : ArrayLike
-        Cell detection mask.
+        Cells' foreground mask.
     voxel_size : Optional[ArrayLike], optional
         Voxel size, by default None
     axis : Optional[int], optional

@@ -19,17 +19,17 @@ from ultrack.api.utils.fs import open_image
 from ultrack.api.utils.zarr import get_channels_from_ome_zarr
 from ultrack.core.database import clear_all_data
 from ultrack.imgproc import detect_foreground, robust_invert
-from ultrack.utils import labels_to_edges
+from ultrack.utils import labels_to_contours
 from ultrack.utils.array import array_apply
 from ultrack.utils.cuda import on_gpu
 
 
 def _get_ultrack_solution(
-    config: MainConfig, detection: np.ndarray, edges: np.ndarray
+    config: MainConfig, foreground: np.ndarray, edges: np.ndarray
 ) -> Tuple[pd.DataFrame, Dict, zarr.Array]:
     clear_all_data(settings.ultrack_data_config.database_path)
 
-    segment(detection=detection, edge=edges, config=config)
+    segment(foreground=foreground, contours=edges, config=config)
     link(config)
     solve(config)
 
@@ -269,10 +269,10 @@ def test_from_labels(experiment_instance: Experiment, label_to_edges_kwargs: dic
             assert experiment.status != ExperimentStatus.ERROR
 
     # compare the results with the ones obtained from the ultrack module
-    detection, edges = labels_to_edges(
+    detection, edges = labels_to_contours(
         label_data,
-        detection_store_or_path=zarr.MemoryStore(),
-        edges_store_or_path=zarr.MemoryStore(),
+        foreground_store_or_path=zarr.MemoryStore(),
+        contours_store_or_path=zarr.MemoryStore(),
         **label_to_edges_kwargs,
     )
 

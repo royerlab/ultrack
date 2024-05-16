@@ -606,8 +606,9 @@ def _filter_short_tracks(
                 parent2children[parent_track_id] = child_children_id
 
             # relabeling
-            for t in child_track["t"]:
-                segm_painter.add_relabel(t, child_id, new_child_track_id)
+            if segm_painter is not None:
+                for t in child_track["t"]:
+                    segm_painter.add_relabel(t, child_id, new_child_track_id)
 
 
 def filter_short_sibling_tracks(

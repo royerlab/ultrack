@@ -19,7 +19,7 @@ def test_tracking(
     config_instance: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
-    detection, edges, labels = timelapse_mock_data
+    foreground, contours, labels = timelapse_mock_data
 
     track(config_instance, labels=labels)
-    track(config_instance, detection=detection, edges=edges, overwrite=True)
+    track(config_instance, foreground=foreground, contours=contours, overwrite=True)
