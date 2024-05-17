@@ -1,0 +1,10 @@
+p {
+    line-height: 1.5;  /* Adjust this value as needed */
+    margin-top: 5px;    /* Space above each paragraph */
+    margin-bottom: 0px; /* Space below each paragraph */
+}
+
+li {
+    margin-top: 0px;    /* Adjust this value as needed */
+    margin-bottom: 0px; /* Adjust this value as needed */
+}

@@ -42,7 +42,7 @@ Exporting
 Core functionalities
 ====================
 
-.. include:: ultrack_source/core/README.md
+.. include:: ../../ultrack/core/README.md
     :parser: myst
 
 .. automodule:: ultrack

@@ -19,20 +19,17 @@ sys.path.insert(0, os.path.abspath("../.."))
 if not os.path.exists("examples"):
     os.symlink("../../examples", "examples", target_is_directory=True)
 
-if not os.path.exists("plugin"):
-    os.symlink("../../plugin-imagej", "plugin", target_is_directory=True)
-
-if not os.path.exists("benchmarks"):
-    os.symlink("../../benchmarks", "benchmarks", target_is_directory=True)
-
-if not os.path.exists("ultrack_source"):
-    os.symlink("../../ultrack", "ultrack_source", target_is_directory=True)
-
 # -- Project information -----------------------------------------------------
 
 project = "ultrack"
-copyright = "2023, Jordão Bragantini"
-author = "Jordão Bragantini"
+copyright = "2024, Jordão Bragantini"
+author = "Jordão Bragantini, Ilan Theodoro & contributors"
+
+# The title of the HTML documentation (appears in the sidebar)
+html_title = "ultrack"
+
+# The short title for the HTML documentation (appears in the navigation bar)
+html_short_title = "ultrack"
 
 # The full version, including alpha/beta/rc tags
 release = libversion("ultrack")
@@ -45,15 +42,16 @@ release = libversion("ultrack")
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx_click.ext",
+    "sphinx_copybutton",
     "sphinx.ext.autosummary",
     "nbsphinx",
     "myst_parser",
-    "sphinx_gallery.load_style"
+    "sphinx_gallery.load_style",
 ]
 
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,12 +67,16 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_css_files = [
+    "css/style.css",
+]
 
 # -- AutoDoc configuration --------------------------------------------------
 
