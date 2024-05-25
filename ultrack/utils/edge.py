@@ -106,5 +106,5 @@ def labels_to_contours(
 
 
 @wraps(labels_to_contours)
-def labels_to_edgs(*args, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+def labels_to_edges(*args, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
     return labels_to_contours(*args, **kwargs)
