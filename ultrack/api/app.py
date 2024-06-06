@@ -345,7 +345,7 @@ async def auto_detect(websocket: WebSocket) -> None:
 
             zarr_detection = create_zarr(
                 shape=shape,
-                dtype=bool,
+                dtype=float,
                 store_or_path=detection_path,
                 overwrite=True,
             )
@@ -358,7 +358,7 @@ async def auto_detect(websocket: WebSocket) -> None:
 
             zarr_edges = create_zarr(
                 shape=shape,
-                dtype=bool,
+                dtype=float,
                 store_or_path=edges_path,
                 overwrite=True,
             )

@@ -3,7 +3,7 @@ from magicgui.widgets import FileEdit, PushButton, create_widget
 from napari.layers import Image
 
 from ultrack.config import MainConfig
-from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets.ultrackwidget._legacy.baseconfigwidget import BaseConfigWidget
 
 
 class MainConfigWidget(BaseConfigWidget):

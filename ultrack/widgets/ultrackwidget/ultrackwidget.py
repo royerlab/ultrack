@@ -1,181 +1,584 @@
 import logging
-from pathlib import Path
-from typing import Any, Dict, Sequence, Tuple
+import webbrowser
+from contextlib import redirect_stderr, redirect_stdout
+from typing import Any, Generator
 
 import napari
-import numpy as np
-import pandas as pd
-from napari.layers import Image, Labels
+import qtawesome as qta
+import toml
+from magicgui.widgets import create_widget
+from napari.layers import Image, Layer
 from napari.qt.threading import thread_worker
-from numpy.typing import ArrayLike
-from qtpy.QtWidgets import QFrame, QTabWidget, QVBoxLayout, QWidget
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QCursor, QFont
+from qtpy.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ultrack import link, segment, solve
-from ultrack.config.config import MainConfig, load_config
-from ultrack.core.database import LinkDB, NodeDB, is_table_empty
-from ultrack.core.export.tracks_layer import to_tracks_layer
-from ultrack.core.export.zarr import tracks_to_zarr
-from ultrack.widgets.ultrackwidget.datawidget import DataWidget
-from ultrack.widgets.ultrackwidget.linkingwidget import LinkingWidget
-from ultrack.widgets.ultrackwidget.mainconfigwidget import MainConfigWidget
-from ultrack.widgets.ultrackwidget.segmentationwidget import SegmentationWidget
-from ultrack.widgets.ultrackwidget.trackingwidget import TrackingWidget
-from ultrack.widgets.utils import wait_cursor
+from ultrack import MainConfig
+from ultrack.widgets.ultrackwidget.components.button_workflow_config import (
+    ButtonWorkflowConfig,
+)
+from ultrack.widgets.ultrackwidget.components.emitting_stream import EmittingStream
+from ultrack.widgets.ultrackwidget.data_forms import DataForms
+from ultrack.widgets.ultrackwidget.utils import UltrackInput
+from ultrack.widgets.ultrackwidget.workflows import UltrackWorkflow, WorkflowChoice
 
 LOG = logging.getLogger(__name__)
 
 
+def _create_link_buttons() -> list[QPushButton]:
+    """
+    Create buttons for external links.
+
+    Returns
+    -------
+    List of QPushButton
+        List of buttons with icons and link actions.
+    """
+    data = {
+        ("Github", "mdi.github", "https://github.com/royerlab/ultrack"),
+        ("BioArXiv", "mdi.file-document", ""),
+        ("Documentation", "mdi.book-open", "https://royerlab.github.io/ultrack/"),
+    }
+
+    bts = []
+    for name, icon_name, link in data:
+        bt = QPushButton(name)
+        icon = qta.icon(icon_name)
+        bt.setIcon(icon)
+        bt.clicked.connect(lambda _, _link=link: webbrowser.open(_link))
+        bts.append(bt)
+
+    return bts
+
+
 class UltrackWidget(QWidget):
     def __init__(self, viewer: napari.Viewer) -> None:
+        """
+        Initialize the UltrackWidgetV2.
+
+        Parameters
+        ----------
+        viewer : napari.Viewer
+            The napari viewer instance.
+        """
         super().__init__()
+        self.viewer = viewer
+        self.workflow = UltrackWorkflow(viewer)
+        self._cb_images = {}
+        self._data_forms = DataForms(self._on_change_config)
 
+        self._init_ui()
+        self._setup_signals()
+
+        # Set the default workflow
+        self._cb_workflow.setCurrentIndex(0)
+        self._cb_workflow.currentIndexChanged.emit(0)
+
+        self._on_image_changed(-1)
+
+        self._current_worker = None
+
+    def _init_ui(self) -> None:
+        """
+        Initialize the user interface components.
+        """
         layout = QVBoxLayout()
-
-        self._viewer = viewer
-        self._tab = QTabWidget()
         self.setLayout(layout)
 
-        layout.addWidget(self._tab)
+        self._add_title(layout)
+        self._add_link_buttons(layout)
+        self._add_spacer(layout, 10)
+        self._add_configuration_group(layout)
+        self._add_run_button(layout)
+        self._add_output_area(layout)
+        self._add_cancel_button(layout)
 
-        config = MainConfig()
+        layout.addStretch()
 
-        self._main_config_w = MainConfigWidget(config=config)
-        tmp_layout = self._main_config_w.native.layout()
-        tmp_layout.takeAt(tmp_layout.count() - 1)
-        self._data_config_w = DataWidget(config=config.data_config)
+    def _add_title(self, layout: QVBoxLayout) -> None:
+        """
+        Add the title and subtitle to the layout.
 
-        frame_layout = QVBoxLayout()
-        main_frame = QFrame()
-        main_frame.setLayout(frame_layout)
-        frame_layout.addWidget(self._main_config_w.native)
-        frame_layout.addWidget(self._data_config_w.native)
-        frame_layout.addStretch()
-        self._tab.addTab(main_frame, "Main")
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the title and subtitle will be added.
+        """
+        layout.addWidget(QLabel("<h1>ultrack</h1>"))
+        subtitle = QLabel(
+            "<h4>Large-scale cell tracking under segmentation uncertainty</h4>"
+        )
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
 
-        self._segmentation_w = SegmentationWidget(config=config.segmentation_config)
-        self._tab.addTab(self._segmentation_w.native, "Segmentation")
+    def _add_link_buttons(self, layout: QVBoxLayout) -> None:
+        """
+        Add link buttons to the layout.
 
-        self._linking_w = LinkingWidget(config=config.linking_config)
-        self._tab.addTab(self._linking_w.native, "Linking")
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the link buttons will be added.
+        """
+        layout_bt_links = QHBoxLayout()
+        for bt in _create_link_buttons():
+            layout_bt_links.addWidget(bt)
+        layout.addLayout(layout_bt_links)
 
-        self._tracking_w = TrackingWidget(config=config.tracking_config)
-        self._tab.addTab(self._tracking_w.native, "Tracking")
+    def _add_spacer(self, layout: QVBoxLayout, size: int = 10) -> None:
+        """
+        Add a spacer item to the layout.
 
-        self._setup_signals()
-        self._update_widget_status()
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the spacer will be added.
+        size : int
+            The size of the spacer.
+        """
+        layout.addSpacerItem(QSpacerItem(0, size))
+
+    def _add_configuration_group(self, layout: QVBoxLayout) -> None:
+        """
+        Add the configuration group to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the configuration group will be added.
+        """
+        gp_ultrack = QGroupBox("Ultrack Configuration")
+        font = QFont()
+        font.setBold(True)
+        gp_ultrack.setFont(font)
+        gp_layout = QVBoxLayout()
+        gp_ultrack.setLayout(gp_layout)
+
+        # Description
+        gp_layout.addSpacerItem(QSpacerItem(0, 5))
+        self._add_configuration_description(gp_layout)
+
+        # Workflow selector
+        gp_layout.addSpacerItem(QSpacerItem(0, 10))
+        self._add_workflow_selector(gp_layout)
+
+        # Image selectors
+        self._add_image_selectors(gp_layout)
+        gp_layout.addSpacerItem(QSpacerItem(0, 10))
+
+        # Settings buttons
+        self._add_settings_buttons(gp_layout)
+
+        # Form tabs
+        self._add_form_tabs(gp_layout)
+
+        layout.addSpacerItem(QSpacerItem(0, 5))
+        layout.addWidget(gp_ultrack)
+
+        self.main_group = gp_ultrack
+
+    def _add_configuration_description(self, layout: QVBoxLayout) -> None:
+        """
+        Add the configuration description to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the configuration description will be added.
+        """
+        label = QLabel(
+            "Configure the Ultrack parameters and run the tracking algorithm."
+        )
+        label.setWordWrap(True)
+        layout.addWidget(label)
+
+    def _add_workflow_selector(self, layout: QVBoxLayout) -> None:
+        """
+        Add the workflow selector to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the workflow selector will be added.
+        """
+        layout.addWidget(QLabel("<h5>Select the desired Ultrack workflow</h5>"))
+        self._cb_workflow = QComboBox()
+        for workflow_choice in WorkflowChoice:
+            name = workflow_choice.value
+            self._cb_workflow.addItem(name, workflow_choice)
+        layout.addWidget(self._cb_workflow)
+
+    def _add_image_selectors(self, layout: QVBoxLayout) -> None:
+        """
+        Add image selectors to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the image selectors will be added.
+        """
+        self.images = ["image", "contours", "detection", "labels"]
+
+        for image in UltrackInput:
+            image_desc = image.value
+            label = QLabel(image_desc)
+            layout.addWidget(label)
+            widget = create_widget(annotation=Image, label=image_desc)
+            widget._lb = label
+            widget.native.setPlaceholderText("Select image")
+            self._cb_images[image] = widget
+            layout.addWidget(widget.native)
+
+    def _add_settings_buttons(self, layout: QVBoxLayout) -> None:
+        """
+        Add settings buttons to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the settings buttons will be added.
+        """
+        button_layout = QHBoxLayout()
+        self._bt_toggle_settings = self._create_toggle_settings_button()
+        button_layout.addWidget(self._bt_toggle_settings)
+
+        self._bt_load_settings = self._create_button(
+            "mdi.folder-open", "Load settings from file"
+        )
+        button_layout.addWidget(self._bt_load_settings)
+
+        self._bt_save_settings = self._create_button(
+            "mdi.content-save", "Save settings to file"
+        )
+        button_layout.addWidget(self._bt_save_settings)
+
+        layout.addLayout(button_layout)
+
+    def _create_toggle_settings_button(self) -> QPushButton:
+        """
+        Create the toggle settings button.
+
+        Returns
+        -------
+        QPushButton
+            The created toggle settings button.
+        """
+        button = QPushButton("Show advanced Settings")
+        button.setCheckable(True)
+        button.setChecked(False)
+        button.setIcon(qta.icon("mdi.chevron-down"))
+        button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        return button
+
+    def _create_button(self, icon_name: str, tooltip: str) -> QPushButton:
+        """
+        Create a button with an icon and tooltip.
+
+        Parameters
+        ----------
+        icon_name : str
+            The name of the icon.
+        tooltip : str
+            The tooltip text.
+
+        Returns
+        -------
+        QPushButton
+            The created button.
+        """
+        button = QPushButton(qta.icon(icon_name), "")
+        button.setToolTip(tooltip)
+        return button
+
+    def _add_form_tabs(self, layout: QVBoxLayout) -> None:
+        """
+        Add form tabs to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the form tabs will be added.
+        """
+        self._tab_scroll_area = QScrollArea()
+        self._tab_scroll_area.setWidgetResizable(True)
+        self._tab_scroll_area.setWidget(self._data_forms.get_tab_widget())
+        self._tab_scroll_area.hide()
+        layout.addWidget(self._tab_scroll_area)
+
+    def _add_run_button(self, layout: QVBoxLayout) -> None:
+        """
+        Add the run button to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the run button will be added.
+        """
+        self._bt_run = QPushButton(self)
+        self._bt_run.setText("Run")
+        self._bt_run.setEnabled(False)
+        self._bt_run.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self._bt_run)
+
+        self._bt_run_config = ButtonWorkflowConfig(self, self.workflow)
+        button_layout.addWidget(self._bt_run_config)
+
+        layout.addLayout(button_layout)
 
     def _setup_signals(self) -> None:
-        self._main_config_w._config_loader_w.changed.connect(self._on_config_loaded)
-        self._main_config_w._config_loader_w.changed.connect(self._update_widget_status)
-        self._main_config_w._foreground_layer_w.changed.connect(
-            self._update_widget_status
+        """Set up the signals for various buttons and widgets."""
+        self._bt_toggle_settings.clicked.connect(self._on_toggle_settings)
+        self._bt_save_settings.clicked.connect(self._on_save_settings)
+        self._bt_load_settings.clicked.connect(self._on_load_settings)
+        self._bt_run.clicked.connect(self._on_run)
+        self._bt_cancel.clicked.connect(self._cancel)
+        self._cb_workflow.currentIndexChanged.connect(self._on_workflow_changed)
+        self.viewer.layers.events.removed.connect(self._on_layers_change)
+        self.viewer.layers.events.inserted.connect(self._on_layers_change)
+
+        for cb_image in self._cb_images.values():
+            cb_image.changed.connect(self._on_image_changed)
+
+    def _on_change_config(self):
+        """Handle the change of the configuration."""
+        if hasattr(self, "_bt_run"):
+            new_config = self._data_forms.get_config()
+            additional_config = self._data_forms.get_additional_options()
+            inputs = {k: w.value for k, w in self._cb_images.items()}
+            workflow = self.workflow.get_stage(
+                new_config, additional_options=additional_config, inputs=inputs
+            )
+            self._bt_run_config.set_workflow_stage(workflow)
+
+    def _on_run(self):
+        """Handle the run button click event.
+
+        It runs the selected workflow with the provided inputs.
+        """
+        config = self._data_forms.get_config()
+        additional_config = self._data_forms.get_additional_options()
+        workflow_choice = self._cb_workflow.currentData()
+
+        inputs: dict[UltrackInput, Layer] = {}
+
+        for k, w in self._cb_images.items():
+            if w.value is not None:
+                inputs[k] = w.value
+
+        worker = self._make_run_worker(
+            config, workflow_choice, inputs, additional_options=additional_config
         )
-        self._main_config_w._edge_layer_w.changed.connect(self._update_widget_status)
-        self._segmentation_w._segment_btn.changed.connect(self._on_segment)
-        self._linking_w._link_btn.changed.connect(self._on_link)
-        self._tracking_w._track_btn.changed.connect(self._on_track)
+        self._current_worker = worker
+        worker.started.connect(self._on_run_started)
+        worker.yielded.connect(self._on_workflow_intermediate_results)
+        worker.finished.connect(self._on_run_finished)
+        worker.start()
 
-    @property
-    def config(self) -> MainConfig:
-        return self._main_config_w.config
+    def _on_workflow_intermediate_results(self, layer: Layer):
+        """Handle the intermediate results of the workflow."""
+        self.viewer.add_layer(layer)
 
-    @config.setter
-    def config(self, value: MainConfig) -> None:
-        self._main_config_w.config = value
-        self._data_config_w.config = value.data_config
-        self._segmentation_w.config = value.segmentation_config
-        self._linking_w.config = value.linking_config
-        self._tracking_w.config = value.tracking_config
+    def _on_run_started(self):
+        """Handle the start of the run worker."""
+        self._bt_run.setEnabled(False)
+        self._bt_run.setText("Running...")
+        self._bt_run.repaint()
+        self.ctx_stdout_switcher.__enter__()
+        self.ctx_stderr_switcher.__enter__()
+        self._output.show()
+        self._bt_cancel.show()
+        self._bt_cancel.setEnabled(True)
+        self.main_group.setEnabled(False)
 
-    def _on_config_loaded(self, value: Path) -> None:
-        if value.exists() and value.is_file():
-            self.config = load_config(value)
+    def _on_run_finished(self):
+        """Handle the finish of the run worker."""
+        self._bt_run.setEnabled(True)
+        self._bt_run.setText("Run")
+        self._bt_run.repaint()
+        self.ctx_stdout_switcher.__exit__(None, None, None)
+        self.ctx_stderr_switcher.__exit__(None, None, None)
+        self._output.hide()
+        self._bt_cancel.hide()
+        self.main_group.setEnabled(True)
+        self._current_worker = None
 
-    def _on_segment(self) -> None:
-        segmentation_worker = self._make_segmentation_worker()
-        segmentation_worker.started.connect(self._lock_buttons)
-        segmentation_worker.finished.connect(self._update_widget_status)
-        segmentation_worker.start()
+    @thread_worker
+    def _make_run_worker(
+        self,
+        config: MainConfig,
+        workflow_choice: WorkflowChoice,
+        inputs: dict[UltrackInput, Layer],
+        additional_options: dict[Any],
+    ) -> Generator:
+        """
+        Create a worker to run the selected workflow.
 
-    def _on_link(self) -> None:
-        if self._linking_w._images_w.value:
-            for layer in self._viewer.layers.selection:
-                if not isinstance(layer, (Image, Labels)):
-                    raise ValueError(
-                        f"Selected layers must be Image or Labels, {layer} not valid."
-                    )
-            images = tuple(layer.data for layer in self._viewer.layers.selection)
+        Returns
+        -------
+        Worker
+            The worker to run the selected workflow.
+        """
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        yield from self.workflow.run(
+            config, workflow_choice, inputs, additional_options
+        )
+        QApplication.restoreOverrideCursor()
+
+    def _on_save_settings(self) -> None:
+        """Handle the save settings button click event."""
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save TOML",
+            "ultrack_settings.toml",
+            "JSON Files (*.toml);;All Files (*)",
+            options=options,
+        )
+        if file_name:
+            with open(file_name, "w") as f:
+                data = self._data_forms.get_config().dict(by_alias=True)
+                toml.dump(data, f)
+            print(f"Data saved to {file_name}")
+
+    def _on_load_settings(self) -> None:
+        """
+        Handle the load settings button click event.
+        """
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            None, "Open TOML", "", "TOML Files (*.toml);;All Files (*)", options=options
+        )
+        if file_name:
+            with open(file_name) as f:
+                data = toml.load(f)
+                data = MainConfig(**data)
+                self._data_forms.load_config(data)
+
+    def _on_toggle_settings(self):
+        """
+        Handle the toggle settings button click event.
+        """
+        if self._bt_toggle_settings.isChecked():
+            self._tab_scroll_area.show()
+            icon = qta.icon("mdi.chevron-up")
+            self._bt_toggle_settings.setIcon(icon)
+            self._bt_toggle_settings.setText("Hide advanced Settings")
         else:
-            images = tuple()
+            self._tab_scroll_area.hide()
+            icon = qta.icon("mdi.chevron-down")
+            self._bt_toggle_settings.setIcon(icon)
+            self._bt_toggle_settings.setText("Show advanced Settings")
 
-        LOG.info(f"Using {images} for linking")
+    def _on_layers_change(self, _: Any) -> None:
+        """
+        Update layer choices when layers are changed.
+        """
+        for widget in self._cb_images.values():
+            widget.choices = self.viewer.layers
 
-        link_worker = self._make_link_worker(images=images)
-        link_worker.started.connect(self._lock_buttons)
-        link_worker.finished.connect(self._update_widget_status)
-        link_worker.start()
+    def _on_image_changed(self, _: int) -> None:
+        """
+        Handle image selection changes.
 
-    def _on_track(self) -> None:
-        track_worker = self._make_track_worker()
-        track_worker.started.connect(self._lock_buttons)
-        track_worker.returned.connect(self._add_tracking_result)
-        track_worker.finished.connect(self._update_widget_status)
-        track_worker.start()
+        Parameters
+        ----------
+        _ : int
+            Ignored.
+        """
+        all_images_are_valid = True
 
-    @thread_worker
-    @wait_cursor()
-    def _make_segmentation_worker(self) -> None:
-        segment(
-            foreground=self._main_config_w._foreground_layer_w.value.data,
-            contours=self._main_config_w._edge_layer_w.value.data,
-            config=self.config,
-            overwrite=True,
-        )
+        for ultrack_input, widget in self._cb_images.items():
+            if widget.enabled:
+                if widget.value is None:
+                    all_images_are_valid = False
+                if ultrack_input == UltrackInput.IMAGE:
+                    self._data_forms.notify_image_update(widget.value)
 
-    @thread_worker
-    @wait_cursor()
-    def _make_link_worker(self, images: Sequence[ArrayLike]) -> None:
-        link(
-            self.config,
-            images=images,
-            overwrite=True,
-        )
+        self._bt_run.setEnabled(all_images_are_valid)
 
-    @thread_worker
-    @wait_cursor()
-    def _make_track_worker(self) -> Tuple[pd.DataFrame, Dict, np.ndarray]:
-        solve(self.config, overwrite=True)
-        tracks, graph = to_tracks_layer(self.config)
-        labels = tracks_to_zarr(self.config)
-        return tracks, graph, labels
+    def _on_workflow_changed(self, index: int) -> None:
+        """
+        Handle workflow selection changes.
 
-    @wait_cursor()
-    def _add_tracking_result(
-        self, result: Tuple[pd.DataFrame, Dict, np.ndarray]
-    ) -> None:
-        tracks, graph, labels = result
-        self._viewer.add_tracks(tracks, graph=graph)
-        self._viewer.add_labels(labels)
+        Parameters
+        ----------
+        index : int
+            The index of the selected workflow.
+        """
+        workflow_choice = self._cb_workflow.itemData(index)
+        inputs = self.workflow.inputs_from_choice(workflow_choice)
+        for name, widget in self._cb_images.items():
+            if name in inputs:
+                widget.native.show()
+                widget.native.setEnabled(True)
+                widget._lb.show()
+            else:
+                widget.native.hide()
+                widget.native.setEnabled(False)
+                widget._lb.hide()
 
-    def _lock_buttons(self) -> None:
-        LOG.info("Locking buttons")
-        self._linking_w._link_btn.enabled = False
-        self._tracking_w._track_btn.enabled = False
-        self._segmentation_w._segment_btn.enabled = False
+        self._data_forms.setup_additional_options(workflow_choice)
 
-    def _update_widget_status(self) -> None:
-        LOG.info("Update widget status")
-        self._segmentation_w._segment_btn.enabled = (
-            self._main_config_w._foreground_layer_w.value is not None
-            and self._main_config_w._edge_layer_w.value is not None
-        )
-        data_config = self._data_config_w.config
-        self._linking_w._link_btn.enabled = not is_table_empty(data_config, NodeDB)
-        self._tracking_w._track_btn.enabled = not is_table_empty(data_config, LinkDB)
+    def _add_output_area(self, layout: QVBoxLayout) -> None:
+        """
+        Add the output area to the layout.
 
-    def reset_choices(self, *_: Any) -> None:
-        self._main_config_w.reset_choices()
-        self._data_config_w.reset_choices()
-        self._linking_w.reset_choices()
-        self._tracking_w.reset_choices()
-        self._segmentation_w.reset_choices()
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the output area will be added.
+        """
+        self._output = QTextEdit()
+        self._output.setReadOnly(True)
+        self._output.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._output.hide()
+        self.ctx_stdout_switcher = redirect_stdout(EmittingStream(self._output, "gray"))
+        self.ctx_stderr_switcher = redirect_stderr(EmittingStream(self._output, "red"))
+        layout.addWidget(self._output)
+
+    def _add_cancel_button(self, layout: QVBoxLayout) -> None:
+        """
+        Add the cancel button to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the cancel button will be added.
+        """
+        self._bt_cancel = QPushButton(self)
+        self._bt_cancel.hide()
+        self._bt_cancel.setText("Cancel")
+        self._bt_cancel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        layout.addWidget(self._bt_cancel)
+
+    def _cancel(self):
+        """Cancel the current worker."""
+        if self._current_worker is not None:
+            self._current_worker.quit()
+            self._bt_cancel.setEnabled(False)
+
+
+if __name__ == "__main__":
+    from napari import Viewer
+
+    viewer = Viewer()
+    widget = UltrackWidget(viewer)
+    widget.show()
+    viewer.window.add_dock_widget(widget, area="right")
+    napari.run()

@@ -204,7 +204,7 @@ def test_auto_detect(
             experiment = Experiment.parse_obj(response)
             assert experiment.status != ExperimentStatus.ERROR
 
-    detection = np.zeros_like(image_data, dtype=bool)
+    detection = np.zeros_like(image_data, dtype=float)
     array_apply(
         image_data,
         out_array=detection,
@@ -212,7 +212,7 @@ def test_auto_detect(
         **detect_foreground_kwargs,
     )
 
-    edges = np.zeros_like(image_data, dtype=bool)
+    edges = np.zeros_like(image_data, dtype=float)
     array_apply(
         image_data.astype(np.float32),
         out_array=edges,

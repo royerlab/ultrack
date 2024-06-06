@@ -1,0 +1,181 @@
+    {
+        "label_to_contours_kwargs": {
+            "subform": true,
+            "title": "Label to Contours",
+            "fields": {
+                "sigma": {
+                    "label": "Sigma",
+                    "type": "number",
+                    "min": 0.0,
+                    "step": "any",
+                    "tooltip": "Contours smoothing parameter (gaussian blur), contours aren't smoothed if not provided",
+                    "validationMessage": "Please enter a valid sigma value (number or blank)"
+                }
+            }
+        },
+        "detect_foreground_kwargs": {
+            "subform": true,
+            "title": "Detect Foreground",
+            "fields": {
+                "sigma": {
+                    "label": "Sigma",
+                    "type": "number",
+                    "default": 15.0,
+                    "min": 0.0,
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Sigma used to estimate background, napari layer scale is used to convert Sigma to physical space.",
+                    "validationMessage": "Please enter a valid sigma value (number)"
+                },
+                "remove_hist_mode": {
+                    "label": "Remove Histogram Mode",
+                    "type": "checkbox",
+                    "default": false,
+                    "required": false,
+                    "tooltip": "Removes histogram mode before computing otsu threshold, useful when background regions are being detected",
+                    "validationMessage": "Please enter a valid remove histogram mode value (boolean)"
+                },
+                "min_foreground": {
+                    "label": "Min Foreground",
+                    "type": "number",
+                    "min": 0.0,
+                    "step": "any",
+                    "default": 0.0,
+                    "required": true,
+                    "tooltip": "Minimum value of foreground pixels after background subtraction and smoothing",
+                    "validationMessage": "Please enter a valid min foreground value (number)"
+                },
+                "channel_axis": {
+                    "label": "Channel Axis",
+                    "type": "number",
+                    "min": 0,
+                    "max": 4,
+                    "required": false,
+                    "default": "",
+                    "tooltip": "Channel axis EXCLUDING TIME (first axis), e.g (T, C, Y, X) would have `channel_axis=0`. When provided it will be used to compute the foreground mask for each channel separately and merge them",
+                    "validationMessage": "Please enter a valid channel axis value (number or blank)"
+                }
+            }
+        },
+        "robust_invert_kwargs": {
+            "subform": true,
+            "title": "Robust Invert",
+            "fields": {
+                "sigma": {
+                    "label": "Sigma",
+                    "type": "number",
+                    "min": 0.0,
+                    "default": 1.0,
+                    "required": true,
+                    "step": "any",
+                    "tooltip": "Sigma used to smooth the image,  napari layer scale is used to convert Sigma to physical space.",
+                    "validationMessage": "Please enter a valid sigma value (number)"
+                },
+                "lower_quantile": {
+                    "label": "Lower Quantile",
+                    "type": "number",
+                    "max": 1.0,
+                    "min": 0.0,
+                    "default": "",
+                    "step": "any",
+                    "required": false,
+                    "tooltip": "Lower quantile used to clip the intensities, minimum used when blank",
+                    "validationMessage": "Please enter a valid lower quantile value (number or blank)"
+                },
+                "upper_quantile": {
+                    "label": "Upper Quantile",
+                    "type": "number",
+                    "max": 1.0,
+                    "min": 0.0,
+                    "step": "any",
+                    "default": "",
+                    "required": false,
+                    "tooltip": "Upper quantile used to clip the intensities, maximum used when blank",
+                    "validationMessage": "Please enter a valid upper quantile value (number or blank)"
+                },
+                "channel_axis": {
+                    "label": "Channel Axis",
+                    "type": "number",
+                    "min": 0,
+                    "max": 4,
+                    "required": false,
+                    "default": "",
+                    "tooltip": "Channel axis EXCLUDING TIME (first axis), e.g (T, C, Y, X) would have `channel_axis=0`. When provided it will be used to compute the edges for each channel separately and merge them",
+                    "validationMessage": "Please enter a valid channel axis value (number or blank)"
+                }
+            }
+        },
+        "flow_kwargs": {
+            "subform": true,
+            "title": "Flow-field estimation",
+            "fields": {
+                "__enable__": {
+                    "label": "Enable flow field estimation",
+                    "type": "checkbox",
+                    "default": false,
+                    "required": true,
+                    "tooltip": "Enable flow field estimation",
+                    "validationMessage": "Please enter a valid enable value (boolean)"
+                },
+                "channel_axis": {
+                    "label": "Channel Axis",
+                    "type": "number",
+                    "min": 0,
+                    "max": 4,
+                    "required": false,
+                    "default": "",
+                    "tooltip": "Channel axis EXCLUDING TIME (first axis), e.g (T, C, Y, X) would have `channel_axis=0`. If not provided assumes first axis after time",
+                    "validationMessage": "Please enter a valid channel axis value (number or blank)"
+                },
+                "im_factor": {
+                    "label": "Image space down scaling factor",
+                    "type": "number",
+                    "min": 1,
+                    "default": 4,
+                    "required": true,
+                    "step": "any",
+                    "tooltip": "Image space down scaling factor, by default 4",
+                    "validationMessage": "Please enter a valid image factor value (number)"
+                },
+                "grid_factor": {
+                    "label": "Grid space down scaling factor",
+                    "type": "number",
+                    "min": 1,
+                    "default": 4,
+                    "required": true,
+                    "step": "any",
+                    "tooltip": "Grid space down scaling factor, by default 4",
+                    "validationMessage": "Please enter a valid grid factor value (number)"
+                },
+                "n_scales": {
+                    "label": "Number of scales",
+                    "type": "number",
+                    "min": 1,
+                    "default": 2,
+                    "required": true,
+                    "tooltip": "Number of scales used to estimate the flow field",
+                    "validationMessage": "Please enter a valid number of scales value (number)"
+                },
+                "lr": {
+                    "label": "Learning rate",
+                    "type": "number",
+                    "min": 0.0,
+                    "default": 0.01,
+                    "required": true,
+                    "step": "any",
+                    "tooltip": "Learning rate used to estimate the flow field",
+                    "validationMessage": "Please enter a valid learning rate value (number)"
+                },
+                "num_iterations": {
+                    "label": "Number of iterations",
+                    "type": "number",
+                    "min": 1,
+                    "default": 2000,
+                    "step": 1,
+                    "required": true,
+                    "tooltip": "Number of iterations used to estimate the flow field",
+                    "validationMessage": "Please enter a valid number of iterations value (number)"
+                }
+            }
+        }
+    }

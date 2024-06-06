@@ -17,25 +17,26 @@ contributions:
       python_name: ultrack.widgets:UltrackWidget
       title: Ultrack
 
-    - id: ultrack.labels_to_edges_widget
-      python_name: ultrack.widgets:LabelsToContoursWidget
-      title: Convert labels into contours map
-
-    - id: ultrack.hypotheses_viz_widget
-      python_name: ultrack.widgets:HypothesesVizWidget
-      title: Segmentation hypotheses visualization
-
-    - id: ultrack.node_annotation_widget
-      python_name: ultrack.widgets:NodeAnnotationWidget
-      title: Node annotation
-
-    - id: ultrack.division_annotation_widget
-      python_name: ultrack.widgets:DivisionAnnotationWidget
-      title: Division annotation
-
-    - id: ultrack.track_inspection
-      python_name: ultrack.widgets:TrackInspectionWidget
-      title: Track inspection
+###### DEPRECATED & WIP WIDGETS  #####
+#     - id: ultrack.labels_to_edges_widget
+#       python_name: ultrack.widgets:LabelsToContoursWidget
+#       title: Convert labels into contours map
+#
+#     - id: ultrack.hypotheses_viz_widget
+#       python_name: ultrack.widgets:HypothesesVizWidget
+#       title: Segmentation hypotheses visualization
+#
+#     - id: ultrack.node_annotation_widget
+#       python_name: ultrack.widgets:NodeAnnotationWidget
+#       title: Node annotation
+#
+#     - id: ultrack.division_annotation_widget
+#       python_name: ultrack.widgets:DivisionAnnotationWidget
+#       title: Division annotation
+#
+#     - id: ultrack.track_inspection
+#       python_name: ultrack.widgets:TrackInspectionWidget
+#       title: Track inspection
 
   readers:
     - command: ultrack.get_reader
