@@ -67,7 +67,7 @@ Navigate to the Gurobi's `named academic license page <https://www.gurobi.com/fe
 
 Replace YOUR_LICENSE_KEY with the key you received. Follow the prompts to complete activation.
 
-Test the Installation
+Test the installation
 `````````````````````
 
 Verify Gurobi's installation by running:

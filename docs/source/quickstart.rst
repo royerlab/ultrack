@@ -15,7 +15,7 @@ For additional information on how to create a conda environment and install pack
 
    pip install ultrack
 
-Basic Usage
+Basic usage
 -----------
 
 The following example demonstrates how to use `ultrack` to track cells using its canonical input, a binary image of the foreground and a cells' contours image.

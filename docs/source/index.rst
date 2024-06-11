@@ -25,6 +25,8 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 .. include:: install.rst
 
+.. include:: napari.rst
+
 .. include:: fiji.rst
 
 .. include:: getting_started.rst
@@ -49,6 +51,7 @@ Documentation contents
 
    quickstart
    install
+   napari
    fiji
    getting_started
    examples

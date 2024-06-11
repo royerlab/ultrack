@@ -8,3 +8,15 @@ li {
     margin-top: 0px;    /* Adjust this value as needed */
     margin-bottom: 0px; /* Adjust this value as needed */
 }
+
+h1 {
+    margin-top: 40px;
+}
+
+h2 {
+    margin-top: 30px;
+}
+
+h3 {
+    margin-top: 20px;
+}

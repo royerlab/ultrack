@@ -1,5 +1,5 @@
 Examples
-========
+--------
 
 .. include:: examples/README.rst
    :start-line: 2
