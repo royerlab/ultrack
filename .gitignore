@@ -174,3 +174,4 @@ docs/source/examples
 # ultrack files
 metadata.toml
 data.db
+*.lock

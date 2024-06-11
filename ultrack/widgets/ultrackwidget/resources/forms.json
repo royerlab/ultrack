@@ -1,0 +1,150 @@
+    {
+        "segmentation": {
+            "title": "Segmentation",
+            "fields": {
+                "threshold": {
+                    "label": "Threshold",
+                    "type": "number",
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Threshold value for the segmentation algorithm",
+                    "validationMessage": "Please enter a valid threshold value (number)"
+                },
+                "min_area": {
+                    "label": "Min Area",
+                    "type": "number",
+                    "min": 0,
+                    "required": true,
+                    "tooltip": "Minimum area for detected objects",
+                    "validationMessage": "Please enter a valid minimum area value (number)"
+                },
+                "max_area": {
+                    "label": "Max Area",
+                    "type": "number",
+                    "min": 1,
+                    "required": true,
+                    "tooltip": "Maximum area for detected objects",
+                    "validationMessage": "Please enter a valid maximum area value (number)"
+                },
+                "min_frontier": {
+                    "label": "Min Frontier",
+                    "type": "number",
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Minimum frontier for detected objects",
+                    "validationMessage": "Please enter a valid minimum frontier value (number)"
+                },
+                "n_workers": {
+                    "label": "Number of Workers",
+                    "type": "number",
+                    "min": 1,
+                    "required": true,
+                    "tooltip": "Number of workers to use for segmentation",
+                    "validationMessage": "Please enter a valid number of workers (> 1)"
+                }
+            }
+        },
+        "linking": {
+            "title": "Linking",
+            "fields": {
+                "max_distance": {
+                    "label": "Max Distance",
+                    "type": "number",
+                    "step": "any",
+                    "min": 0.0,
+                    "required": true,
+                    "tooltip": "Maximum distance for linking segments",
+                    "validationMessage": "Please enter a valid maximum distance value (number)"
+                },
+                "distance_weight": {
+                    "label": "Distance Weight",
+                    "type": "number",
+                    "step": "any",
+                    "min": 0.0,
+                    "required": true,
+                    "tooltip": "Distance weight for linking",
+                    "validationMessage": "Please enter a valid distance weight value (number)"
+                },
+                "max_neighbors": {
+                    "label": "Max Neighbors",
+                    "type": "number",
+                    "min": 1,
+                    "required": true,
+                    "tooltip": "Maximum number of neighbors",
+                    "validationMessage": "Please enter a valid maximum number of neighbors (> 1)"
+                },
+                "n_workers": {
+                    "label": "Number of Workers",
+                    "type": "number",
+                    "min": 1,
+                    "required": true,
+                    "tooltip": "Number of workers to use for linking",
+                    "validationMessage": "Please enter a valid number of workers (> 1)"
+                }
+            }
+        },
+        "tracking": {
+            "title": "Tracking",
+            "fields": {
+                "appear_weight": {
+                    "label": "Appear Weight",
+                    "type": "number",
+                    "max": 0.0,
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Appear weight for tracking",
+                    "validationMessage": "Please enter a valid appear weight value (negative number)"
+                },
+                "disappear_weight": {
+                    "label": "Disappear Weight",
+                    "type": "number",
+                    "max": 0.0,
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Disappear weight for tracking",
+                    "validationMessage": "Please enter a valid disappear weight value (negative number)"
+                },
+                "division_weight": {
+                    "label": "Division Weight",
+                    "type": "number",
+                    "max": 0.0,
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Division weight for tracking",
+                    "validationMessage": "Please enter a valid division weight value (negative number)"
+                },
+                "window_size": {
+                    "label": "Window Size",
+                    "type": "number",
+                    "min": 0,
+                    "default": "",
+                    "tooltip": "Window size for tracking. Blank for the whole movie.",
+                    "validationMessage": "Please enter a valid window size value (number or 0 for blank)"
+                },
+                "overlap_size": {
+                    "label": "Overlap Size",
+                    "type": "number",
+                    "min": 1,
+                    "required": true,
+                    "tooltip": "Overlap size for tracking",
+                    "validationMessage": "Please enter a valid overlap size value (number)"
+                },
+                "solution_gap": {
+                    "label": "Solution Gap",
+                    "type": "number",
+                    "step": "any",
+                    "required": true,
+                    "tooltip": "Solution gap for tracking",
+                    "validationMessage": "Please enter a valid solution gap value (number)"
+                },
+                "n_threads": {
+                    "label": "Number of Threads",
+                    "type": "number",
+                    "min": -1,
+                    "required": true,
+                    "tooltip": "Number of Threads to use for tracking. -1 for all available threads.",
+                    "validationMessage": "Please enter a valid number of threads"
+                }
+            }
+        }
+    }

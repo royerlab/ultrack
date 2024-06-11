@@ -1,12 +1,15 @@
 import logging
+from functools import wraps
 from typing import Optional, Sequence, Tuple, Union
 
+import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
 from zarr.storage import Store
 
 from ultrack.utils.array import create_zarr
 from ultrack.utils.cuda import import_module, to_cpu
+from ultrack.utils.deprecation import rename_argument
 
 LOG = logging.getLogger(__name__)
 
@@ -19,27 +22,29 @@ except ImportError as e:
     import numpy as xp
 
 
-def labels_to_edges(
+@rename_argument("detection_store_or_path", "foreground_store_or_path")
+@rename_argument("edges_store_or_path", "contours_store_or_path")
+def labels_to_contours(
     labels: Union[ArrayLike, Sequence[ArrayLike]],
     sigma: Optional[Union[Sequence[float], float]] = None,
-    detection_store_or_path: Union[Store, str, None] = None,
-    edges_store_or_path: Union[Store, str, None] = None,
+    foreground_store_or_path: Union[Store, str, None] = None,
+    contours_store_or_path: Union[Store, str, None] = None,
     overwrite: bool = False,
 ) -> Tuple[ArrayLike, ArrayLike]:
     """
-    Converts and merges a sequence of labels into ultrack input format (detection and edges)
+    Converts and merges a sequence of labels into ultrack input format (foreground and contours)
 
     Parameters
     ----------
     labels : Union[ArrayLike, Sequence[ArrayLike]]
         List of labels with equal shape.
     sigma : Optional[Union[Sequence[float], float]], optional
-        Edges smoothing parameter (gaussian blur), edges aren't smoothed if not provided
-    detection_store_or_path : str, zarr.storage.Store, optional
-        Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
+        Contours smoothing parameter (gaussian blur), contours aren't smoothed when not provided.
+    foreground_store_or_path : str, zarr.storage.Store, optional
+        Zarr storage, it can be used with zarr.NestedDirectoryStorage to save the output into disk.
         By default it loads the data into memory.
-    edges_store_or_path : str, zarr.storage.Store, optional
-        Zarr storage, it can be used with zarr.DirectoryStorage to save the output into disk.
+    contours_store_or_path : str, zarr.storage.Store, optional
+        Zarr storage, it can be used with zarr.NestedDirectoryStorage to save the output into disk.
         By default it loads the data into memory.
     overwrite : bool, optional
         Overwrite output output files if they already exist, by default False.
@@ -47,7 +52,7 @@ def labels_to_edges(
     Returns
     -------
     Tuple[ArrayLike, ArrayLike]
-        Detection and edges array.
+        Combined foreground and edges arrays.
     """
     ndi = import_module("scipy", "ndimage")
     segm = import_module("skimage", "segmentation")
@@ -64,35 +69,42 @@ def labels_to_edges(
 
     LOG.info(f"Labels shape {shape}")
 
-    detection = create_zarr(
+    foreground = create_zarr(
         shape=shape,
         dtype=bool,
-        store_or_path=detection_store_or_path,
+        store_or_path=foreground_store_or_path,
         overwrite=overwrite,
+        default_store_type=zarr.TempStore,
     )
-    edges = create_zarr(
+    contours = create_zarr(
         shape=shape,
         dtype=xp.float32,
-        store_or_path=edges_store_or_path,
+        store_or_path=contours_store_or_path,
         overwrite=overwrite,
+        default_store_type=zarr.TempStore,
     )
 
-    for t in tqdm(range(shape[0]), "Converting labels to edges"):
-        detection_frame = xp.zeros(shape[1:], dtype=detection.dtype)
-        edges_frame = xp.zeros(shape[1:], dtype=edges.dtype)
+    for t in tqdm(range(shape[0]), "Converting labels to contours"):
+        foreground_frame = xp.zeros(shape[1:], dtype=foreground.dtype)
+        contours_frames = xp.zeros(shape[1:], dtype=contours.dtype)
 
         for lb in labels:
             lb_frame = xp.asarray(lb[t])
-            detection_frame |= lb_frame > 0
-            edges_frame += segm.find_boundaries(lb_frame, mode="outer")
+            foreground_frame |= lb_frame > 0
+            contours_frames += segm.find_boundaries(lb_frame, mode="outer")
 
-        edges_frame /= len(labels)
+        contours_frames /= len(labels)
 
         if sigma is not None:
-            edges_frame = ndi.gaussian_filter(edges_frame, sigma)
-            edges_frame = edges_frame / edges_frame.max()
+            contours_frames = ndi.gaussian_filter(contours_frames, sigma)
+            contours_frames = contours_frames / contours_frames.max()
 
-        detection[t] = to_cpu(detection_frame)
-        edges[t] = to_cpu(edges_frame)
+        foreground[t] = to_cpu(foreground_frame)
+        contours[t] = to_cpu(contours_frames)
 
-    return detection, edges
+    return foreground, contours
+
+
+@wraps(labels_to_contours)
+def labels_to_edges(*args, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+    return labels_to_contours(*args, **kwargs)

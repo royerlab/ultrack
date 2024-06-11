@@ -119,11 +119,14 @@ def array_apply(
     """
     name = func.__name__ if hasattr(func, "__name__") else type(func).__name__
 
-    for arr in in_arrays:
-        if arr.shape != out_array.shape:
-            raise ValueError(
-                f"Input arrays {arr.shape} must have the same shape as the output array {out_array.shape}."
-            )
+    try:
+        in_shape = [arr.shape for arr in in_arrays]
+        np.broadcast_shapes(out_array.shape, *in_shape)
+    except ValueError as e:
+        LOG.warning(
+            f"Warning: if you are not using multichannel operations, "
+            f"this can be an error. {e}."
+        )
 
     if isinstance(axis, int):
         axis = (axis,)
@@ -134,7 +137,10 @@ def array_apply(
         for a, i in zip(axis, indices):
             stub_slicing[a] = i
         indexing = tuple(stub_slicing)
-        out_array[indexing] = func(*[a[indexing] for a in in_arrays], **kwargs)
+
+        func_result = func(*[a[indexing] for a in in_arrays], **kwargs)
+        output_shape = out_array[indexing].shape
+        out_array[indexing] = np.broadcast_to(func_result, output_shape)
 
 
 def create_zarr(

@@ -5,7 +5,7 @@ import napari
 from magicgui.widgets import FileEdit
 
 from ultrack.config import DataConfig, load_config
-from ultrack.widgets.ultrackwidget.baseconfigwidget import BaseConfigWidget
+from ultrack.widgets.ultrackwidget._legacy.baseconfigwidget import BaseConfigWidget
 
 
 class GenericDataWidget(BaseConfigWidget):

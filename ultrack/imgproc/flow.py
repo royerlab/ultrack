@@ -67,7 +67,14 @@ def _interpolate(tensor: th.Tensor, antialias: bool = False, **kwargs) -> th.Ten
         if scale_factor < 1.0:
             ndi = import_module("scipy", "ndimage")
             orig_shape = tensor.shape
-            array = xp.asarray(tensor.squeeze().contiguous())
+
+            if xp == np:  # xp ideally should be cupy in this case
+                LOG.warning(
+                    "Cupy not found, using scipy for interpolation. This may slow down ultrack."
+                )
+                array = xp.asarray(tensor.cpu().squeeze().contiguous().numpy())
+            else:
+                array = xp.asarray(tensor.squeeze().contiguous())
             blurred = ndi.gaussian_filter(
                 array,
                 sigma=0.5 / scale_factor,
@@ -452,7 +459,7 @@ def advenct_from_quasi_random(
     n_samples: int,
     invert: bool = True,
     device: Optional[th.device] = None,
-) -> None:
+) -> ArrayLike:
     """
     Advenct points from quasi random uniform distribution.
 
