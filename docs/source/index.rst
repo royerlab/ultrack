@@ -4,9 +4,21 @@
 ultrack
 =======
 
-``ultrack`` is general purpose cell tracking software that can be used to track cells in 2D and 3D images.
+``ultrack`` is general purpose 2D/3D cell tracking software.
 
-It was originally developed to terabyte-scale zebrafish embryo images where we had few 3D annotations.
+It can track from segmentation masks or from raw images directly, specially fluorescence microscopy images.
+
+Four interfaces are provided, depending on your needs:
+
+- napari plugin
+- FIJI plugin
+- Python API
+- Command line interface for batch processing, including distributed computing.
+
+See below for additional details in each interface.
+
+
+Moreover, it was originally developed to terabyte-scale zebrafish embryo images where we had few 3D annotations.
 Hence, a few key features of ``ultrack`` are:
 
 - Out-of-memory storage of intermediate results. You should not run out of memory even for large datasets. We have tracked a 3TB dataset on a laptop with 64GB of RAM.

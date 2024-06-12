@@ -9,6 +9,10 @@ li {
     margin-bottom: 0px; /* Adjust this value as needed */
 }
 
+ul, ol {
+    margin-top: 0px;  /* Margin around the list */
+}
+
 h1 {
     margin-top: 40px;
 }
