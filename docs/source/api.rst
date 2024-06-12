@@ -43,7 +43,6 @@ Core functionalities
 ====================
 
 .. include:: ../../ultrack/core/README.md
-    :parser: myst
 
 .. automodule:: ultrack
     :members:

@@ -54,6 +54,26 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 .. include:: theory.rst
 
+
+Citing
+------
+
+If you use ``ultrack`` in your research, please cite the following paper:
+
+.. code-block:: bibtex
+
+   @article{bragantini2023ucmtracking,
+      title={Large-Scale Multi-Hypotheses Cell Tracking Using Ultrametric Contours Maps},
+      author={Jordão Bragantini and Merlin Lange and Loïc Royer},
+      year={2023},
+      eprint={2308.04526},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+   }
+
+And the respective auxiliary methods (e.g. Cellpose, napari, etc) depending on your usage.
+
+
 Documentation contents
 ``````````````````````
 
