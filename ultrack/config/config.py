@@ -44,3 +44,8 @@ def load_config(path: Union[str, Path]) -> MainConfig:
         data = toml.load(f)
         LOG.info(data)
         return MainConfig.parse_obj(data)
+
+def save_config(config, path: Union[str, Path]):
+    """Saved MainConfig to TOML file."""
+    with open(path,mode='w') as f:
+        toml.dump(config.dict(by_alias=True),f)
