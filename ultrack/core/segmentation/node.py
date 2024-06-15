@@ -210,6 +210,10 @@ class Node(_Node):
         )
         return centroid.round().astype(int)
 
+    def _volume(self) -> int:
+        volume = self.mask.sum()
+        return volume.astype(int)
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Node):
             return False
