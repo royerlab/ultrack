@@ -26,6 +26,11 @@ jobs:
           fetch-depth: 0
           submodules: 'true'
 
+      - name: Pandoc install
+        uses: pandoc/actions/setup@{main}
+        with:
+          version: 2.19
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v3
