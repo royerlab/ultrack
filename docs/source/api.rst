@@ -1,13 +1,18 @@
 API
----
+===
+
+First, we provide a summary of the main functionalities of the package.
+Then we provide detailed documentation of every public function of ultrack.
 
 Object Oriented API
+^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
     ultrack.Tracker
 
 Core functionalities
+^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
@@ -21,15 +26,22 @@ Core functionalities
 .. could not make it work for ultrack.utils.array
 
 Image processing utilities
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
-    ultrack.imgproc.segmentation.Cellpose
-    ultrack.imgproc.plantseg.PlantSeg
-    ultrack.imgproc.sam
-    ultrack.imgproc.flow
+    ultrack.imgproc.PlantSeg
+    ultrack.imgproc.detect_foreground
+    ultrack.imgproc.inverted_edt
+    ultrack.imgproc.normalize
+    ultrack.imgproc.robust_invert
+    ultrack.imgproc.tracks_properties
+    ultrack.imgproc.Cellpose
+    ultrack.imgproc.sam.MicroSAM
+    ultrack.imgproc.flow.timelapse_flow
 
 Exporting
+^^^^^^^^^
 
 .. autosummary::
 
@@ -41,8 +53,6 @@ Exporting
 ====================
 Core functionalities
 ====================
-
-.. include:: ../../ultrack/core/README.md
 
 .. automodule:: ultrack
     :members:
@@ -59,15 +69,9 @@ Array utilities
 Image processing utilities
 ==========================
 
--------------------
-DL models interface
--------------------
-
-.. autoclass:: ultrack.imgproc.segmentation.Cellpose
+.. automodule:: ultrack.imgproc
     :members:
-
-.. autoclass:: ultrack.imgproc.plantseg.PlantSeg
-    :members:
+    :imported-members:
 
 .. automodule:: ultrack.imgproc.sam
     :members:
