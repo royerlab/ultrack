@@ -97,3 +97,4 @@ Documentation contents
 
    api
    cli
+   rest_api

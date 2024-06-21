@@ -3,7 +3,7 @@ Examples
 
 .. include:: examples/README.rst
    :start-line: 2
-   :end-line: 20
+   :end-line: 25
 
 Notebooks
 ---------

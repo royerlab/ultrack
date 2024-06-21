@@ -51,7 +51,7 @@ The official documentation is available [here](https://royerlab.github.io/ultrac
 
 These additional developer documentation are available:
 
-- Parameter [configuration schema](ultrack/config/README.md).
+- Parameter [configuration schema](docs/source/configuration.rst).
 - Intermediate segmentation and tracking SQL database are [here](ultrack/core/README.md).
 
 ## Gurobi setup

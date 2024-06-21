@@ -11,14 +11,44 @@ NAME_TO_WS_HIER = {
 
 
 class SegmentationConfig(BaseModel):
-    threshold: float = 0.5
+    """Segmentation hypotheses creation configuration"""
+
     min_area: int = 100
+    """
+    Minimum segment number of pixels, regions smaller than this value are merged
+    or removed when there is no neighboring region
+    """
+
     max_area: int = 1_000_000
-    min_frontier: float = 0.0
-    anisotropy_penalization: float = 0.0
-    max_noise: float = 0.0
-    ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
+    """Maximum segment's number of pixels, regions larger than this value are removed """
+
     n_workers: int = 1
+    """Number of worker threads """
+
+    min_frontier: float = 0.0
+    """
+    Minimum average frontier value between candidate segmentations, regions sharing an average
+    frontier value lower than this are merged
+    """
+
+    threshold: float = 0.5
+    """Threshold used to binarize the cell foreground map"""
+
+    max_noise: float = 0.0
+    """``SPECIAL``: Upper limit of uniform distribution for additive noise on contour map """
+
+    ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
+    """
+    ``SPECIAL``: Watershed hierarchy function from
+    `higra <https://higra.readthedocs.io/en/stable/python/watershed_hierarchy.html>`_
+    used to construct the hierarchy
+    """
+
+    anisotropy_penalization: float = 0.0
+    """
+    ``SPECIAL``: Image graph z-axis penalization, positive values will prioritize segmenting
+    the xy-plane first, negative will do the opposite
+    """
 
     class Config:
         use_enum_values = True

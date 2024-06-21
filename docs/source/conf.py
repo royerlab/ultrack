@@ -44,9 +44,11 @@ extensions = [
     "sphinx_click.ext",
     "sphinx_copybutton",
     "sphinx.ext.autosummary",
+    "sphinx.ext.mathjax",
     "nbsphinx",
     "myst_parser",
     "sphinx_gallery.load_style",
+    "sphinxcontrib.autodoc_pydantic",
 ]
 
 source_suffix = {
@@ -86,3 +88,13 @@ autodoc_typehints = "none"
 
 # Don't show class signature with the class' name.
 # autodoc_class_signature = "separated"
+
+# Pydantic auto-doc settings
+autodoc_pydantic_model_show_json = False
+autodoc_pydantic_model_show_config_summary = False
+autodoc_pydantic_model_show_validator_summary = False
+autodoc_pydantic_model_show_validator_members = False
+autodoc_pydantic_model_show_field_summary = False
+autodoc_pydantic_model_signature_prefix = "class"
+autodoc_pydantic_field_list_validators = False
+autodoc_pydantic_model_undoc_members = False

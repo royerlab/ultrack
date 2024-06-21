@@ -1,6 +1,12 @@
 Ultrack's Usage Examples
 ========================
 
+Here we provide some examples of how to use Ultrack for cell tracking.
+
+Some examples are provided as Jupyter notebooks with additional documentation, but we do not recommend using Jupyter notebooks for your day-to-day analysis.
+
+Other examples as Python scripts can be found in `here <https://github.com/royerlab/ultrack/tree/main/examples>`_.
+
 Additional packages might be required. Therefore, conda environment files are provided, which can be installed using:
 
 .. code-block:: bash
