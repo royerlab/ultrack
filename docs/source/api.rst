@@ -38,6 +38,7 @@ Image processing utilities
     ultrack.imgproc.tracks_properties
     ultrack.imgproc.Cellpose
     ultrack.imgproc.sam.MicroSAM
+    ultrack.imgproc.register_timelapse
     ultrack.imgproc.flow.timelapse_flow
 
 Exporting
