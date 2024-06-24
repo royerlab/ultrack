@@ -98,3 +98,5 @@ autodoc_pydantic_model_show_field_summary = False
 autodoc_pydantic_model_signature_prefix = "class"
 autodoc_pydantic_field_list_validators = False
 autodoc_pydantic_model_undoc_members = False
+autodoc_pydantic_model_summary_list_order = "bysource"
+autodoc_pydantic_model_member_order = "bysource"
