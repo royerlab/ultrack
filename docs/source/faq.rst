@@ -31,7 +31,7 @@ FAQ
     - increase `min_frontier`; this is my preferred option when you have a high accuracy network as plants.
         This merges regions whose average intensity between them is below min_frontier.
         In this case, assuming your boundary is between 0 and 1, `min_frontier=0.1`` or even `0.05`` should work.
-        I'm a bit careful to not increase this too much because it could merge regions where cells are shared by a "weak" boundary.
+        Be careful to not increase this too much because it could merge regions where cells are shared by a "weak" boundary.
     - another option is to blur the boundary map so you avoid creating regions with "flat" intensities.
         This follows the same reasoning for using EDT to run watersheds.
         This works better for convex objects. And remember to renormalize the intensity values if using this with `min_frontier`.
