@@ -2,7 +2,7 @@ FAQ
 ---
 
 **Q: What is each configuration parameters for?**
-    A: See the `configuration README <https://github.com/royerlab/ultrack/tree/main/ultrack/config>`_.
+    A: See the :doc:`configuration page <configuration>`.
 
 **Q: What to do when Qt platform plugin cannot be initialized?**
     A: The solution to try is to install `pyqt` using `conda` from the `-c conda-forge` channel.
@@ -37,7 +37,7 @@ FAQ
         This works better for convex objects. And remember to renormalize the intensity values if using this with `min_frontier`.
 
 **Q: Ultrack is not working with my data. What can I do?**
-    A: See the :doc:`tracking optimizing page <optimizing>`_.
+    A: See the :doc:`tracking optimizing page <optimizing>`.
 
 **Q: My data is isotropic. How can I take that into account?**
     A: Provide the the Z, Y, X scaling factors in the ``scale`` parameter of ``track`` or ``link`` functions.
