@@ -35,3 +35,9 @@ FAQ
     - another option is to blur the boundary map so you avoid creating regions with "flat" intensities.
         This follows the same reasoning for using EDT to run watersheds.
         This works better for convex objects. And remember to renormalize the intensity values if using this with `min_frontier`.
+
+**Q: Ultrack is not working with my data. What can I do?**
+    A: See the :doc:`tracking optimizing page <optimizing>`_.
+
+**Q: My data is isotropic. How can I take that into account?**
+    A: Provide the the Z, Y, X scaling factors in the ``scale`` parameter of ``track`` or ``link`` functions.

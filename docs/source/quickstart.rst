@@ -7,7 +7,7 @@ Otherwise, we recommend you read the :doc:`install` and :doc:`getting_started` s
 Installation
 ------------
 
-If already have a working Python environment, you can install `ultrack` using pip.
+If already have a working Python environment, you can install ``ultrack`` using pip.
 We recommend you use a conda environment to avoid any conflicts with your existing packages.
 For additional information on how to create a conda environment and install packages, see :doc:`install`.
 
@@ -18,7 +18,7 @@ For additional information on how to create a conda environment and install pack
 Basic usage
 -----------
 
-The following example demonstrates how to use `ultrack` to track cells using its canonical input, a binary image of the foreground and a cells' contours image.
+The following example demonstrates how to use ``ultrack`` to track cells using its canonical input, a binary image of the foreground and a cells' contours image.
 
 .. code-block:: python
 
@@ -45,7 +45,7 @@ The following example demonstrates how to use `ultrack` to track cells using its
       napari.run()
 
 
-If you already have segmentation labels, you can provide the them directly to the tracker.
+If you already have segmentation labels, you can provide them directly to the tracker.
 
 .. code-block:: python
 
