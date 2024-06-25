@@ -119,7 +119,7 @@ class HeuristicSolver(BaseSolver):
         self._out_edge = self._forward_map[np.asarray(sources)].astype(np.int64)
         self._in_edge = self._forward_map[np.asarray(targets)].astype(np.int64)
 
-        LOG.info(f"transformed edge weights {self._weights}")
+        LOG.info("transformed edge weights %s", self._weights)
 
         n_nodes = len(self._appear_weight)
 
