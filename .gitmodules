@@ -1,0 +1,3 @@
+[submodule "plugin-imagej"]
+	path = plugin-imagej
+	url = https://github.com/royerlab/ultrack-imagej

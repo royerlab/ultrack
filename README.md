@@ -51,7 +51,7 @@ The official documentation is available [here](https://royerlab.github.io/ultrac
 
 These additional developer documentation are available:
 
-- Parameter [configuration schema](ultrack/config/README.md).
+- Parameter [configuration schema](docs/source/configuration.rst).
 - Intermediate segmentation and tracking SQL database are [here](ultrack/core/README.md).
 
 ## Gurobi setup
@@ -92,8 +92,10 @@ Depending on the operating system, the gurobi library might be missing and you n
 
 ## Citing
 
+If you use ultrack in your research, please cite the following paper:
+
 ```
-@misc{bragantini2023ultrack,
+@misc{bragantini2023ucmtracking,
       title={Large-Scale Multi-Hypotheses Cell Tracking Using Ultrametric Contours Maps},
       author={Jordão Bragantini and Merlin Lange and Loïc Royer},
       year={2023},
@@ -102,3 +104,5 @@ Depending on the operating system, the gurobi library might be missing and you n
       primaryClass={cs.CV}
 }
 ```
+
+And the respective auxiliary methods (e.g. Cellpose, napari, etc) depending on your usage.

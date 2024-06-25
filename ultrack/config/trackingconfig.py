@@ -11,20 +11,54 @@ class LinkFunctionChoices(Enum):
 
 
 class TrackingConfig(BaseModel):
+    """Tracking (segmentation & linking selection) configuration"""
+
     appear_weight: float = -0.001
+    """Penalization weight for appearing cell, should be negative """
     disappear_weight: float = -0.001
+    """Penalization for disappearing cell, should be negative """
     division_weight: float = -0.001
+    """Penalization for dividing cell, should be negative """
+
+    n_threads: int = -1
+    """Number of worker threads """
+
+    window_size: Optional[int] = None
+    """
+    Time window size for partially solving the tracking ILP.
+    By default it solves the entire timelapse at once.
+    Useful for large datasets.
+    """
+
+    overlap_size: int = 1
+    """
+    Number of frames used to shared (overlap/pad) each size when ``window_size`` is set.
+    This improves the tracking quality at the edges of the windows and enforce continuity of the tracks.
+    """
+
+    solution_gap: float = 0.001
+    """
+    Solver solution gap. This will speed up the solver when finding the optimal
+    solution might taken a long time, but may affect the quality of the solution.
+    """
+
+    time_limit: int = 36000
+    """Solver execution time limit in seconds """
+
+    method: int = 0
+    """``SPECIAL``: Solver method, `reference <https://docs.python-mip.com/en/latest/classes.html#lp-method>`_"""
+
+    link_function: LinkFunctionChoices = "power"
+    """``SPECIAL``: Function used to transform the edge weights, `identity` or `power`"""
+
+    power: float = 4
+    r"""``SPECIAL``: Expoent :math:`\eta` of power transform, :math:`w_{pq}^\eta` """
+
+    bias: float = -0.0
+    """``SPECIAL``: Edge weights bias :math:`b`, :math:`w_{pq} + b`, should be negative """
+
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
-    window_size: Optional[int] = None
-    overlap_size: int = 1
-    solution_gap: float = 0.001
-    time_limit: int = 36000
-    method: int = 0
-    n_threads: int = -1
-    link_function: LinkFunctionChoices = "power"
-    power: float = 4
-    bias: float = -0.0
 
     class Config:
         use_enum_values = True

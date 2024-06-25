@@ -169,6 +169,7 @@ cython_debug/
 examples/*/*
 !examples/*/*.ipynb
 !examples/*/*.yml
+docs/source/examples
 
 # ultrack files
 metadata.toml

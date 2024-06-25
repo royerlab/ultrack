@@ -16,10 +16,21 @@ class DatabaseChoices(Enum):
 
 
 class DataConfig(BaseModel):
-    working_dir: Path = Path(".")
-    database: DatabaseChoices = "sqlite"
-    address: Optional[str] = None
+    """
+    Configuration for intermediate data storage and retrieval.
+    """
+
     n_workers: int = 1
+    """Number of workers for parallel processing"""
+
+    working_dir: Path = Path(".")
+    """Working directory for auxiliary files (e.g. sqlite database, metadata)"""
+
+    database: DatabaseChoices = "sqlite"
+    """``SPECIAL``: Database type ``sqlite`` and ``postgresql`` supported"""
+
+    address: Optional[str] = None
+    """``SPECIAL``: Postgresql database path, for example, ``postgres@localhost:12345/example``"""
 
     class Config:
         validate_assignment = True
@@ -86,6 +97,7 @@ class DataConfig(BaseModel):
 
     @property
     def metadata(self) -> Dict[str, Any]:
+        """Returns metadata as dictionary."""
         if not self.metadata_path.exists():
             return {}
 
