@@ -43,4 +43,4 @@ FAQ
     A: Provide the the Z, Y, X scaling factors in the ``scale`` parameter of ``track`` or ``link`` functions.
 
 **Q: How can I use Ultrack distributed over a cluster?**
-    A: `Ka-long Ka <https://github.com/jackyko1991>`_ shared his setup and his documentation `here <https://github.com/jackyko1991/Ultrack-Cluster>`_.
+    A: `Ka-long Ko <https://github.com/jackyko1991>`_ shared his setup and his documentation `here <https://github.com/jackyko1991/Ultrack-Cluster>`_.
