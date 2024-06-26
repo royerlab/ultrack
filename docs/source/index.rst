@@ -74,6 +74,11 @@ If you use ``ultrack`` in your research, please cite the following paper:
 And the respective auxiliary methods (e.g. Cellpose, napari, etc) depending on your usage.
 
 
+Additional resources
+--------------------
+
+.. [1] `Ka-long Ko <https://github.com/jackyko1991>`_'s Ultrack cluster setup and documentation: https://github.com/jackyko1991/Ultrack-Cluster
+
 Documentation contents
 ``````````````````````
 
