@@ -77,7 +77,7 @@ And the respective auxiliary methods (e.g. Cellpose, napari, etc) depending on y
 Additional resources
 --------------------
 
-.. [1] `Ka-long Ko <https://github.com/jackyko1991>`_'s Ultrack cluster setup and documentation: https://github.com/jackyko1991/Ultrack-Cluster
+.. [1] `Jacky Ko <https://github.com/jackyko1991>`_'s Ultrack cluster setup and documentation: https://github.com/jackyko1991/Ultrack-Cluster
 
 Documentation contents
 ``````````````````````
