@@ -13,6 +13,9 @@ from ultrack.config import load_config
 from ultrack.utils.data import make_config_content
 
 
+def _run_server(instance_config_path: str):
+    _run_command(["server", "--port", "54123", "-cfg", instance_config_path])
+
 def _run_command(command_and_args: List[str]) -> None:
     try:
         main(command_and_args)
@@ -161,6 +164,25 @@ class TestCommandLine:
             ]
         )
 
+    def test_server(self, instance_config_path: str) -> None:
+        # Start server in a background thread
+        process = Process(target=_run_server, args=(instance_config_path,))
+        process.start()
+
+        # Wait for server to start
+        import time
+
+        time.sleep(10)
+
+        response = requests.get("http://127.0.0.1:54123")
+        print(response.content)
+
+        assert process.is_alive()
+        assert response.status_code == 200
+
+        process.terminate()
+        process.join()
+
 
 def test_create_config(tmp_path: Path) -> None:
     _run_command(["create_config", str(tmp_path / "config.toml")])
@@ -178,28 +200,3 @@ def test_labels_to_contours(zarr_dataset_paths: List[str], tmp_path: Path) -> No
 
 def test_check_gurobi() -> None:
     _run_command(["check_gurobi"])
-
-
-def _run_server():
-    _run_command(["server", "--port", "54123"])
-
-
-def test_server() -> None:
-
-    # Start server in a background thread
-    process = Process(target=_run_server)
-    process.start()
-
-    # Wait for server to start
-    import time
-
-    time.sleep(10)
-
-    response = requests.get("http://127.0.0.1:54123")
-    print(response.content)
-
-    assert process.is_alive()
-    assert response.status_code == 200
-
-    process.terminate()
-    process.join()

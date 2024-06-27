@@ -1,9 +1,12 @@
-import os
+from typing import Optional
 
 import click
-import uvicorn
+import toml
 
-from ultrack.api.app import app
+from ultrack import MainConfig
+from ultrack.api import start_server
+from ultrack.cli.utils import config_option
+from ultrack.config import DataConfig
 
 
 @click.command("server")
@@ -22,9 +25,9 @@ from ultrack.api.app import app
     default=None,
     show_default=True,
 )
-def server_cli(host: str, port: int, api_results_path: str) -> None:
+@config_option()
+def server_cli(
+    host: str, port: int, api_results_path: Optional[str], config: MainConfig
+) -> None:
     """Start the websockets ultrack API."""
-    if api_results_path is not None:
-        os.environ["API_RESULTS_PATH"] = str(api_results_path)
-
-    uvicorn.run(app, host=host, port=port)
+    start_server(api_results_path, ultrack_data_config=config, host=host, port=port)
