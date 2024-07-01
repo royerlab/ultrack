@@ -54,21 +54,23 @@ Here is a basic example to get you started:
 import napari
 from ultrack import MainConfig, Tracker
 
-# Load your data
-foreground = ...
-contours = ...
+# __main__ is recommended to avoid multi-processing errors
+if __name__ == "__main__":
+      # Load your data
+      foreground = ...
+      contours = ...
 
-# Create config
-config = MainConfig()
+      # Create config
+      config = MainConfig()
 
-# Run tracking
-tracker = Tracker(config)
-tracker.track(foreground=foreground, edges=contours)
+      # Run tracking
+      tracker = Tracker(config)
+      tracker.track(foreground=foreground, edges=contours)
 
-# Visualize results in napari
-tracks, graph = tracker.to_napari()
-napari.view_tracks(tracks[["track_id", "t", "z", "y", "x"]], graph=graph)
-napari.run()
+      # Visualize results in napari
+      tracks, graph = tracker.to_napari()
+      napari.view_tracks(tracks[["track_id", "t", "z", "y", "x"]], graph=graph)
+      napari.run()
 ```
 
 More usage examples can be found [here](examples), including their environment files and installation instructions.
