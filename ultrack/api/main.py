@@ -12,13 +12,15 @@ from ultrack.api import app
 def _in_notebook():
     try:
         from IPython import get_ipython
-        if 'IPKernelApp' not in get_ipython().config:  # pragma: no cover
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
             return False
     except ImportError:
         return False
     except AttributeError:
         return False
     return True
+
 
 def start_server(
     api_results_path: Union[Path, str, None] = None,
@@ -40,8 +42,10 @@ def start_server(
         os.environ["ULTRACK_DATA_CONFIG"] = ultrack_data_config.json()
 
     if _in_notebook():
+
         def start_in_notebook():
             uvicorn.run(app.app, host=host, port=port)
+
         Process(target=start_in_notebook).start()
     else:
         uvicorn.run(app.app, host=host, port=port)

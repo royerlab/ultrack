@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -27,14 +28,18 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ultrack import MainConfig
+from ultrack import MainConfig, export_tracks_by_extension
 from ultrack.widgets.ultrackwidget.components.button_workflow_config import (
     ButtonWorkflowConfig,
 )
 from ultrack.widgets.ultrackwidget.components.emitting_stream import EmittingStream
 from ultrack.widgets.ultrackwidget.data_forms import DataForms
 from ultrack.widgets.ultrackwidget.utils import UltrackInput
-from ultrack.widgets.ultrackwidget.workflows import UltrackWorkflow, WorkflowChoice
+from ultrack.widgets.ultrackwidget.workflows import (
+    UltrackWorkflow,
+    WorkflowChoice,
+    WorkflowStage,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -106,8 +111,53 @@ class UltrackWidget(QWidget):
         self._add_run_button(layout)
         self._add_output_area(layout)
         self._add_cancel_button(layout)
+        self._add_bt_export_tracks(layout)
 
         layout.addStretch()
+
+    def _add_bt_export_tracks(self, layout: QVBoxLayout) -> None:
+        """
+        Add the export tracks button to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the export tracks button will be added.
+        """
+        self._add_spacer(layout, 10)
+        self._bt_export = QPushButton("Export tracks")
+        self._bt_export.setEnabled(False)
+        layout.addWidget(self._bt_export)
+
+    def export_tracks(self):
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.AnyFile)
+        file_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        file_dialog.setNameFilter(
+            "Napari Tracks (*.csv);;"
+            "Trackmate (*.xml);;"
+            "Zarr segments (*.zarr);;"
+            "NetworkX (*.dot);;"
+            "NetworkX (*.json)"
+        )
+
+        if file_dialog.exec_():
+            file_name = file_dialog.selectedFiles()[0]
+            ext = file_dialog.selectedNameFilter().split("*.")[-1][:-1]
+
+            # add the extension if not present
+            if not file_name.endswith(ext):
+                file_name += f".{ext}"
+
+            config = self._data_forms.get_config()
+            export_tracks_by_extension(config, file_name, overwrite=True)
+
+            QMessageBox.information(
+                self,
+                "Export tracks",
+                f"Tracks exported to {file_name}",
+                QMessageBox.Ok,
+            )
 
     def _add_title(self, layout: QVBoxLayout) -> None:
         """
@@ -346,6 +396,7 @@ class UltrackWidget(QWidget):
         self._bt_toggle_settings.clicked.connect(self._on_toggle_settings)
         self._bt_save_settings.clicked.connect(self._on_save_settings)
         self._bt_load_settings.clicked.connect(self._on_load_settings)
+        self._bt_export.clicked.connect(self.export_tracks)
         self._bt_run.clicked.connect(self._on_run)
         self._bt_cancel.clicked.connect(self._cancel)
         self._cb_workflow.currentIndexChanged.connect(self._on_workflow_changed)
@@ -396,7 +447,9 @@ class UltrackWidget(QWidget):
 
     def _on_run_started(self):
         """Handle the start of the run worker."""
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         self._bt_run.setEnabled(False)
+        self._bt_export.setEnabled(False)
         self._bt_run.setText("Running...")
         self._bt_run.repaint()
         self.ctx_stdout_switcher.__enter__()
@@ -410,6 +463,9 @@ class UltrackWidget(QWidget):
         """Handle the finish of the run worker."""
         self._bt_run.setEnabled(True)
         self._bt_run.setText("Run")
+        self._bt_export.setEnabled(
+            self.workflow.last_reached_stage == WorkflowStage.DONE
+        )
         self._bt_run.repaint()
         self.ctx_stdout_switcher.__exit__(None, None, None)
         self.ctx_stderr_switcher.__exit__(None, None, None)
@@ -417,6 +473,7 @@ class UltrackWidget(QWidget):
         self._bt_cancel.hide()
         self.main_group.setEnabled(True)
         self._current_worker = None
+        QApplication.restoreOverrideCursor()
 
     @thread_worker
     def _make_run_worker(
@@ -434,11 +491,9 @@ class UltrackWidget(QWidget):
         Worker
             The worker to run the selected workflow.
         """
-        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         yield from self.workflow.run(
             config, workflow_choice, inputs, additional_options
         )
-        QApplication.restoreOverrideCursor()
 
     def _on_save_settings(self) -> None:
         """Handle the save settings button click event."""
@@ -447,7 +502,7 @@ class UltrackWidget(QWidget):
             None,
             "Save TOML",
             "ultrack_settings.toml",
-            "JSON Files (*.toml);;All Files (*)",
+            "TOML Files (*.toml);;All Files (*)",
             options=options,
         )
         if file_name:
