@@ -55,17 +55,17 @@ contributions:
     - command: ultrack.main_widget
       display_name: Ultrack
 
-    - command: ultrack.labels_to_edges_widget
-      display_name: Labels to edges map
+    # - command: ultrack.labels_to_edges_widget
+    #   display_name: Labels to edges map
 
-    - command: ultrack.hypotheses_viz_widget
-      display_name: Segmentation hypotheses visualization
+    # - command: ultrack.hypotheses_viz_widget
+    #   display_name: Segmentation hypotheses visualization
 
-    - command: ultrack.node_annotation_widget
-      display_name: Node annotation
+    # - command: ultrack.node_annotation_widget
+    #   display_name: Node annotation
 
-    - command: ultrack.division_annotation_widget
-      display_name: Division annotation
+    # - command: ultrack.division_annotation_widget
+    #   display_name: Division annotation
 
-    - command: ultrack.track_inspection
-      display_name: Track inspection
+    # - command: ultrack.track_inspection
+    #   display_name: Track inspection
