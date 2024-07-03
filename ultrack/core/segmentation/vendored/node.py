@@ -10,14 +10,19 @@ if TYPE_CHECKING:
 
 
 class Node:
-    def __init__(self, h_node_index: int, parent: "Hierarchy", **kwargs):  # noqa
+    def __init__(
+        self, h_node_index: int, parent: Optional["Hierarchy"], **kwargs
+    ):  # noqa
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
         self._h_node_index = h_node_index
         self._parent = parent
-        self.bbox, self.mask = self._init_bbox_and_mask()
+        if parent is not None:
+            self.bbox, self.mask = self._init_bbox_and_mask()
+        else:
+            self.bbox, self.mask = None, None
 
     @staticmethod
     def _fast_find_binary_object(mask: ArrayLike) -> Tuple[slice]:

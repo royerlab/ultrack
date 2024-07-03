@@ -1,19 +1,19 @@
 import os
 from multiprocessing import Process
 from pathlib import Path
-from threading import Thread
 from typing import Union
 
 import uvicorn
 
+from ultrack import MainConfig
 from ultrack.api import app
-from ultrack.config import DataConfig
 
 
 def _in_notebook():
     try:
         from IPython import get_ipython
-        if 'IPKernelApp' not in get_ipython().config:  # pragma: no cover
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
             return False
     except ImportError:
         return False
@@ -21,9 +21,10 @@ def _in_notebook():
         return False
     return True
 
+
 def start_server(
     api_results_path: Union[Path, str, None] = None,
-    ultrack_data_config: Union[DataConfig, None] = None,
+    ultrack_data_config: Union[MainConfig, None] = None,
     host: str = "0.0.0.0",
     port: int = 8000,
 ):
@@ -41,8 +42,10 @@ def start_server(
         os.environ["ULTRACK_DATA_CONFIG"] = ultrack_data_config.json()
 
     if _in_notebook():
+
         def start_in_notebook():
             uvicorn.run(app.app, host=host, port=port)
+
         Process(target=start_in_notebook).start()
     else:
         uvicorn.run(app.app, host=host, port=port)

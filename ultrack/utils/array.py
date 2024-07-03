@@ -3,7 +3,7 @@ import logging
 import shutil
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, Tuple, Union
+from typing import Callable, Literal, Optional, Tuple, Type, Union
 
 import numpy as np
 import zarr
@@ -148,7 +148,7 @@ def create_zarr(
     dtype: np.dtype,
     store_or_path: Union[Store, Path, str, None] = None,
     overwrite: bool = False,
-    default_store_type: Store = zarr.MemoryStore,
+    default_store_type: Type[Store] = zarr.TempStore,
     chunks: Optional[Tuple[int]] = None,
     **kwargs,
 ) -> zarr.Array:

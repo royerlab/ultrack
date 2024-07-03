@@ -163,7 +163,7 @@ def _process(
             )  # current, next
 
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
-        LOG.info(f"Node {node.id} links {neighborhood}")
+        LOG.info("Node %s links %s", node.id, neighborhood)
         links += neighborhood
 
     if len(links) == 0:

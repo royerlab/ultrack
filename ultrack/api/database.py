@@ -7,7 +7,7 @@ from typing import Optional
 
 import sqlalchemy as sqla
 from pydantic import BaseModel, Json, validator
-from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy import JSON, Column, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from ultrack import MainConfig
@@ -260,8 +260,6 @@ def update_experiment(experiment: Experiment) -> None:
             setattr(experiment_db, key, value)
     session.commit()
     session.close()
-
-
 
 
 def get_experiment(id: int) -> Experiment:

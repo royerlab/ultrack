@@ -91,5 +91,5 @@ def to_networkx(
     nx.DiGraph
         Networkx graph.
     """
-    df = to_tracks_layer(config)
+    df, _ = to_tracks_layer(config)
     return tracks_layer_to_networkx(df, children_to_parent)

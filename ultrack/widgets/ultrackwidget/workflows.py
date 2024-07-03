@@ -174,6 +174,7 @@ class UltrackWorkflow:
         self.inputs_used = inputs
         self.config = config
         self.additional_options = additional_options
+        self.last_reached_stage = WorkflowStage.PREPROCESSING
         try:
             if stage == WorkflowStage.PREPROCESSING:
                 if workflow_choice != WorkflowChoice.MANUAL:

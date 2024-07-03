@@ -95,8 +95,8 @@ class MIPSolver(BaseSolver):
             indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
         )
 
-        LOG.info(f"# {np.sum(is_first_t)} nodes at starting `t`.")
-        LOG.info(f"# {np.sum(is_last_t)} nodes at last `t`.")
+        LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
+        LOG.info("# %s nodes at last `t`.", np.sum(is_last_t))
 
         appear_weight = np.logical_not(is_first_t) * self._config.appear_weight
         disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
@@ -146,7 +146,7 @@ class MIPSolver(BaseSolver):
 
         weights = self._config.apply_link_function(weights.astype(float))
 
-        LOG.info(f"transformed edge weights {weights}")
+        LOG.info("transformed edge weights %s", weights)
 
         sources = self._forward_map[np.asarray(sources, dtype=int)]
         targets = self._forward_map[np.asarray(targets, dtype=int)]
@@ -344,7 +344,7 @@ class MIPSolver(BaseSolver):
             [i for i, node in enumerate(self._nodes) if node.x > 0.5], dtype=int
         )
         nodes = self._backward_map[nodes]
-        LOG.info(f"Solution nodes\n{nodes}")
+        LOG.info("Solution nodes\n%s", nodes)
 
         if len(nodes) == 0:
             raise ValueError("Something went wrong, nodes solution is empty.")
@@ -360,7 +360,7 @@ class MIPSolver(BaseSolver):
         )
         edges = self._backward_map[self._edges_df.loc[edges_solution].values]
 
-        LOG.info(f"Solution edges\n{edges}")
+        LOG.info("Solution edges\n%s", edges)
 
         if len(edges) == 0:
             raise ValueError("Something went wrong, edges solution is empty")
