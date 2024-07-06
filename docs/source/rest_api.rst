@@ -5,6 +5,10 @@ The ultrack REST API is a set of HTTP/Websockets endpoints that allow you to tra
 data from a Ultrack server.
 This is what enables the :doc:`Ultrack FIJI plugin <fiji>`.
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
 The communication between the Ultrack server and the client is mainly done through websockets.
 This allows for a more efficient communication between the server and the client, enabling
 real time responses.
@@ -83,6 +87,7 @@ Experiment endpoints
 The experiment endpoints are the main endpoints of the Ultrack server. They are the endpoints
 that allow the client to run the experiments and get the results of the experiments.
 
+.. _segment_auto_detect:
 .. describe:: WEBSOCKET /segment/auto_detect
 
     This endpoint is a websocket endpoint that allows you to send an image (referenced
@@ -152,14 +157,152 @@ that allow the client to run the experiments and get the results of the experime
             "robust_invert_kwargs": {},
         }
 
+All the other endpoints are similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but they
+are more specific to the segmentation of the image. The endpoints are described below.
+
+.. _segment_manual:
 .. describe:: WEBSOCKET /segment/manual
 
+    This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
+    client to manually provide the image detection of cells and the edges of the cells.
+    This endpoint requires the following JSON payload:
+
+    .. code-block:: JSON
+
+        {
+            "experiment": {
+                "name": "Experiment Name",
+                "config": "..."
+                "detection_channel_or_path": "/path/to/detection",
+                "edges_channel_or_path": "/path/to/edges",
+            },
+        }
+
+    Alternatively, if the image is a OME-ZARR file, the input data could be referenced
+    as a channel in the file. For example, the input data could be referenced as:
+
+    .. code-block:: JSON
+
+        {
+            "experiment": {
+                "name": "Experiment Name",
+                "config": "..."
+                "data_url": "/path/to/image.ome.zarr",
+                "detection_channel_or_path": "detection_channel",
+                "edges_channel_or_path": "edges_channel",
+            },
+        }
+
+    And for both cases, the server will send the :class:`Experiment <ultrack.api.database.Experiment>`
+    JSON payload. For example:
+
+    .. code-block:: JSON
+
+        {
+            "id": 1,
+            "name": "Experiment Name",
+            "status": "segmenting",
+            "config": {
+                "..."
+            }
+            "start_time": "2021-01-01T00:00:00",
+            "end_time": "",
+            "std_log": "Linking cells...",
+            "err_log": "",
+            "data_url": "",
+            "image_channel_or_path": "",
+            "edges_channel_or_path": "/path/to/edges",
+            "detection_channel_or_path": "/path/to/detection",
+            "segmentation_channel_or_path": "",
+            "labels_channel_or_path": "",
+            "final_segments_url": "",
+            "tracks": ""
+        }
+
+Lastly, the following endpoint could be used in a situation where the client has already
+the instance segmentation of the cells from a third party software, like Cellpose or
+StarDist.
+
+.. _segment_labels:
 .. describe:: WEBSOCKET /segment/labels
+
+    This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
+    client to manually provide the instance segmentation of the cells.
+    This endpoint wraps the :func:`ultrack.imgproc.labels_to_edges` function, which is
+    capable of obtaining the edges of the cells from the instance segmentation.
+
+    This endpoint requires the following JSON payload:
+
+    .. code-block:: JSON
+
+        {
+            "experiment": {
+                "name": "Experiment Name",
+                "config": "..."
+                "labels_channel_or_path": "/path/to/labels",
+            },
+            "labels_to_edges_kwargs": {},
+        }
+
+    Alternatively, if the image is a OME-ZARR file, the input data could be referenced
+    as a channel in the file. For example, the input data could be referenced as:
+
+    .. code-block:: JSON
+
+        {
+            "experiment": {
+                "name": "Experiment Name",
+                "config": "..."
+                "data_url": "/path/to/image.ome.zarr",
+                "labels_channel_or_path": "labels_channel",
+            },
+        }
+
+    And for both cases, the server will send the :class:`Experiment
+    <ultrack.api.database.Experiment>` JSON payload. For example:
+
+    .. code-block:: JSON
+
+        {
+            "id": 1,
+            "name": "Experiment Name",
+            "status": "segmenting",
+            "config": {
+                "..."
+            }
+            "start_time": "2021-01-01T00:00:00",
+            "end_time": "",
+            "std_log": "Linking cells...",
+            "err_log": "",
+            "data_url": "",
+            "image_channel_or_path": "",
+            "edges_channel_or_path": "",
+            "detection_channel_or_path": "",
+            "segmentation_channel_or_path": "",
+            "labels_channel_or_path": "/path/to/labels",
+            "final_segments_url": "",
+            "tracks": ""
+        }
+
+Data export endpoints
+^^^^^^^^^^^^^^^^^^^^^
 
 .. describe:: GET /experiment/{experiment_id}/trackmate
 
-Database API
-^^^^^^^^^^^^
+    This endpoint allows the client to download the results of the experiment in the TrackMate
+    format. The client must provide the ``experiment_id`` in the URL. This id is obtained from
+    the :class:`Experiment <ultrack.api.database.Experiment>` instance that was executed.
+    The server will return a XML encoded within the response.
+
+Database Schema
+---------------
+
+All the data that is being processed by the Ultrack server is stored in a database. This
+database is a SQLite database that is created when the server is started. The database
+is used to store the results of the experiments and the configuration of the experiments.
+
+The database schema is the same as the one used in Ultrack, but with an additional table
+to store the configuration and the status of the experiments. The schema is described below.
 
 .. autopydantic_model:: ultrack.api.database.Experiment
     :members:
