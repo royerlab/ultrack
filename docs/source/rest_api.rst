@@ -5,10 +5,6 @@ The ultrack REST API is a set of HTTP/Websockets endpoints that allow you to tra
 data from a Ultrack server.
 This is what enables the :doc:`Ultrack FIJI plugin <fiji>`.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
 The communication between the Ultrack server and the client is mainly done through websockets.
 This allows for a more efficient communication between the server and the client, enabling
 real time responses.
