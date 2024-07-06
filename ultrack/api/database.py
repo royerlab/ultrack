@@ -51,25 +51,25 @@ class ExperimentStatus(str, enum.Enum):
 
     Attributes
     ----------
-    NOT_PERSISTED : str
+    NOT_PERSISTED: str = "not_persisted"
         The experiment is not persisted in the database.
-    QUEUED : str
+    QUEUED: str = "queued"
         The experiment is queued for execution.
-    INITIALIZING : str
+    INITIALIZING: str = "initializing"
         The experiment is now initializing and preprocessing data.
-    DATA_LOADED : str
+    DATA_LOADED: str = "data_loaded"
         The data is loaded and ready for tracking.
-    SEGMENTING : str
+    SEGMENTING: str = "segmenting"
         Ultrack is segmenting the data.
-    LINKING : str
+    LINKING: str = "linking"
         Ultrack is linking the segments.
-    SOLVING : str
+    SOLVING: str = "solving"
         Ultrack is optimizing the tracks.
-    EXPORTING : str
+    EXPORTING: str = "exporting"
         Ultrack is exporting the results.
-    SUCCESS : str
+    SUCCESS: str = "success"
         The experiment was successfully executed until the EXPORTING phase.
-    FAILED : str
+    FAILED: str = "failed"
         The experiment failed at some point.
     """
 
