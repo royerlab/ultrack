@@ -5,6 +5,7 @@ Once you have a working ultrack pipeline, the next step is optimizing the tracki
 Here we describe our guidelines for optimizing the tracking performance and up to what point you can expect to improve the tracking performance.
 
 It will be divided into a few sections:
+
 - Pre-processing: How to make tracking easier by pre-processing the data;
 - Input verification: Guidelines to check if you have good `labels` or `foreground` and `contours` maps;
 - Hard constraints: Parameters must be adjusted so the hypotheses include the correct solution;
@@ -13,15 +14,24 @@ It will be divided into a few sections:
 Pre-processing
 ``````````````
 
-The first question to ask yourself is, are your frames correctly aligned?
-If not, we recommend aligning them, we provide the ``ultrack.imgproc.register_timelapse`` to align translations, see :doc:`API reference <api>`.
+Registration
+^^^^^^^^^^^^
 
-If your cells are very dynamic and there are considerable movements in different directions, we recommend using the ``flow`` functionalities to align individual segments with their own transforms, see the :doc:`flow tutorial <examples>`.
+Before tracking, the first question to ask yourself is, are your frames correctly aligned?
 
-Some deep learning models are sensitive to the contrast of your data, we recommend adjusting the contrast and removing background applying them.
+If not, we recommend aligning them. To do that, we provide the ``ultrack.imgproc.register_timelapse`` to align translations, see the :ref:`registration API <api_imgproc>`.
+
+If the movement is more complex, with cells moving in different directions, we recommend using the ``flow`` functionalities to align individual segments with distinct transforms, see the :doc:`flow tutorial <examples>`.
+See the :ref:`flow estimation API <api_flow>` for more information.
+
+Deep learning
+^^^^^^^^^^^^^
+
+Some deep learning models are sensitive to the contrast of your data, we recommend adjusting the contrast and removing background before applying them to improve their predictions.
+See the :ref:`image processing utilities API <api_imgproc>` for more information.
 
 Input verification
-`````````````````
+``````````````````
 
 At this point, we assume you already have a ``labels`` image or a ``foreground`` and ``contours`` maps;
 

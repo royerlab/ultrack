@@ -144,7 +144,7 @@ class Tracker:
         to_ctc(config=self.config, *args, **kwargs)
 
     @functools.wraps(to_tracks_layer)
-    def to_napari(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+    def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         self._assert_solved()
         tracks_df, graph = to_tracks_layer(self.config, *args, **kwargs)
         return tracks_df, graph
