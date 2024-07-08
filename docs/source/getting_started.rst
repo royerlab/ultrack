@@ -43,16 +43,35 @@ Solving
 ```````
 
 The solving step is responsible for solving the tracking problem by finding the best segmentation and trajectory for each cell. The parameters for this step are harder to interpret, as they are related to the optimization problem. The most important ones are:
+
 - ``config.tracking_config.appear_weight``: The penalization for a cell to appear, which means to start a new lineage;
 - ``config.tracking_config.division_weight``: The penalization for a cell to divide, breaking a single tracklet into two;
 - ``config.tracking_config.disappear_weight``: The penalization for a cell to disappear, which means to end a lineage;
 
 These weights are negative or zero, as they try to balance the cost of including new lineages in the final solution. The connections (links) between segmentation hypotheses are positive and measure the quality of the tracks, so only lineages with a total linking weight higher than the penalizations are included in the final solution. At the same time, our optimization problem is finding the combination of connections that maximize the sum of weights of all lineages.
 
+See the :ref:`tracking configuration description <tracking_config>` for more information and :doc:`optimizing` for details on how to select these parameters.
+
+
 Exporting
 `````````
 
 Once the above steps have been applied, the tracking solutions are recorded in the database and they can be exported to a format of your choice, them being, ``to_networkx``, ``to_trackmate``, ``to_tracks_layer``, ``tracks_to_zarr`` and others.
+
+See the :ref:`export API reference <api_export>` for all available options and their parameters.
+
+Example of exporting solutions to napari tracks layer:
+
+.. code-block:: python
+
+    # ... tracking computation
+
+    # Exporting to napari format using `Tracker` class
+    tracks, graph = tracker.to_tracks_layer()
+
+    # Exporting using config file
+    tracks, graph = to_tracks_layer(config)
+
 
 Post-processing
 ```````````````
@@ -67,7 +86,7 @@ Other functionalities can be found in ``ultrack.utils`` or ``ultrack.imgproc``, 
 
 - ``tracks_properties``: Which returns compute statistics from the tracks, segmentation masks and images.
 
-For additional information, please refer to the :doc:`API reference <api>`.
+For additional information, please refer to the :ref:`tracks post-processing API reference <api_tracks>`.
 
 Image processing
 ````````````````
@@ -76,4 +95,4 @@ Despite being presented here last, ultrack's image processing module provides au
 
 Most of them are available in ``ultrack.imgproc`` , ``ultrack.utils.array`` and ``ultrack.utils.cuda`` modules.
 
-Refer to the :doc:`API reference <api>` for more information.
+Refer to the :ref:`image processing API reference <api_imgproc>` for more information.

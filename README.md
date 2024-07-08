@@ -37,7 +37,7 @@ To avoid conflicts between different packages, we recommend using conda to creat
 ```bash
 conda create --name tracking -c conda-forge python=3.10 pyqt
 conda activate tracking
-pip install git+https://github.com/royerlab/ultrack
+pip install ultrack
 ```
 
 ## Usage
@@ -68,7 +68,7 @@ if __name__ == "__main__":
       tracker.track(foreground=foreground, edges=contours)
 
       # Visualize results in napari
-      tracks, graph = tracker.to_napari()
+      tracks, graph = tracker.to_tracks_layer()
       napari.view_tracks(tracks[["track_id", "t", "z", "y", "x"]], graph=graph)
       napari.run()
 ```

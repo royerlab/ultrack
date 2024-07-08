@@ -135,8 +135,8 @@ def test_outputs(
     tracker.link()
     tracker.solve()
 
-    # test to_napari (and indirectly to_pandas)
-    df_tracker, graph_tracker = tracker.to_napari()
+    # test to_tracks_layer (and indirectly to_pandas)
+    df_tracker, graph_tracker = tracker.to_tracks_layer()
     df_original, graph_original = to_tracks_layer(config_instance)
 
     assert df_tracker.equals(df_original)
