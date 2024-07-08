@@ -13,7 +13,7 @@ All the messages sent through the websocket are JSON messages. And there is alwa
 :class:`Experiment <ultrack.api.database.Experiment>` object that is sent encoded within the message.
 This object contains all the information about the experiment that is being run, including
 the configuration (:class:`MainConfig <ultrack.config.MainConfig>`) of the experiment, the status of the
-experiment (:enum:`ExperimentStatus <ultrack.api.database.ExperimentStatus>`), the experiment ID, and the experiment name.
+experiment (:class:`ExperimentStatus <ultrack.api.database.ExperimentStatus>`), the experiment ID, and the experiment name.
 When the experiment is concluded, this object will also contain the results of the
 experiment, encoded in the fields ``final_segments_url`` (URL to the tracked segments path)
 and ``tracks`` (JSON of napari complaint tracking format).
@@ -91,7 +91,7 @@ that allow the client to run the experiments and get the results of the experime
 
     This endpoint wraps the :func:`ultrack.imgproc.detect_foreground` function and the
     :func:`ultrack.imgproc.robust_invert` function, which are functions capable
-    of obtaining the foreground of the image and its edges by image processing techniques.
+    of obtaining the foreground of the image and its contours by image processing techniques.
     For that reason, one can override the default parameters of those functions by sending
     the ``detect_foreground_kwargs`` and ``robust_invert_kwargs`` as keyword arguments.
     Those keyword arguments will be passed to the respective functions.
@@ -160,7 +160,7 @@ are more specific to the segmentation of the image. The endpoints are described 
 .. describe:: WEBSOCKET /segment/manual
 
     This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
-    client to manually provide the image detection of cells and the edges of the cells.
+    client to manually provide the image detection of cells and the contours of the cells.
     This endpoint requires the following JSON payload:
 
     .. code-block:: JSON
@@ -170,7 +170,7 @@ are more specific to the segmentation of the image. The endpoints are described 
                 "name": "Experiment Name",
                 "config": "..."
                 "detection_channel_or_path": "/path/to/detection",
-                "edges_channel_or_path": "/path/to/edges",
+                "edges_channel_or_path": "/path/to/contours",
             },
         }
 
@@ -185,7 +185,7 @@ are more specific to the segmentation of the image. The endpoints are described 
                 "config": "..."
                 "data_url": "/path/to/image.ome.zarr",
                 "detection_channel_or_path": "detection_channel",
-                "edges_channel_or_path": "edges_channel",
+                "edges_channel_or_path": "contours_channel",
             },
         }
 
@@ -207,7 +207,7 @@ are more specific to the segmentation of the image. The endpoints are described 
             "err_log": "",
             "data_url": "",
             "image_channel_or_path": "",
-            "edges_channel_or_path": "/path/to/edges",
+            "edges_channel_or_path": "/path/to/contours",
             "detection_channel_or_path": "/path/to/detection",
             "segmentation_channel_or_path": "",
             "labels_channel_or_path": "",
@@ -224,8 +224,8 @@ StarDist.
 
     This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
     client to manually provide the instance segmentation of the cells.
-    This endpoint wraps the :func:`ultrack.imgproc.labels_to_edges` function, which is
-    capable of obtaining the edges of the cells from the instance segmentation.
+    This endpoint wraps the :meth:`ultrack.utils.labels_to_contours` function, which is
+    capable of obtaining the contours of the cells from the instance segmentation.
 
     This endpoint requires the following JSON payload:
 

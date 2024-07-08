@@ -40,6 +40,7 @@ Image processing utilities
     ultrack.imgproc.sam.MicroSAM
     ultrack.imgproc.register_timelapse
     ultrack.imgproc.flow.timelapse_flow
+    ultrack.utils.labels_to_contours
 
 Exporting
 ^^^^^^^^^
@@ -73,6 +74,8 @@ Image processing utilities
 .. automodule:: ultrack.imgproc
     :members:
     :imported-members:
+
+.. autofunction:: ultrack.utils.labels_to_contours
 
 .. automodule:: ultrack.imgproc.sam
     :members:
