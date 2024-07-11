@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Callable, Literal, Optional, Tuple, Union
 
 import numpy as np
+import sqlalchemy as sqla
 import zarr
 from numpy.typing import ArrayLike
+from sqlalchemy.orm import Session
 from tqdm import tqdm
 from zarr.storage import Store
-import sqlalchemy as sqla
-from sqlalchemy.orm import Session
+
 from ultrack.core.database import NodeDB
 
 LOG = logging.getLogger(__name__)
@@ -197,25 +198,27 @@ def create_zarr(
 
     return zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
 
+
 class UltrackArray:
-    def __init__(self,
+    def __init__(
+        self,
         config,
         dtype: np.dtype = np.int32,
     ):
-        self.config         = config
-        self.database_path  = config.data_config.database_path
-        self.shape          = tuple(config.data_config.metadata["shape"])  #(t,(z),y,x)
-        self.dtype          = dtype
-        self.ndim           = len(self.shape)
-    
-        self.array =  np.zeros(self.shape[1:] ,dtype=self.dtype)
+        self.config = config
+        self.database_path = config.data_config.database_path
+        self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
+        self.dtype = dtype
+        self.ndim = len(self.shape)
+
+        self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.minmax = self.find_min_max_volume_entire_dataset()
         self.volume = self.minmax.mean().astype(int)
         self.export_func = self.array.__setitem__
 
-#proper documentation!!
+    # proper documentation!!
 
-    def __getitem__(self, indexing): 
+    def __getitem__(self, indexing):
         if isinstance(indexing, tuple):
             time, volume_slicing = indexing[0], indexing[1:]
         else:
@@ -223,19 +226,19 @@ class UltrackArray:
             volume_slicing = ...
 
         try:
-            time = time.item()  #convert from numpy.int to int
+            time = time.item()  # convert from numpy.int to int
         except:
             time = time
 
         self.query_volume(
-            time = time,
-            buffer = self.array,
+            time=time,
+            buffer=self.array,
         )
 
         return self.array[volume_slicing]
 
-
-    def query_volume(self, 
+    def query_volume(
+        self,
         time: int,
         buffer: np.array,
     ) -> None:
@@ -251,34 +254,36 @@ class UltrackArray:
 
             idx_to_plot = []
 
-            for idx,q in enumerate(query):
+            for idx, q in enumerate(query):
                 if q[1].area <= self.volume:
                     idx_to_plot.append(idx)
 
-            id_to_plot = [q[0] for idx,q in enumerate(query) if idx in idx_to_plot ]
-            label_list = np.arange(1,len(query)+1,dtype=int)
+            id_to_plot = [q[0] for idx, q in enumerate(query) if idx in idx_to_plot]
+            label_list = np.arange(1, len(query) + 1, dtype=int)
 
             to_remove = []
             for idx in idx_to_plot:
-                if query[idx][2] in id_to_plot:  #if parent is also printed
+                if query[idx][2] in id_to_plot:  # if parent is also printed
                     to_remove.append(idx)
 
             for idx in to_remove:
                 idx_to_plot.remove(idx)
 
             if len(query) == 0:
-                print('query is empty!')
+                print("query is empty!")
 
             for idx in idx_to_plot:
-                query[idx][1].paint_buffer(buffer, value=label_list[idx], include_time=False) 
+                query[idx][1].paint_buffer(
+                    buffer, value=label_list[idx], include_time=False
+                )
 
         return query
 
+    def find_minmax_volumes_1_timepoint(
+        self,
+        time: int,
+    ) -> np.ndarray:
 
-    def find_minmax_volumes_1_timepoint(self,
-            time: int,
-        ) -> np.ndarray:
-        
         ##
         # returns an np.array: [minVolume, maxVolume] of all nodes in the hierarchy for a single time point
         ##
@@ -287,11 +292,7 @@ class UltrackArray:
         min_vol = np.inf
         max_vol = 0
         with Session(engine) as session:
-            query = list(
-                session.query(NodeDB.pickle).where(
-                    NodeDB.t == time
-                )
-            )
+            query = list(session.query(NodeDB.pickle).where(NodeDB.t == time))
             for node in query:
                 vol = node[0].area
                 if vol < min_vol:
@@ -299,10 +300,10 @@ class UltrackArray:
                 if vol > max_vol:
                     max_vol = vol
         return np.array([min_vol, max_vol]).astype(int)
-            
+
     def find_min_max_volume_entire_dataset(self):
         ##
-        # loops over all time points in the stack and returns an 
+        # loops over all time points in the stack and returns an
         # np.array: [minVolume, maxVolume] of all nodes in the hierarchy over all times
         ##
         min_vol = np.inf
@@ -313,5 +314,5 @@ class UltrackArray:
                 min_vol = minmax[0]
             if minmax[1] > max_vol:
                 max_vol = minmax[1]
-        
-        return np.array([min_vol, max_vol],dtype=int)
+
+        return np.array([min_vol, max_vol], dtype=int)
