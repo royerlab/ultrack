@@ -12,7 +12,7 @@ of pre-processing steps, segmentation, (candidate segments) linking, and the tra
 We explain the different workflows in the following sections.
 
 Workflows
-^^^^^^^^^
+`````````
 
 The difference between the workflows is the way the user provides the information to the plugin,
 and the way it processes the information. The remaining steps are the same for all workflows.
@@ -47,7 +47,7 @@ There are three workflows available in the plugin:
 
 
 Flow Field Estimation
-^^^^^^^^^^^^^^^^^^^^^
+`````````````````````
 
 Every workflow allows the use of a flow field to improve the tracking of dynamic cells.
 This method estimates the movement of the cells in the sequence
