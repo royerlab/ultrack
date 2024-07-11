@@ -40,7 +40,7 @@ The following example demonstrates how to use ``ultrack`` to track cells using i
       tracker.track(foreground=foreground, contours=contours)
 
       # Visualize the results
-      tracks, graph = tracker.to_napari()
+      tracks, graph = tracker.to_tracks_layer()
       napari.view_tracks(tracks[["track_id", "t", "y", "x"]], graph=graph)
       napari.run()
 
@@ -70,6 +70,6 @@ If you already have segmentation labels, you can provide them directly to the tr
       tracker.track(labels=labels)
 
       # Visualize the results
-      tracks, graph = tracker.to_napari()
+      tracks, graph = tracker.to_tracks_layer()
       napari.view_tracks(tracks[["track_id", "t", "y", "x"]], graph=graph)
       napari.run()

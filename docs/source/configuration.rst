@@ -32,4 +32,6 @@ The configurations are documented below, the parameters are ordered by importanc
 
 ---------------
 
+.. _tracking_config:
+
 .. autopydantic_model:: ultrack.config.TrackingConfig

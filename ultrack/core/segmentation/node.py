@@ -3,6 +3,7 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import blosc2
 import numpy as np
+import scipy.ndimage as ndi
 import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
@@ -109,6 +110,7 @@ def iou_with_bbox_3d(
 
 class Node(_Node):
     def __init__(self, h_node_index: int, id: int = -1, time: int = -1, **kwargs):
+        self.area = None
         super().__init__(h_node_index=h_node_index, **kwargs)
         self.id = id
         self.time = time
@@ -117,7 +119,7 @@ class Node(_Node):
         else:
             self.centroid = self._centroid()
 
-        LOG.info(f"Constructed node {self}")
+        LOG.info("Constructed node %s", self)
 
     def IoU(self, other: "Node") -> float:
         if not intersects(self.bbox, other.bbox):
@@ -272,3 +274,56 @@ class Node(_Node):
         features = image[self.mask_indices()].std(axis=0)
         assert features.shape[0] == image.shape[-1], f"{features.shape}, {image.shape}"
         return features
+
+    @staticmethod
+    def from_mask(
+        time: int,
+        mask: ArrayLike,
+        bbox: Optional[ArrayLike] = None,
+    ) -> "Node":
+        """
+        Create a new node from a mask.
+
+        Parameters
+        ----------
+        time : int
+            Time point of the node.
+        mask : ArrayLike
+            Binary mask of the node.
+        bbox : Optional[ArrayLike], optional
+            Bounding box of the node, (min_0, min_1, ..., max_0, max_1, ...).
+            When provided it assumes the mask is a crop of the original image, by default None
+
+        Returns
+        -------
+        Node
+            New node.
+        """
+
+        if mask.dtype != bool:
+            raise ValueError(f"Mask should be a boolean array. Found {mask.dtype}")
+
+        node = Node(h_node_index=-1, time=time, parent=None)
+
+        if bbox is None:
+            bbox = ndi.find_objects(mask)[0]
+            mask = mask[bbox]
+
+        if mask.ndim * 2 != len(bbox):
+            raise ValueError(
+                f"Bounding box {bbox} does not match 2x mask ndim {mask.ndim}"
+            )
+
+        bbox_shape = bbox[mask.ndim :] - bbox[: mask.ndim]
+
+        if np.any(bbox_shape != mask.shape):
+            raise ValueError(
+                f"Mask shape {mask.shape} does not match bbox shape {bbox_shape}"
+            )
+
+        node.bbox = bbox
+        node.mask = mask
+        node.area = mask.sum()
+        node.centroid = node._centroid()
+
+        return node

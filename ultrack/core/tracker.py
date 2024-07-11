@@ -7,6 +7,7 @@ import pandas as pd
 import zarr
 from numpy.typing import ArrayLike
 
+from ultrack import export_tracks_by_extension
 from ultrack.config import MainConfig
 from ultrack.core.export import (
     to_ctc,
@@ -143,7 +144,12 @@ class Tracker:
         to_ctc(config=self.config, *args, **kwargs)
 
     @functools.wraps(to_tracks_layer)
-    def to_napari(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
+    def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
         self._assert_solved()
         tracks_df, graph = to_tracks_layer(self.config, *args, **kwargs)
         return tracks_df, graph
+
+    @functools.wraps(to_tracks_layer)
+    def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
+        self._assert_solved()
+        export_tracks_by_extension(self.config, filename, overwrite=overwrite)

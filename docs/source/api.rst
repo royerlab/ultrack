@@ -67,6 +67,8 @@ Array utilities
 .. automodule:: ultrack.utils.array
     :members:
 
+.. _api_imgproc:
+
 ==========================
 Image processing utilities
 ==========================
@@ -80,12 +82,16 @@ Image processing utilities
 .. automodule:: ultrack.imgproc.sam
     :members:
 
+.. _api_flow:
+
 ----
 Flow
 ----
 
 .. automodule:: ultrack.imgproc.flow
     :members:
+
+.. _api_tracks:
 
 ================
 Tracks utilities
@@ -94,6 +100,8 @@ Tracks utilities
 .. automodule:: ultrack.tracks
     :imported-members:
     :members:
+
+.. _api_export:
 
 =========
 Exporting
