@@ -2,15 +2,14 @@ REST API
 ========
 
 The ultrack REST API is a set of HTTP/Websockets endpoints that allow you to track your
-data from a Ultrack server.
+data from an Ultrack server.
 This is what enables the :doc:`Ultrack FIJI plugin <fiji>`.
 
 The communication between the Ultrack server and the client is mainly done through websockets.
-This allows for a more efficient communication between the server and the client, enabling
-real time responses.
+Allowing real-time responses for efficient communication between the server and the client.
 
 All the messages sent through the websocket are JSON messages. And there is always an
-:class:`Experiment <ultrack.api.database.Experiment>` object that is sent encoded within the message.
+:class:`Experiment <ultrack.api.database.Experiment>` object encoded and sent within the message.
 This object contains all the information about the experiment that is being run, including
 the configuration (:class:`MainConfig <ultrack.config.MainConfig>`) of the experiment, the status of the
 experiment (:class:`ExperimentStatus <ultrack.api.database.ExperimentStatus>`), the experiment ID, and the experiment name.
@@ -18,11 +17,8 @@ When the experiment is concluded, this object will also contain the results of t
 experiment, encoded in the fields ``final_segments_url`` (URL to the tracked segments path)
 and ``tracks`` (JSON of napari complaint tracking format).
 
-**One important notice is that the server is meant to be executed in an environment where
-the client has access to the data that is being processed. This means that the server
-does not store the data that is being processed, only the results of the experiment.
-This also means that the server must have access to the data that is being processed,
-so the client must send the links to the data that is being processed.**
+**IMPORTANT:** The server must have access to the data shared by the client, for example, through the web, or a shared file system.
+Because the server does not store the input data being processed, only the results of the experiment.
 
 Endpoints
 ---------
@@ -36,7 +32,7 @@ Meta endpoint
 To avoid keeping track of each endpoint, there is a single endpoint that returns the available
 endpoints for the Ultrack server. This also allows for the Ultrack server to be more dynamic,
 as the available endpoints can be changed without changing the client. This endpoint is
-describe below.
+described below.
 
 .. describe:: GET /config/available
 
@@ -73,15 +69,15 @@ describe below.
     possible set of keyword arguments that are expected by the endpoint. Those keyword
     arguments are dependent on the endpoint and are described in the following sections.
 
-    The `experiment` instance will be initialized with the default configuration of the
+    The `experiment` instance is initialized with the default configuration of the
     :class:`MainConfig <ultrack.config.MainConfig>` class. This configuration can be
-    changed by the client as his needs and then be sent to the server.
+    changed by the client and sent to update the server.
 
 Experiment endpoints
 ^^^^^^^^^^^^^^^^^^^^
 
-The experiment endpoints are the main endpoints of the Ultrack server. They are the endpoints
-that allow the client to run the experiments and get the results of the experiments.
+The experiment endpoints are the main endpoints of the Ultrack server.
+They allow the client to run the experiments and get their respective results.
 
 .. _segment_auto_detect:
 .. describe:: WEBSOCKET /segment/auto_detect
@@ -90,11 +86,11 @@ that allow the client to run the experiments and get the results of the experime
     as ``image_channel_or_path``) to the server and get the segmentation of the image.
 
     This endpoint wraps the :func:`ultrack.imgproc.detect_foreground` function and the
-    :func:`ultrack.imgproc.robust_invert` function, which are functions capable
-    of obtaining the foreground of the image and its contours by image processing techniques.
+    :func:`ultrack.imgproc.robust_invert` function, which estimates
+    the foreground of the image and its contours by image processing techniques.
     For that reason, one can override the default parameters of those functions by sending
     the ``detect_foreground_kwargs`` and ``robust_invert_kwargs`` as keyword arguments.
-    Those keyword arguments will be passed to the respective functions.
+    Those keyword arguments will be passed to their respective function.
 
     This endpoint requires a JSON payload with the following structure:
 
@@ -110,9 +106,8 @@ that allow the client to run the experiments and get the results of the experime
             "robust_invert_kwargs": {},
         }
 
-    and repeatedly sends the :class:`Experiment <ultrack.api.database.Experiment>`
-    JSON payload from the server. For example, the server could possibly send the
-    following JSON payload:
+    and the reserver repeatedly returns the :class:`Experiment <ultrack.api.database.Experiment>`
+    JSON payload. For example:
 
     .. code-block:: JSON
 
@@ -137,8 +132,8 @@ that allow the client to run the experiments and get the results of the experime
             "tracks": ""
         }
 
-    Alternatively, if the image is a OME-ZARR file, the input data could be referenced
-    as a channel in the file. For example, the input data could be referenced as:
+    Alternatively, if the image is an OME-ZARR file, the input data could be
+    a specific channel. In this case, the input data could be referenced as:
 
     .. code-block:: JSON
 
@@ -154,13 +149,13 @@ that allow the client to run the experiments and get the results of the experime
         }
 
 All the other endpoints are similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but they
-are more specific to the segmentation of the image. The endpoints are described below.
+are more specific to the segmentation labels of the image. The endpoints are described below.
 
 .. _segment_manual:
 .. describe:: WEBSOCKET /segment/manual
 
     This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
-    client to manually provide the image detection of cells and the contours of the cells.
+    client to manually provide cells' foreground mask and their multilevel contours.
     This endpoint requires the following JSON payload:
 
     .. code-block:: JSON
@@ -174,8 +169,8 @@ are more specific to the segmentation of the image. The endpoints are described 
             },
         }
 
-    Alternatively, if the image is a OME-ZARR file, the input data could be referenced
-    as a channel in the file. For example, the input data could be referenced as:
+    Alternatively, if the image is an OME-ZARR file, the input data could be
+    a specific channel. In this case, the input data could be referenced as:
 
     .. code-block:: JSON
 
@@ -189,7 +184,7 @@ are more specific to the segmentation of the image. The endpoints are described 
             },
         }
 
-    And for both cases, the server will send the :class:`Experiment <ultrack.api.database.Experiment>`
+    For both cases, the server will send the :class:`Experiment <ultrack.api.database.Experiment>`
     JSON payload. For example:
 
     .. code-block:: JSON
@@ -215,17 +210,16 @@ are more specific to the segmentation of the image. The endpoints are described 
             "tracks": ""
         }
 
-Lastly, the following endpoint could be used in a situation where the client has already
-the instance segmentation of the cells from a third party software, like Cellpose or
-StarDist.
+Last but not least, the following endpoint could be used in a situation where the client already has
+the instance segmentation of the cells, for example, from Cellpose or StarDist.
 
 .. _segment_labels:
 .. describe:: WEBSOCKET /segment/labels
 
     This endpoint is similar to the :ref:`/segment/auto_detect <segment_auto_detect>` endpoint, but it allows the
-    client to manually provide the instance segmentation of the cells.
-    This endpoint wraps the :meth:`ultrack.utils.labels_to_contours` function, which is
-    capable of obtaining the contours of the cells from the instance segmentation.
+    client to provide pre-computed instance segmentation of the cells.
+    This endpoint wraps the :meth:`ultrack.utils.labels_to_contours` function, which computes the foreground and contours
+    of the cells from the instance segmentation.
 
     This endpoint requires the following JSON payload:
 
@@ -240,8 +234,8 @@ StarDist.
             "labels_to_edges_kwargs": {},
         }
 
-    Alternatively, if the image is a OME-ZARR file, the input data could be referenced
-    as a channel in the file. For example, the input data could be referenced as:
+    Alternatively, if the image is an OME-ZARR file, the input data could be
+    a specific channel. In this case, the input data could be referenced as:
 
     .. code-block:: JSON
 
@@ -254,8 +248,8 @@ StarDist.
             },
         }
 
-    And for both cases, the server will send the :class:`Experiment
-    <ultrack.api.database.Experiment>` JSON payload. For example:
+    For both cases, the server will send the :class:`Experiment <ultrack.api.database.Experiment>`
+    JSON payload. For example:
 
     .. code-block:: JSON
 
@@ -286,9 +280,9 @@ Data export endpoints
 .. describe:: GET /experiment/{experiment_id}/trackmate
 
     This endpoint allows the client to download the results of the experiment in the TrackMate
-    format. The client must provide the ``experiment_id`` in the URL. This id is obtained from
+    XML format. The client must provide the ``experiment_id`` in the URL. This id is obtained from
     the :class:`Experiment <ultrack.api.database.Experiment>` instance that was executed.
-    The server will return a XML encoded within the response.
+    The server will return an XML encoded within the response.
 
 Database Schema
 ---------------
