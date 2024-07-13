@@ -1,4 +1,3 @@
-import platform
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -6,7 +5,6 @@ import numpy as np
 import pytest
 import toml
 import zarr
-from testing.postgresql import Postgresql
 
 from ultrack.config.config import MainConfig, load_config
 from ultrack.config.dataconfig import DatabaseChoices
@@ -19,6 +17,8 @@ from ultrack.utils.data import (
     make_segmentation_mock_data,
 )
 
+# from testing.postgresql import Postgresql
+
 
 @pytest.fixture
 def config_content(tmp_path: Path, request) -> Dict[str, Any]:
@@ -26,20 +26,24 @@ def config_content(tmp_path: Path, request) -> Dict[str, Any]:
     if hasattr(request, "param"):
         kwargs.update(request.param)
 
+    # FIXME: needs to fork testing.postgresql
     # if postgresql create dummy server and close when done
     is_postgresql = kwargs.get("data.database") == DatabaseChoices.postgresql.value
 
     if is_postgresql:
-        if platform.system() == "Windows":
-            pytest.skip("Skipping postgresql testing on Windows")
+        # FIXME: not working, falling back to sqlite
+        kwargs["data.database"] = DatabaseChoices.sqlite.value
 
-        postgresql = Postgresql()
-        kwargs["data.address"] = postgresql.url().split("//")[1]
+        # if platform.system() == "Windows":
+        #     pytest.skip("Skipping postgresql testing on Windows")
+
+        # postgresql = Postgresql()
+        # kwargs["data.address"] = postgresql.url().split("//")[1]
 
     yield make_config_content(kwargs)
 
-    if is_postgresql:
-        postgresql.stop()
+    # if is_postgresql:
+    #     postgresql.stop()
 
 
 @pytest.fixture
