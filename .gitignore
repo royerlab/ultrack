@@ -175,3 +175,6 @@ docs/source/examples
 metadata.toml
 data.db
 *.lock
+# pixi environments
+.pixi
+*.egg-info
