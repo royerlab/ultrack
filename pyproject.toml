@@ -68,6 +68,13 @@ test = [
     "pytrackmate @ git+https://github.com/hadim/pytrackmate.git",
 ]
 
+[project.scripts]
+ultrack = "ultrack.cli.main:main"
+
+[project.entry-points."napari.manifest"]
+ultrack = "ultrack:napari.yaml"
+
+# pixi config
 [tool.pixi.feature.cuda]
 channels = ["conda-forge", "rapidsai"]
 platforms = ["linux-64"] # , "win-64"]
@@ -78,23 +85,6 @@ cucim = "*"
 
 [tool.pixi.feature.cuda.system-requirements]
 cuda = "11"
-
-[project.scripts]
-ultrack = "ultrack.cli.main:main"
-
-[project.entry-points."napari.manifest"]
-ultrack = "ultrack:napari.yaml"
-
-[tool.hatch.version]
-path = "ultrack/__init__.py"
-
-[tool.hatch.build.targets.sdist]
-only-include = [
-    "/ultrack",
-]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -110,8 +100,20 @@ ultrack = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-cuda = { features = ["cuda"] }
+# FIXME: cuda = { features = ["cuda"] }
 docs = { features = ["docs"], solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
 
 [tool.pixi.tasks]
+
+# Hatch config
+[tool.hatch.version]
+path = "ultrack/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "/ultrack",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
