@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import toml
-from pydantic import BaseModel, Extra, root_validator, validator
+from pydantic.v1 import BaseModel, Extra, root_validator, validator
 
 LOG = logging.getLogger(__name__)
 

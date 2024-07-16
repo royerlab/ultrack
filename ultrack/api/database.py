@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sqla
-from pydantic import BaseModel, Json, validator
+from pydantic.v1 import BaseModel, Json, validator
 from sqlalchemy import JSON, Column, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
