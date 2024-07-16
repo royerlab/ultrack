@@ -203,19 +203,26 @@ class UltrackArray:
     def __init__(
         self,
         config,
+        Tmax,
+        database_path: Union[str,None] = None,
         dtype: np.dtype = np.int32,
     ):
         self.config = config
-        self.database_path = config.data_config.database_path
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
+        self.Tmax = Tmax
         self.ndim = len(self.shape)
-
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
-        self.minmax = self.find_min_max_volume_entire_dataset()
-        self.volume = self.minmax.mean().astype(int)
         self.export_func = self.array.__setitem__
 
+        if database_path is None:
+            self.database_path = config.data_config.database_path
+        else:
+            self.database_path = database_path
+
+        self.minmax = self.find_min_max_volume_entire_dataset()
+        self.volume = self.minmax.mean().astype(int)
+        
     # proper documentation!!
 
     def __getitem__(self, indexing):
@@ -308,7 +315,7 @@ class UltrackArray:
         ##
         min_vol = np.inf
         max_vol = 0
-        for t in range(self.shape[0]):
+        for t in range(self.Tmax): #range(self.shape[0]):
             minmax = self.find_minmax_volumes_1_timepoint(t)
             if minmax[0] < min_vol:
                 min_vol = minmax[0]
