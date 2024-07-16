@@ -354,7 +354,7 @@ class SQLTracking:
                 )
                 .values(parent_id=sqla.bindparam("parent_id"), selected=True)
             )
-            session.execute(
+            session.connection().execute(
                 general_stmt,
                 solution[["node_id", "parent_id"]].to_dict("records"),
                 execution_options={"synchronize_session": False},
@@ -371,7 +371,7 @@ class SQLTracking:
                     )
                     .values(selected=True)
                 )
-                session.execute(
+                session.connection().execute(
                     start_stmt,
                     solution[["node_id"]].to_dict("records"),
                     execution_options={"syncronize_session": False},

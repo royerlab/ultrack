@@ -51,9 +51,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
 
       - uses: tlambert03/setup-qt-libs@v1
+
+      - uses: yezz123/setup-uv@v4
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
@@ -67,9 +68,8 @@ jobs:
       # of python dependendencies into a virtualenv.  see tox.ini for more
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install setuptools tox tox-gh-actions
-          pip install ".[api]"
+          uv pip install setuptools tox tox-gh-actions
+          uv pip install ".[api,test]"
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
