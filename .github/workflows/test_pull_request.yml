@@ -55,6 +55,8 @@ jobs:
       - uses: tlambert03/setup-qt-libs@v1
 
       - uses: yezz123/setup-uv@v4
+        with:
+          uv-venv: "ultrack-env"
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
