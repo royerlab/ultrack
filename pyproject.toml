@@ -32,7 +32,7 @@ dependencies = [
     "pillow >=10.0.0",
     "psycopg2-binary >=2.9.6",
     "psygnal >=0.9.0",
-    "pydantic >=1.10.7",
+    "pydantic >= 2",
     "pydot >= 2.0.0",
     "qtawesome >= 1.3.1",
     "rich >=13.3.5",
@@ -94,12 +94,12 @@ magicgui = ">=0.7.2"
 # mip = ">=1.16.0"  # TODO: change to python-mip for OSX is released and when available in conda-forge
 napari = ">=0.4.18"
 numba = {version = ">=0.57.0", channel = "numba"}
-ome-zarr = ">= 0.8.3"
+ome-zarr = ">= 0.9"
 pandas = ">=2.0.1"
 pillow = ">=10.0.0"
 psycopg2-binary = ">=2.9.6"
 psygnal = ">=0.9.0"
-pydantic = ">=1.10.7"
+pydantic = ">=2"
 pydot = ">= 2.0.0"
 qtawesome = ">= 1.3.1"
 rich = ">=13.3.5"
