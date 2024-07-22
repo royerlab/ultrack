@@ -80,6 +80,32 @@ def test_tracks_df_movement():
     pd.testing.assert_frame_equal(result, expected)
 
 
+def test_tracks_df_movement_2d():
+    # Sample test data
+    df = pd.DataFrame(
+        {
+            "track_id": [1, 1, 2, 2],
+            "t": [1, 2, 1, 2],
+            "y": [1, 2, 1, 2],
+            "x": [2, 3, 2, 2],
+        }
+    )
+
+    # Call the function
+    result = tracks_df_movement(df)
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
+            "y": [0.0, 1.0, 0.0, 1.0],
+            "x": [0.0, 1.0, 0.0, 0.0],
+        }
+    )
+
+    # Assert that the result matches the expected dataframe
+    pd.testing.assert_frame_equal(result, expected)
+
+
 def test_tracks_profile_matrix_one_track_one_attribute():
     tracks_df = pd.DataFrame(
         {"track_id": [1, 1, 1], "t": [0, 1, 2], "attribute_1": [10, 20, 30]}
