@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install setuptools tox tox-gh-actions
-          uv pip install ".[api,test]"
+          uv pip install ".[test]"
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
