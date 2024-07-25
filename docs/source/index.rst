@@ -33,26 +33,48 @@ Hence, a few key features of ``ultrack`` are:
 
 Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2>`_ whole embryo tracking.
 
+---------------
+
 .. include:: quickstart.rst
+
+---------------
 
 .. include:: install.rst
 
+---------------
+
 .. include:: napari.rst
+
+---------------
 
 .. include:: fiji.rst
 
+---------------
+
 .. include:: getting_started.rst
+
+---------------
 
 .. include:: examples.rst
    :end-line: 6
 
+---------------
+
 .. include:: optimizing.rst
+
+---------------
 
 .. include:: configuration.rst
 
+---------------
+
 .. include:: faq.rst
 
+---------------
+
 .. include:: theory.rst
+
+---------------
 
 
 Citing

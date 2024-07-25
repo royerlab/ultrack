@@ -40,6 +40,7 @@ Image processing utilities
     ultrack.imgproc.sam.MicroSAM
     ultrack.imgproc.register_timelapse
     ultrack.imgproc.flow.timelapse_flow
+    ultrack.utils.labels_to_contours
 
 Exporting
 ^^^^^^^^^
@@ -66,6 +67,8 @@ Array utilities
 .. automodule:: ultrack.utils.array
     :members:
 
+.. _api_imgproc:
+
 ==========================
 Image processing utilities
 ==========================
@@ -74,8 +77,12 @@ Image processing utilities
     :members:
     :imported-members:
 
+.. autofunction:: ultrack.utils.labels_to_contours
+
 .. automodule:: ultrack.imgproc.sam
     :members:
+
+.. _api_flow:
 
 ----
 Flow
@@ -84,6 +91,8 @@ Flow
 .. automodule:: ultrack.imgproc.flow
     :members:
 
+.. _api_tracks:
+
 ================
 Tracks utilities
 ================
@@ -91,6 +100,8 @@ Tracks utilities
 .. automodule:: ultrack.tracks
     :imported-members:
     :members:
+
+.. _api_export:
 
 =========
 Exporting
