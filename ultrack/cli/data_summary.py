@@ -57,7 +57,12 @@ def _link_stats_over_time(database_path: str, out_dir: Path) -> None:
     sns.set_theme(style="whitegrid")
 
     fig_path = out_dir / "link_weight_plot.png"
-    plot = sns.lineplot(data=groups.agg({"weight": [q1, q2, q3]}), legend=False)
+    df = pd.melt(
+        groups.agg({"weight": [q1, q2, q3]}),
+        var_name="quantile",
+        value_name="link_weight",
+    )
+    plot = sns.lineplot(data=df, legend=False)
     plot.set_ylabel("link weight")
     plot.get_figure().savefig(fig_path)
     plt.close()

@@ -1,3 +1,4 @@
+import sys
 import tempfile
 from multiprocessing import Process
 from pathlib import Path
@@ -15,6 +16,7 @@ from ultrack.utils.data import make_config_content
 
 def _run_server(instance_config_path: str):
     _run_command(["server", "--port", "54123", "-cfg", instance_config_path])
+
 
 def _run_command(command_and_args: List[str]) -> None:
     try:
@@ -164,6 +166,10 @@ class TestCommandLine:
             ]
         )
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("darwin"),
+        reason="Not supported on OSX",
+    )
     def test_server(self, instance_config_path: str) -> None:
         # Start server in a background thread
         process = Process(target=_run_server, args=(instance_config_path,))

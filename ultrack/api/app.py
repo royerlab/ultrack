@@ -174,7 +174,7 @@ async def root() -> Dict[str, str]:
 
 
 @app.get("/config/default")
-async def get_default_config() -> MainConfig:
+async def get_default_config() -> Dict:
     """Gets the default ultrack configuration.
 
     Returns
@@ -184,7 +184,7 @@ async def get_default_config() -> MainConfig:
     """
     config = MainConfig()
     config.data_config = None
-    return config
+    return config.dict()
 
 
 @app.get("/config/available")
@@ -201,7 +201,7 @@ async def get_available_configs() -> Dict:
 
     experiment = {
         "name": "Unnamed Experiment",
-        "config": default_config,
+        "config": default_config.dict(),
     }
 
     auto_detect_config = {

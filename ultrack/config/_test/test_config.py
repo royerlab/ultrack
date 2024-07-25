@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import pytest
 import toml
-from pydantic import ValidationError
+from pydantic.v1 import ValidationError
 
 from ultrack.config import load_config
 

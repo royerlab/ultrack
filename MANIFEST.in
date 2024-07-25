@@ -1,3 +1,4 @@
 include README.md
 include LICENSE
 recursive-include ultrack/widgets/ultrackwidget/resources *.json
+exclude examples/**

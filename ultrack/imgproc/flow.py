@@ -761,7 +761,7 @@ def add_flow(
                     x_shift=sqla.bindparam("x_shift"),
                 )
             )
-            session.execute(
+            session.connection().execute(
                 statement,
                 df[["node_id"] + columns].to_dict("records"),
                 execution_options={"synchronize_session": False},
