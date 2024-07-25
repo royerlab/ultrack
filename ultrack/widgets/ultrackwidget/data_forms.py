@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import qtawesome as qta
-from napari.layers import Image
+from napari.layers import Image, Layer
 from qtpy.QtWidgets import (
     QCheckBox,
     QGroupBox,
@@ -414,9 +414,9 @@ class DataForms:
         # if no additional options are visible, hide the tab
         self._tab.setTabVisible(0, any_visible)
 
-    def notify_image_update(self, image: Image) -> None:
+    def notify_image_update(self, image: Layer) -> None:
         channel = ""
-        if image and image.rgb:
+        if image and isinstance(image, Image) and image.rgb:
             channel = image.data.ndim - 2  # last dimension is channel
 
         for widget in self._update_channel_axis_bindings:

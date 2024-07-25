@@ -94,6 +94,7 @@ class UltrackWidget(QWidget):
         self._cb_workflow.currentIndexChanged.emit(0)
 
         self._on_image_changed(-1)
+        self._on_layers_change(None)
 
         self._current_worker = None
 

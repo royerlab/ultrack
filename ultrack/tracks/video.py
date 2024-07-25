@@ -4,7 +4,7 @@ import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Generator, Literal, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Generator, Literal, Optional, Sequence, Union
 
 import dask.array as da
 import napari
@@ -540,6 +540,7 @@ def tracks_df_to_3D_video(
     clipping_planes_layers: Sequence[Layer] = (),
     clipping_box_size: int = 25,
     time_to_camera_kwargs: Dict[int, Dict[str, Any]] = {},
+    time_to_viewer_cb: Dict[int, Callable[[napari.Viewer], None]] = {},
     origin: Optional[ArrayLike] = None,
     overwrite: bool = False,
 ) -> None:
@@ -569,6 +570,11 @@ def tracks_df_to_3D_video(
         Can include 'zoom', 'angles', 'center' per time point, for example:
         {0: {"zoom": 1.5, "angles": (0, 0, 90), "center": (0, 0, 0)}}
         "center" supports "auto" to set the center to the mean of the tracks at that time point.
+    time_to_viewer_cb : Dict[int, Callable[[napari.Viewer]]]
+        Dictionary of time points to viewer callback functions.
+        Callbacks are called at the provided time point.
+        Useful to update viewer settings, for example:
+            ``{0: lambda viewer: viewer.dims.ndisplay = 3}``
     origin : ArrayLike
         Volume origin position, used to automatically set camera angles.
         When not provided, the mean of the tracks is used.
@@ -611,6 +617,9 @@ def tracks_df_to_3D_video(
         animation = Animation(viewer)
 
         for t in range(t_min, int(tracks_df["t"].max().item()) + 1):
+
+            if t in time_to_viewer_cb:
+                time_to_viewer_cb[t](viewer)
 
             if t != t_min and t % update_step != 0:
                 continue
