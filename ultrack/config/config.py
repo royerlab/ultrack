@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import toml
-from pydantic import BaseModel, Extra, Field
+from pydantic.v1 import BaseModel, Extra, Field
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.segmentationconfig import SegmentationConfig
