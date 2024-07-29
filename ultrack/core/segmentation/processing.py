@@ -163,6 +163,7 @@ def _process(
                 y=int(y),
                 x=int(x),
                 area=int(hier_node.area),
+                frontier=hier_node.frontier,
                 pickle=pickle.dumps(hier_node),  # pickling to reduce memory usage
             )
 
