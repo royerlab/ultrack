@@ -39,14 +39,14 @@ class SegmentationChange:
         """
         indices = list(np.nonzero(self.mask))
         for i, b in enumerate(self.bbox[: len(indices)]):
-            indices[i] = np.round(indices[i] + b).astype(int)
+            indices[i] = (indices[i] + b).astype(int)
 
         if include_time_pt:
             return (np.full_like(self.src_time_pt, len(indices[i])), *indices)
         else:
             return tuple(indices)
 
-    def dst_mask_indices(self, include_time_pt: bool = None) -> Tuple[np.ndarray, ...]:
+    def dst_mask_indices(self, include_time_pt: bool = False) -> Tuple[np.ndarray, ...]:
         """
         Get the indices of the destination mask in the segmentation.
 
@@ -62,7 +62,7 @@ class SegmentationChange:
         """
         indices = list(self.src_mask_indices())
         for i, s in enumerate(self.shift):
-            indices[i] = np.round(indices[i] + s).astype(int)
+            indices[i] = (indices[i] + s).astype(int)
 
         if include_time_pt:
             return (np.full_like(indices[i], self.dst_time_pt), *indices)
@@ -215,6 +215,10 @@ class SegmentationPainter:
                     print(f"Mask not found for {change}")
                     continue
                 dst_indices = change.dst_mask_indices()
+                dst_indices = tuple(
+                    np.maximum(0, np.minimum(i, s - 1))
+                    for i, s in zip(dst_indices, frame.shape)
+                )  # clipping mask to frame
                 frame[dst_indices] = change.dst_label
             self._segments[t] = frame
 
