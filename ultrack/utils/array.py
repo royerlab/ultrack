@@ -326,6 +326,7 @@ class UltrackArray:
     
     def get_volume_list(
         self,
+        timeLimit,
     ) -> np.ndarray:
 
         ##
@@ -335,7 +336,7 @@ class UltrackArray:
         engine = sqla.create_engine(self.database_path)
         vol_list = []
         with Session(engine) as session:
-            query = list(session.query(NodeDB.pickle))
+            query = list(session.query(NodeDB.pickle).where(NodeDB.t <= timeLimit))
             for node in query:
                 vol = node[0].area
                 vol_list.append(vol)
