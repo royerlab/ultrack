@@ -203,14 +203,13 @@ class UltrackArray:
     def __init__(
         self,
         config,
-        Tmax,
         database_path: Union[str,None] = None,
         dtype: np.dtype = np.int32,
     ):
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
-        self.Tmax = Tmax
+        self.Tmax = config.data_config.metadata["shape"][0] #first channel must the T!!
         self.ndim = len(self.shape)
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.export_func = self.array.__setitem__
@@ -222,6 +221,7 @@ class UltrackArray:
 
         self.minmax = self.find_min_max_volume_entire_dataset()
         self.volume = self.minmax.mean().astype(int)
+        self.initial_volume = self.volume.copy()
         
     # proper documentation!!
 
@@ -323,3 +323,21 @@ class UltrackArray:
                 max_vol = minmax[1]
 
         return np.array([min_vol, max_vol], dtype=int)
+    
+    def get_volume_list(
+        self,
+    ) -> np.ndarray:
+
+        ##
+        # get a list of the volumes of ALL segments in the database (all time frames)
+        ##
+
+        engine = sqla.create_engine(self.database_path)
+        vol_list = []
+        with Session(engine) as session:
+            query = list(session.query(NodeDB.pickle))
+            for node in query:
+                vol = node[0].area
+                vol_list.append(vol)
+            
+        return vol_list
