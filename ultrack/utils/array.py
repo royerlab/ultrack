@@ -203,9 +203,18 @@ class UltrackArray:
     def __init__(
         self,
         config,
-        database_path: Union[str,None] = None,
         dtype: np.dtype = np.int32,
     ):
+        """Create an array that directly visualizes the segments in the ultrack database.
+
+        Parameters
+        ----------
+        config : MainConfig
+            Configuration file of Ultrack.
+        dtype : np.dtype
+            Data type of the array.
+        """
+            
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
@@ -214,18 +223,24 @@ class UltrackArray:
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.export_func = self.array.__setitem__
 
-        if database_path is None:
-            self.database_path = config.data_config.database_path
-        else:
-            self.database_path = database_path
-
+        self.database_path = config.data_config.database_path
         self.minmax = self.find_min_max_volume_entire_dataset()
         self.volume = self.minmax.mean().astype(int)
         self.initial_volume = self.volume.copy()
         
-    # proper documentation!!
-
     def __getitem__(self, indexing):
+        """Indexing the ultrack-array
+
+        Parameters
+        ----------
+        indexing : Tuple or Array
+
+        Returns
+        -------
+        array : numpy array
+            array with painted segments
+        """
+
         if isinstance(indexing, tuple):
             time, volume_slicing = indexing[0], indexing[1:]
         else:
@@ -249,6 +264,15 @@ class UltrackArray:
         time: int,
         buffer: np.array,
     ) -> None:
+        """Paint all segments of specific time point which volume is bigger than self.volume
+        Parameters
+        ----------
+        time : int
+            time point to paint the segments
+        buffer : np.array
+            np.zeros to be filled with segments
+        """
+                
         engine = sqla.create_engine(self.database_path)
         buffer.fill(0)
 
@@ -290,11 +314,17 @@ class UltrackArray:
         self,
         time: int,
     ) -> np.ndarray:
+        """Find minimum and maximum segment volume for single time point
 
-        ##
-        # returns an np.array: [minVolume, maxVolume] of all nodes in the hierarchy for a single time point
-        ##
+        Parameters
+        ----------
+        time : int
 
+        Returns
+        -------
+        np.array : np.array
+            array with two elements: [min_volume, max_volume]
+        """
         engine = sqla.create_engine(self.database_path)
         min_vol = np.inf
         max_vol = 0
@@ -309,10 +339,13 @@ class UltrackArray:
         return np.array([min_vol, max_vol]).astype(int)
 
     def find_min_max_volume_entire_dataset(self):
-        ##
-        # loops over all time points in the stack and returns an
-        # np.array: [minVolume, maxVolume] of all nodes in the hierarchy over all times
-        ##
+        """Find minimum and maximum segment volume for ALL time point
+
+        Returns
+        -------
+        np.array : np.array
+            array with two elements: [min_volume, max_volume]
+        """
         min_vol = np.inf
         max_vol = 0
         for t in range(self.Tmax): #range(self.shape[0]):
@@ -326,13 +359,19 @@ class UltrackArray:
     
     def get_volume_list(
         self,
-        timeLimit,
-    ) -> np.ndarray:
+        timeLimit: int,
+    ) -> list:
+        """Creates a list of the volumes of all segments in the database (up untill t=timeLimit)
 
-        ##
-        # get a list of the volumes of ALL segments in the database (all time frames)
-        ##
+        Parameters
+        ----------
+        timeLimit : int
 
+        Returns
+        -------
+        vol_list : list
+            list with all volumes from t=0 to t=timeLimit
+        """
         engine = sqla.create_engine(self.database_path)
         vol_list = []
         with Session(engine) as session:
