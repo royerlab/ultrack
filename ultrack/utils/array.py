@@ -14,7 +14,7 @@ from tqdm import tqdm
 from zarr.storage import Store
 
 from ultrack.core.database import NodeDB
-from ultrack import MainConfig
+from ultrack.config import MainConfig
 
 LOG = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ class UltrackArray:
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
-        self.Tmax = self.shape[0]
+        self.t_max = self.shape[0]
         self.ndim = len(self.shape)
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.export_func = self.array.__setitem__
