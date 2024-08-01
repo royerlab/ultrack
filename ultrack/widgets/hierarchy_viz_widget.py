@@ -32,7 +32,7 @@ class HierarchyVizWidget(Container):
             if not provided, config will be taken from UltrackWidget
         """
             
-        super().__init__() #layout='horizontal')
+        super().__init__(layout='horizontal')
         
         self._viewer = viewer
 
@@ -41,8 +41,8 @@ class HierarchyVizWidget(Container):
         else:
             self.config = config
 
-        self.ultrack_layer = UltrackArray(self.config)
-        self._viewer.add_labels(self.ultrack_layer, name='hierarchy')
+        self.ultrack_array = UltrackArray(self.config)
+        self._viewer.add_labels(self.ultrack_array, name='hierarchy')
 
         self.mapping = self._create_mapping()
 
@@ -64,7 +64,7 @@ class HierarchyVizWidget(Container):
         return self.config.metadata.get("shape", [])
 
     def _slider_update(self, value: float) -> None:
-        self.ultrack_layer.volume = self.mapping(value)
+        self.ultrack_array.volume = self.mapping(value)
         self.slider_label.label = str(int(self.mapping(value)))
         self._viewer.layers['hierarchy'].refresh()
 
@@ -73,9 +73,9 @@ class HierarchyVizWidget(Container):
         Creates a pseudo-linear mapping from U[0,1] to full range of segment volumes:  
             volume = mapping([0,1])
         """
-        volume_list = self.ultrack_layer.get_volume_list(timeLimit=5)
-        volume_list.append(self.ultrack_layer.minmax[0])
-        volume_list.append(self.ultrack_layer.minmax[1])
+        volume_list = self.ultrack_array.get_volume_list(timeLimit=5)
+        volume_list.append(self.ultrack_array.minmax[0])
+        volume_list.append(self.ultrack_array.minmax[1])
         volume_list.sort()
 
         x_vec = np.linspace(0,1,len(volume_list))

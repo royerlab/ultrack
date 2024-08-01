@@ -575,6 +575,7 @@ class UltrackWidget(QWidget):
 
     @staticmethod
     def find_ultrack_widget(viewer: napari.Viewer) -> Union["UltrackWidget", None]:
+        """Find the ultrack, if the widget is open, otherwise returns None."""
 
         for _, w in viewer.window._dock_widgets.items():
             if isinstance(w.widget(), UltrackWidget):

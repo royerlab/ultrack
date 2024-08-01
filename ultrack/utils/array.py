@@ -14,6 +14,7 @@ from tqdm import tqdm
 from zarr.storage import Store
 
 from ultrack.core.database import NodeDB
+from ultrack import MainConfig
 
 LOG = logging.getLogger(__name__)
 
@@ -202,7 +203,7 @@ def create_zarr(
 class UltrackArray:
     def __init__(
         self,
-        config,
+        config: MainConfig,
         dtype: np.dtype = np.int32,
     ):
         """Create an array that directly visualizes the segments in the ultrack database.
@@ -218,7 +219,7 @@ class UltrackArray:
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
-        self.Tmax = config.data_config.metadata["shape"][0] #first channel must the T!!
+        self.t_max = config.data_config.metadata["shape"][0] #first channel must the T!!
         self.ndim = len(self.shape)
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.export_func = self.array.__setitem__
@@ -228,7 +229,9 @@ class UltrackArray:
         self.volume = self.minmax.mean().astype(int)
         self.initial_volume = self.volume.copy()
         
-    def __getitem__(self, indexing):
+    def __getitem__(self, 
+                    indexing: tuple,
+        ) -> np.ndarray:
         """Indexing the ultrack-array
 
         Parameters
@@ -348,7 +351,7 @@ class UltrackArray:
         """
         min_vol = np.inf
         max_vol = 0
-        for t in range(self.Tmax): #range(self.shape[0]):
+        for t in range(self.t_max): #range(self.shape[0]):
             minmax = self.find_minmax_volumes_1_timepoint(t)
             if minmax[0] < min_vol:
                 min_vol = minmax[0]
