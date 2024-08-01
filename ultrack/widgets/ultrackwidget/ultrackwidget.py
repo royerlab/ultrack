@@ -1,7 +1,7 @@
 import logging
 import webbrowser
 from contextlib import redirect_stderr, redirect_stdout
-from typing import Any, Generator, Union
+from typing import Any, Generator, Optional
 
 import napari
 import qtawesome as qta
