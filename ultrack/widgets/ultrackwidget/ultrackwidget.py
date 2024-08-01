@@ -1,7 +1,7 @@
 import logging
 import webbrowser
 from contextlib import redirect_stderr, redirect_stdout
-from typing import Any, Generator, Union
+from typing import Any, Generator, Optional
 
 import napari
 import qtawesome as qta
@@ -574,8 +574,7 @@ class UltrackWidget(QWidget):
             self._bt_cancel.setEnabled(False)
 
     @staticmethod
-    def find_ultrack_widget(viewer: napari.Viewer) -> Union["UltrackWidget", None]:
-        """Find the ultrack, if the widget is open, otherwise returns None."""
+    def find_ultrack_widget(viewer: napari.Viewer) -> Optional["UltrackWidget"]:
 
         for _, w in viewer.window._dock_widgets.items():
             if isinstance(w.widget(), UltrackWidget):
