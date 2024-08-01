@@ -14,7 +14,7 @@ from tqdm import tqdm
 from zarr.storage import Store
 
 from ultrack.core.database import NodeDB
-from ultrack import MainConfig
+from ultrack.config import MainConfig
 
 LOG = logging.getLogger(__name__)
 
@@ -219,15 +219,13 @@ class UltrackArray:
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
-        self.Tmax = self.shape[0]
+        self.t_max = self.shape[0]
         self.ndim = len(self.shape)
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
-        self.export_func = self.array.__setitem__
 
         self.database_path = config.data_config.database_path
         self.minmax = self.find_min_max_volume_entire_dataset()
         self.volume = self.minmax.mean().astype(int)
-        self.initial_volume = self.volume.copy()
         
     def __getitem__(self, 
                     indexing: tuple,
@@ -252,32 +250,28 @@ class UltrackArray:
 
         try:
             time = time.item()  # convert from numpy.int to int
-        except:
+        except AttributeError:
             time = time
 
-        self.query_volume(
+        self.fill_array(
             time=time,
-            buffer=self.array,
         )
 
         return self.array[volume_slicing]
 
-    def query_volume(
+    def fill_array(
         self,
         time: int,
-        buffer: np.array,
     ) -> None:
         """Paint all segments of specific time point which volume is bigger than self.volume
         Parameters
         ----------
         time : int
             time point to paint the segments
-        buffer : np.array
-            np.zeros to be filled with segments
         """
                 
         engine = sqla.create_engine(self.database_path)
-        buffer.fill(0)
+        self.array.fill(0)
 
         with Session(engine) as session:
             query = list(
@@ -308,12 +302,33 @@ class UltrackArray:
 
             for idx in idx_to_plot:
                 query[idx][1].paint_buffer(
-                    buffer, value=label_list[idx], include_time=False
+                    self.array, value=label_list[idx], include_time=False
                 )
 
-        return query
+    def get_tp_num_pixels(
+            self, 
+            timeStart:int,
+            timeStop:int,
+    ) -> list:
+        """Gets a list of number of pixels of all segments range of time points (timeStart to timeStop)
+        Parameters
+        ----------
+        timeStart : int
+        timeStop : int
+        Returns
+        -------
+        num_pix_list : list
+            list with all num_pixels for timeStart to timeStop
+        """
+        engine = sqla.create_engine(self.database_path)
+        num_pix_list = []
+        with Session(engine) as session:
+            query = list(session.query(NodeDB.area).where(NodeDB.t >= timeStart).where(NodeDB.t <= timeStop))
+            for num_pix in query:
+                num_pix_list.append(int(np.array(num_pix)))
+        return num_pix_list
 
-    def find_minmax_volumes_1_timepoint(
+    def get_tp_num_pixels_minmax(
         self,
         time: int,
     ) -> np.ndarray:
@@ -325,21 +340,12 @@ class UltrackArray:
 
         Returns
         -------
-        np.array : np.array
+        num_pix_list : list
             array with two elements: [min_volume, max_volume]
         """
-        engine = sqla.create_engine(self.database_path)
-        min_vol = np.inf
-        max_vol = 0
-        with Session(engine) as session:
-            query = list(session.query(NodeDB.pickle).where(NodeDB.t == time))
-            for node in query:
-                vol = node[0].area
-                if vol < min_vol:
-                    min_vol = vol
-                if vol > max_vol:
-                    max_vol = vol
-        return np.array([min_vol, max_vol]).astype(int)
+        num_pix_list = self.get_tp_num_pixels(time,time)
+        return (min(num_pix_list), max(num_pix_list))
+
 
     def find_min_max_volume_entire_dataset(self):
         """Find minimum and maximum segment volume for ALL time point
@@ -352,35 +358,10 @@ class UltrackArray:
         min_vol = np.inf
         max_vol = 0
         for t in range(self.t_max): #range(self.shape[0]):
-            minmax = self.find_minmax_volumes_1_timepoint(t)
+            minmax = self.get_tp_num_pixels_minmax(t)
             if minmax[0] < min_vol:
                 min_vol = minmax[0]
             if minmax[1] > max_vol:
                 max_vol = minmax[1]
 
         return np.array([min_vol, max_vol], dtype=int)
-    
-    def get_volume_list(
-        self,
-        timeLimit: int,
-    ) -> list:
-        """Creates a list of the volumes of all segments in the database (up untill t=timeLimit)
-
-        Parameters
-        ----------
-        timeLimit : int
-
-        Returns
-        -------
-        vol_list : list
-            list with all volumes from t=0 to t=timeLimit
-        """
-        engine = sqla.create_engine(self.database_path)
-        vol_list = []
-        with Session(engine) as session:
-            query = list(session.query(NodeDB.pickle).where(NodeDB.t <= timeLimit))
-            for node in query:
-                vol = node[0].area
-                vol_list.append(vol)
-            
-        return vol_list

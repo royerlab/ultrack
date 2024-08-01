@@ -42,12 +42,12 @@ class HierarchyVizWidget(Container):
             self.config = config
 
         self.ultrack_array = UltrackArray(self.config)
-        self._viewer.add_labels(self.ultrack_array, name='hierarchy')
 
         self.mapping = self._create_mapping()
 
         self._area_threshold_w = FloatSlider(label="Area", min=0, max=1, readout=False)
         self._area_threshold_w.value = 0.5
+        self.ultrack_array.volume = self.mapping(0.5)
         self._area_threshold_w.changed.connect(self._slider_update)
 
         self.slider_label = Label(label=str(int(self.mapping(self._area_threshold_w.value))))
@@ -55,6 +55,10 @@ class HierarchyVizWidget(Container):
 
         self.append(self._area_threshold_w)
         self.append(self.slider_label)
+
+        #THERE SHOULD BE CHECK HERE IF THERE EXISTS A LAYER WITH THE NAME 'HIERARCHY'
+        self._viewer.add_labels(self.ultrack_array, name='hierarchy')
+        self._viewer.layers['hierarchy'].refresh()
 
     def _on_config_changed(self) -> None:
         self._ndim = len(self._shape)
@@ -70,16 +74,16 @@ class HierarchyVizWidget(Container):
 
     def _create_mapping(self):
         """
-        Creates a pseudo-linear mapping from U[0,1] to full range of segment volumes:  
-            volume = mapping([0,1])
+        Creates a pseudo-linear mapping from U[0,1] to full range of number of pixels
+            num_pixels = mapping([0,1])
         """
-        volume_list = self.ultrack_array.get_volume_list(timeLimit=5)
-        volume_list.append(self.ultrack_array.minmax[0])
-        volume_list.append(self.ultrack_array.minmax[1])
-        volume_list.sort()
+        num_pixels_list = self.ultrack_array.get_tp_num_pixels(timeStart=5,timeStop=5)
+        num_pixels_list.append(self.ultrack_array.minmax[0])
+        num_pixels_list.append(self.ultrack_array.minmax[1])
+        num_pixels_list.sort()
 
-        x_vec = np.linspace(0,1,len(volume_list))
-        y_vec = np.array(volume_list)
+        x_vec = np.linspace(0,1,len(num_pixels_list))
+        y_vec = np.array(num_pixels_list)
         mapping = interpolate.interp1d(x_vec,y_vec)
         return mapping
     
