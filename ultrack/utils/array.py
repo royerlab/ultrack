@@ -218,7 +218,7 @@ class UltrackArray:
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
-        self.Tmax = config.data_config.metadata["shape"][0] #first channel must the T!!
+        self.Tmax = self.shape[0]
         self.ndim = len(self.shape)
         self.array = np.zeros(self.shape[1:], dtype=self.dtype)
         self.export_func = self.array.__setitem__
