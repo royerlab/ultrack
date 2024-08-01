@@ -574,7 +574,7 @@ class UltrackWidget(QWidget):
             self._bt_cancel.setEnabled(False)
 
     @staticmethod
-    def find_ultrack_widget(viewer: napari.Viewer) -> Union["UltrackWidget", None]:
+    def find_ultrack_widget(viewer: napari.Viewer) -> Optional["UltrackWidget"]:
 
         for _, w in viewer.window._dock_widgets.items():
             if isinstance(w.widget(), UltrackWidget):
