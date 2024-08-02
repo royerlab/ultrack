@@ -228,7 +228,7 @@ class UltrackArray:
         self.volume = self.minmax.mean().astype(int)
         
     def __getitem__(self, 
-                    indexing: tuple,
+                    indexing: Union[Tuple[Union[int, slice]], int, slice],
         ) -> np.ndarray:
         """Indexing the ultrack-array
 
@@ -241,17 +241,24 @@ class UltrackArray:
         array : numpy array
             array with painted segments
         """
+        # print('indexing in getitem:',indexing)
 
         if isinstance(indexing, tuple):
             time, volume_slicing = indexing[0], indexing[1:]
-        else:
+        else:       #if only 1 (time) is provided
             time = indexing
-            volume_slicing = ...
+            volume_slicing = tuple()
 
-        try:
-            time = time.item()  # convert from numpy.int to int
-        except AttributeError:
-            time = time
+        if isinstance(time, slice): #if all time points are requested
+            return np.stack([
+                self.__getitem__((t,) + volume_slicing)
+                for t in range(*time.indices(self.shape[0]))
+            ])
+        else:
+            try:
+                time = time.item()  # convert from numpy.int to int
+            except AttributeError:
+                time = time
 
         self.fill_array(
             time=time,
