@@ -42,7 +42,6 @@ def test_array_apply_parametrized(axis):
 )
 def test_ultrack_array(
         segmentation_database_mock_data: MainConfig,
-        tmp_path: str,
         key: Tuple,
     ):
     ua = UltrackArray(segmentation_database_mock_data)
