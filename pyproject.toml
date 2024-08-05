@@ -51,7 +51,7 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = [
-    "autodoc_pydantic >= 2.0.0",
+    "autodoc_pydantic < 2.0.0",  # update when moving away from pydantic.v1
     "furo",
     "myst-parser >= 2.0.0",
     "nbsphinx >= 0.9.3",
