@@ -9,7 +9,7 @@ Installation
 
 If already have a working Python environment, you can install ``ultrack`` using pip.
 We recommend you use a conda environment to avoid any conflicts with your existing packages.
-For additional information on how to create a conda environment and install packages, see :doc:`install`.
+If you're using OSX or for additional information on how to create a conda environment and install packages, see :doc:`install`.
 
 .. code-block:: bash
 
