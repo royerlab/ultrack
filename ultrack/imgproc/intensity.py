@@ -111,7 +111,7 @@ def robust_invert(
             _image = np.take(image, indices=ch, axis=channel_axis)
 
         _image = xp.asarray(_image)
-        ndi.gaussian_filter(_image, sigma=sigmas, output=_image)
+        _image = ndi.gaussian_filter(_image, sigma=sigmas)
 
         flat_small_img = ndi.zoom(_image, (0.25,) * _image.ndim, order=1).ravel()
 
