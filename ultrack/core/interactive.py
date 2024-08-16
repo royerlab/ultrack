@@ -264,7 +264,7 @@ def add_new_node(
     node = Node.from_mask(
         time=time,
         mask=mask,
-        bbox=bbox,
+        bbox=np.asarray(bbox),
     )
     if node.area == 0:
         raise ValueError("Node area is zero. Something went wrong.")
