@@ -13,6 +13,7 @@ LOG = logging.getLogger(__name__)
 class DatabaseChoices(Enum):
     sqlite = "sqlite"
     postgresql = "postgresql"
+    memory = "memory"
 
 
 class DataConfig(BaseModel):
@@ -31,6 +32,12 @@ class DataConfig(BaseModel):
 
     address: Optional[str] = None
     """``SPECIAL``: Postgresql database path, for example, ``postgres@localhost:12345/example``"""
+
+    in_memory_db_id: int = 0
+    """
+    ``SPECIAL``: Memory database id used to identify the database in memory,
+    must be altered manually if multiple instances are used
+    """
 
     class Config:
         validate_assignment = True
@@ -72,6 +79,9 @@ class DataConfig(BaseModel):
         """Returns database path given working directory and database type."""
         if self.database == DatabaseChoices.sqlite.value:
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
+
+        elif self.database == DatabaseChoices.memory.value:
+            return f"sqlite:///file:{self.in_memory_db_id}?mode=memory&cache=shared&uri=true"
 
         elif self.database == DatabaseChoices.postgresql.value:
             return f"postgresql://{self.address}"
