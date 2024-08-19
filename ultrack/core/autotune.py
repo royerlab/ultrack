@@ -130,6 +130,9 @@ def _tune_time_point(
 
     config = config.copy(deep=True)
 
+    prev_in_memory_db_id = config.data_config.in_memory_db_id
+    config.data_config.in_memory_db_id = t
+
     clear_all_data(config.data_config.database_path)
 
     gt_labels = np.asarray(gt_labels[t])
@@ -205,6 +208,8 @@ def _tune_time_point(
     config.segmentation_config.min_area = df["area"].min()
     config.segmentation_config.max_area = df["area"].max()
 
+    config.data_config.in_memory_db_id = prev_in_memory_db_id
+
     return config, gt_df
 
 
@@ -236,6 +241,9 @@ def auto_tune_config(
         config = MainConfig()
     else:
         config = config.copy(deep=True)
+
+    prev_db = config.data_config.database
+    config.data_config.database = "memory"
 
     tuning_tup = multiprocessing_apply(
         _tune_time_point(
@@ -277,5 +285,7 @@ def auto_tune_config(
         - 0.025,
         0.0,
     )
+
+    config.data_config.database = prev_db
 
     return config
