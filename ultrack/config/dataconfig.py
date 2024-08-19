@@ -13,7 +13,6 @@ LOG = logging.getLogger(__name__)
 class DatabaseChoices(Enum):
     sqlite = "sqlite"
     postgresql = "postgresql"
-    memory = "memory"
 
 
 class DataConfig(BaseModel):
@@ -73,9 +72,6 @@ class DataConfig(BaseModel):
         """Returns database path given working directory and database type."""
         if self.database == DatabaseChoices.sqlite.value:
             return f"sqlite:///{self.working_dir.absolute()}/data.db"
-
-        elif self.database == DatabaseChoices.memory.value:
-            return "sqlite+pysqlite:///:memory:"
 
         elif self.database == DatabaseChoices.postgresql.value:
             return f"postgresql://{self.address}"

@@ -232,9 +232,6 @@ def auto_tune_config(
     scale: Optional[ArrayLike] = None,
 ) -> MainConfig:
 
-    prev_database = config.data_config.database
-    # config.data_config.database = "memory"
-
     if config is None:
         config = MainConfig()
     else:
@@ -280,7 +277,5 @@ def auto_tune_config(
         - 0.025,
         0.0,
     )
-
-    config.data_config.database = prev_database
 
     return config
