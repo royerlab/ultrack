@@ -51,7 +51,8 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = [
-    "autodoc_pydantic == 1.9.1",  # update when moving away from pydantic.v1
+    "sphinx == 6.2.1",
+    "autodoc_pydantic",  # NOT WORKING, needs to install 'autodoc_pydantic==1.9.1' to build docs
     "pydantic-settings",
     "furo",
     "myst-parser >= 2.0.0",

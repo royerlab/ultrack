@@ -38,6 +38,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ".[docs]"
+          pip install "autodoc_pydantic==1.9.1"
       - name: Set environment
         run: |
           REPO_OWNER="${GITHUB_REPOSITORY%%/*}"
