@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import mip
 import mip.exceptions
@@ -15,7 +15,7 @@ from ultrack.config.config import MainConfig
 from ultrack.core.database import LinkDB, NodeDB, OverlapDB, clear_all_data
 from ultrack.core.interactive import add_new_node
 from ultrack.core.linking.processing import link
-from ultrack.core.segmentation.processing import _generate_id, segment
+from ultrack.core.segmentation.processing import segment
 from ultrack.tracks.stats import estimate_drift
 from ultrack.utils.multiprocessing import multiprocessing_apply
 
@@ -78,43 +78,56 @@ class SQLGTMatching:
         engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
             query = session.query(LinkDB).join(NodeDB, NodeDB.id == LinkDB.source_id)
-            df = pd.read_sql(query.statement, session.bind)
+            self._edges_df = pd.read_sql(query.statement, session.bind)
 
-        df["source_id"] = self._nodes_df.index.get_indexer(df["source_id"])
-        df.reset_index(drop=True, inplace=True)
+        self._edges_df["source_id"] = self._nodes_df.index.get_indexer(
+            self._edges_df["source_id"]
+        )
+        self._edges_df.reset_index(drop=True, inplace=True)
 
         self._edges = self._model.add_var_tensor(
-            (len(df),),
+            (len(self._edges_df),),
             name="edges",
             var_type=mip.BINARY,
         )
         # setting objective function
-        self._model.objective = mip.xsum(df["weight"].to_numpy() * self._edges)
+        self._model.objective = mip.xsum(
+            self._edges_df["weight"].to_numpy() * self._edges
+        )
 
         # source_id is time point T (hierarchies id)
         # target_id is time point T+1 (ground-truth)
-        for source_id, group in df.groupby("source_id", as_index=False):
+        for source_id, group in self._edges_df.groupby("source_id", as_index=False):
             self._model.add_constr(
                 self._nodes[source_id] == mip.xsum(self._edges[group.index.to_numpy()])
             )
 
-        for _, group in df.groupby("target_id", as_index=False):
+        for _, group in self._edges_df.groupby("target_id", as_index=False):
             self._model.add_constr(mip.xsum(self._edges[group.index.to_numpy()]) <= 1)
 
-    def __call__(self) -> Tuple[pd.Series, float]:
+    def __call__(self) -> Tuple[float, pd.DataFrame]:
         # TODO
         self._add_nodes()
         self._add_edges()
         self._model.optimize()
 
-        score = self._model.objective_value
-        solution = pd.Series(
-            data=[var.x for var in self._nodes],
-            index=self._nodes_df.index,
-            name="solution",
-        )
+        data = []
 
-        return score, solution
+        for i, e_var in enumerate(self._edges):
+            if e_var.x > 0.5:
+                data.append(
+                    {
+                        "id": self._nodes_df.index.get_indexer(
+                            self._edges_df.iloc[i]["source_id"]
+                        ),
+                        "gt_id": self._edges_df.iloc[i]["target_id"],
+                    }
+                )
+
+        score = self._model.objective_value
+        matching_df = pd.DataFrame(data)
+
+        return score, matching_df
 
 
 @curry
@@ -125,12 +138,10 @@ def _tune_time_point(
     gt_labels: ArrayLike,
     config: MainConfig,
     scale: Optional[ArrayLike],
-) -> Optional[Tuple[MainConfig, pd.DataFrame]]:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # TODO
 
     config = config.copy(deep=True)
-
-    prev_in_memory_db_id = config.data_config.in_memory_db_id
     config.data_config.in_memory_db_id = t
 
     clear_all_data(config.data_config.database_path)
@@ -141,7 +152,7 @@ def _tune_time_point(
     props = regionprops(gt_labels)
 
     if len(props) == 0:
-        return None
+        LOG.warning(f"No objects found in time point {t}")
 
     foreground = np.asarray(foreground[t])
     contours = np.asarray(contours[t])
@@ -161,7 +172,7 @@ def _tune_time_point(
             time=1,
             mask=obj.image,
             bbox=obj.bbox,
-            index=_generate_id(obj.label, 1, 10_000_000),
+            index=obj.label,  # _generate_id(obj.label, 1, 10_000_000),
             include_overlaps=False,
         )
         row = {c: v for c, v in zip("xyz", obj.centroid[::-1])}
@@ -175,8 +186,12 @@ def _tune_time_point(
     link(config, scale=scale, overwrite=False)
 
     matching = SQLGTMatching(config)
-    total_score, solution = matching()
-    mean_score = total_score / len(gt_df)
+    total_score, solution_df = matching()
+
+    if len(gt_df) > 0:
+        mean_score = total_score / len(gt_df)
+    else:
+        mean_score = 0.0
 
     print(f"Total score: {total_score:0.4f}")
     print(f"Mean score: {mean_score:0.4f}")
@@ -187,13 +202,14 @@ def _tune_time_point(
         query = session.query(
             NodeDB.id,
             NodeDB.hier_parent_id,
+            NodeDB.t_hier_id,
             NodeDB.area,
             NodeDB.frontier,
         ).where(NodeDB.t == 0)
 
         df = pd.read_sql(query.statement, session.bind, index_col="id")
 
-    df = df.merge(solution, left_index=True, right_index=True)
+    df = df.join(solution_df)
 
     frontiers = df["frontier"]
 
@@ -202,31 +218,15 @@ def _tune_time_point(
 
     # selecting only nodes in solution
     # must be after parent_frontier computation
-    df = df[df["solution"] > 0.5]
+    # matched_df = df[df["solution"] > 0.5]
 
-    config.segmentation_config.min_frontier = df["parent_frontier"].min()
-    config.segmentation_config.min_area = df["area"].min()
-    config.segmentation_config.max_area = df["area"].max()
+    # config.segmentation_config.min_frontier = matched_df["parent_frontier"].min()
+    # config.segmentation_config.min_area = matched_df["area"].min()
+    # config.segmentation_config.max_area = matched_df["area"].max()
 
-    config.data_config.in_memory_db_id = prev_in_memory_db_id
+    # config.data_config.in_memory_db_id = prev_in_memory_db_id
 
-    return config, gt_df
-
-
-def _min_attr(
-    configs: List[MainConfig],
-    getter: Callable[[MainConfig], float],
-) -> float:
-    return min(getter(cfg) for cfg in configs)
-    # return np.quantile([getter(cfg) for cfg in configs], 0.01)
-
-
-def _max_attr(
-    configs: List[MainConfig],
-    getter: Callable[[MainConfig], float],
-) -> float:
-    return max(getter(cfg) for cfg in configs)
-    # return np.quantile([getter(cfg) for cfg in configs], 0.99)
+    return df, gt_df
 
 
 def auto_tune_config(
@@ -235,7 +235,7 @@ def auto_tune_config(
     ground_truth_labels: ArrayLike,
     config: Optional[MainConfig] = None,
     scale: Optional[ArrayLike] = None,
-) -> MainConfig:
+) -> Tuple[MainConfig, pd.DataFrame]:
 
     if config is None:
         config = MainConfig()
@@ -258,7 +258,7 @@ def auto_tune_config(
         desc="Auto-tuning individual time points",
     )
     tuning_tup = tuple(zip(*tuning_tup))
-    new_configs: List[MainConfig] = tuning_tup[0]
+    df = pd.concat(tuning_tup[0], ignore_index=True)
     gt_df = pd.concat(tuning_tup[1], ignore_index=True)
 
     if scale is not None:
@@ -268,24 +268,23 @@ def auto_tune_config(
     if "z" not in gt_df.columns:
         gt_df["z"] = 0.0
 
-    max_distance = estimate_drift(gt_df)
-    if not np.isnan(max_distance) or max_distance > 0:
-        config.linking_config.max_distance = max_distance + 1.0
+    if len(gt_df) > 0:
+        max_distance = estimate_drift(gt_df)
+        if not np.isnan(max_distance) or max_distance > 0:
+            config.linking_config.max_distance = max_distance + 1.0
 
-    config.segmentation_config.min_area = (
-        _min_attr(new_configs, lambda cfg: cfg.segmentation_config.min_area) * 0.95
-    )
+    if "solution" in df.columns:
+        matched_df = df[df["solution"] > 0.5]
+        config.segmentation_config.min_area = matched_df["area"].min() * 0.95
 
-    config.segmentation_config.max_area = (
-        _max_attr(new_configs, lambda cfg: cfg.segmentation_config.max_area) * 1.025
-    )
+        config.segmentation_config.max_area = matched_df["area"].max() * 1.025
 
-    config.segmentation_config.min_frontier = max(
-        _min_attr(new_configs, lambda cfg: cfg.segmentation_config.min_frontier)
-        - 0.025,
-        0.0,
-    )
+        config.segmentation_config.min_frontier = max(
+            matched_df["parent_frontier"].min() - 0.025, 0.0
+        )
 
-    config.data_config.database = prev_db
+        config.data_config.database = prev_db
+    else:
+        LOG.warning("No nodes were matched. Keeping previous configuration.")
 
-    return config
+    return config, df
