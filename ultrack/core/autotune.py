@@ -282,9 +282,9 @@ def auto_tune_config(
         config.segmentation_config.min_frontier = max(
             matched_df["parent_frontier"].min() - 0.025, 0.0
         )
-
-        config.data_config.database = prev_db
     else:
         LOG.warning("No nodes were matched. Keeping previous configuration.")
+
+    config.data_config.database = prev_db
 
     return config, df
