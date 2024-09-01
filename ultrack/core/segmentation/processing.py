@@ -5,6 +5,7 @@ from typing import Callable, List, Optional
 
 import fasteners
 import numpy as np
+import pandas as pd
 import sqlalchemy as sqla
 import zarr
 from numpy.typing import ArrayLike
@@ -14,7 +15,13 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import MainConfig, SegmentationConfig
-from ultrack.core.database import Base, NodeDB, OverlapDB, clear_all_data
+from ultrack.core.database import (
+    Base,
+    NodeDB,
+    OverlapDB,
+    clear_all_data,
+    get_node_values,
+)
 from ultrack.core.segmentation.hierarchy import create_hierarchies
 from ultrack.core.segmentation.node import Node
 from ultrack.utils.array import check_array_chunk
@@ -415,3 +422,32 @@ def segment(
             config.segmentation_config.n_workers,
             desc="Adding nodes to database",
         )
+
+
+def get_nodes_features(
+    config: MainConfig,
+    indices: Optional[ArrayLike] = None,
+) -> pd.DataFrame:
+    """
+    Creates a pandas dataframe from nodes features defined during segmentation
+    plus area and coordinates.
+
+    Parameters
+    ----------
+    config : MainConfig
+        Configuration parameters.
+    indices : Optional[ArrayLike], optional
+        List of node indices, by default
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with nodes features
+    """
+    feats_cols = [NodeDB.t, NodeDB.z, NodeDB.y, NodeDB.x, NodeDB.area, NodeDB.features]
+    df = get_node_values(config.data_config, indices=indices, values=feats_cols)
+    feat_columns = config.data_config.metadata["properties"]
+    df.loc[:, feat_columns] = np.vstack(df["features"].to_numpy())
+    df.drop(columns=["features"], inplace=True)
+
+    return df
