@@ -89,7 +89,23 @@ def _insert_db(
 def create_feats_callback(
     shape: ArrayLike, image: Optional[ArrayLike], properties: List[str]
 ) -> Callable[[Node], np.ndarray]:
+    """
+    Create a callback function to compute features for each node.
 
+    Parameters
+    ----------
+    shape : ArrayLike
+        Volume (plane) shape.
+    image : Optional[ArrayLike]
+        Image array for segments properties, could have channel dimension on last axis.
+    properties : List[str]
+        List of properties to compute for each segment, see skimage.measure.regionprops documentation.
+
+    Returns
+    -------
+    Callable[[Node], np.ndarray]
+        Callback function to compute features for each node returning a numpy array.
+    """
     mask = np.zeros(shape, dtype=bool)
 
     def _feats_callback(node: Node) -> np.ndarray:
@@ -157,7 +173,7 @@ def _process(
     insertion_throttle_rate : int
         Throttling rate for insertion, by default 50.
     image : Optional[ArrayLike], optional
-        Image array for segments properties, by default None.
+        Image array for segments properties, channel dimension is optional on last axis, by default None.
     properties : Optional[List[str]], optional
         List of properties to compute for each segment, by default None.
     """
@@ -310,6 +326,18 @@ def _get_properties_names(
     image: Optional[ArrayLike],
     properties: Optional[List[str]],
 ) -> Optional[List[str]]:
+    """
+    Get properties names from provided properties list.
+
+    Parameters
+    ----------
+    shape : ArrayLike
+        Volume (plane) shape.
+    image : Optional[ArrayLike]
+        Image array for segments properties, could have channel dimension on last axis.
+    properties : Optional[List[str]]
+        List of properties to compute for each segment, see skimage.measure.regionprops documentation.
+    """
 
     if properties is None:
         return None
@@ -360,9 +388,10 @@ def segment(
         Throttling rate for insertion, by default 50.
         Only used with non-sqlite databases.
     image : Optional[ArrayLike], optional
-        Image array of shape (T, (Z), Y, X) for segments properties, by default None.
+        Image array of shape (T, (Z), Y, X, (C)) for segments properties, by default None.
+        Channel and Z dimensions are optional.
     properties : Optional[List[str]], optional
-        List of properties to compute for each segment, by default None.
+        List of properties to compute for each segment, see skimage.measure.regionprops documentation.
     """
     LOG.info(f"Adding nodes with SegmentationConfig:\n{config.segmentation_config}")
 
