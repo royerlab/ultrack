@@ -74,6 +74,10 @@ def main() -> None:
         tracker.add_links(sources=source_ids, targets=target_ids, weights=weights)
 
     tracker.solve()
+
+    # for CTC use this
+    # tracker.to_ctc()
+
     tracks, graph = tracker.to_tracks_layer()
     segments = tracker.to_zarr()
 
