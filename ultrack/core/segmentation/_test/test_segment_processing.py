@@ -8,7 +8,7 @@ import zarr
 
 from ultrack import segment
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NodeDB, OverlapDB
+from ultrack.core.database import NodeDB, OverlapDB, get_node_values
 
 
 @pytest.mark.parametrize(
@@ -43,6 +43,7 @@ def test_multiprocessing_segment(
         foreground,
         contours,
         config_instance,
+        properties=["centroid"],
     )
 
     assert config_instance.data_config.metadata["shape"] == list(contours.shape)
@@ -83,3 +84,9 @@ def test_multiprocessing_segment(
                     continue
                 node_j = nodes[j]
                 assert node_i.IoU(node_j) == 0.0
+
+    feats = get_node_values(config_instance.data_config, i, NodeDB.features)
+    feats_name = config_instance.data_config.metadata["properties"]
+
+    assert len(feats) == len(feats_name)
+    assert isinstance(feats, np.ndarray)
