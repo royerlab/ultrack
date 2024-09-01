@@ -234,9 +234,9 @@ def link(
 
 def add_links(
     config: MainConfig,
-    source: ArrayLike,
-    target: ArrayLike,
-    weight: ArrayLike,
+    sources: ArrayLike,
+    targets: ArrayLike,
+    weights: ArrayLike,
 ) -> None:
     """
     Adds user-defined links to the database.
@@ -245,18 +245,18 @@ def add_links(
     ----------
     config : MainConfig
         Configuration parameters.
-    source : ArrayLike
-        Source (t) node id.
-    target : ArrayLike
-        Target (t + 1) node id.
-    weight : ArrayLike
-        Link weight.
+    sources : ArrayLike
+        Sources (t) node id.
+    targets : ArrayLike
+        Targets (t + 1) node id.
+    weights : ArrayLike
+        Link weights, the higher the weight the more likely the link.
     """
     df = pd.DataFrame(
         {
-            "source_id": np.asarray(source, dtype=int),
-            "target_id": np.asarray(target, dtype=int),
-            "weight": weight,
+            "source_id": np.asarray(sources, dtype=int),
+            "target_id": np.asarray(targets, dtype=int),
+            "weight": weights,
         }
     )
 

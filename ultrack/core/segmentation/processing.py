@@ -304,7 +304,9 @@ def _process(
                 )
                 return
             else:
-                raise e
+                raise ValueError(
+                    "Duplicated nodes found. Set `overwrite=True` to overwrite existing data."
+                ) from e
 
     # pushes any remaning data
     with write_lock if write_lock is not None else nullcontext():
@@ -347,7 +349,7 @@ def _get_properties_names(
     else:
         dummy_image = np.ones((4,) * (image.ndim - 1), dtype=np.float32)
 
-    dummy_labels = np.zeros(shape, dtype=np.uint32)
+    dummy_labels = np.zeros((4,) * len(shape), dtype=np.uint32)
     dummy_labels[:2, :2] = 1
 
     data_dict = regionprops_table(dummy_labels, dummy_image, properties=properties)
