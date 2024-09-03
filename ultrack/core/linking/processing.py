@@ -48,6 +48,61 @@ def _compute_features(
     ]
 
 
+def color_filtering_mask(
+    time: int,
+    current_nodes: List[Node],
+    next_nodes: List[Node],
+    images: Sequence[ArrayLike],
+    neighbors: ArrayLike,
+    z_score_threshold: float,
+) -> ArrayLike:
+    """
+    Filtering by color z-score.
+
+    Parameters
+    ----------
+    time : int
+        Current time.
+    current_nodes : List[Node]
+        List of source nodes.
+    next_nodes : List[Node]
+        List of target nodes.
+    images : Sequence[ArrayLike]
+        Sequence of images to extract color features for filtering.
+    neighbors : ArrayLike
+        Neighbors indices (current/source) for each target (next) node.
+    z_score_threshold : float
+        Z-score threshold for color filtering.
+
+    Returns
+    -------
+    ArrayLike
+        Boolean mask of neighboring nodes within color z-score threshold.
+
+    """
+    LOG.info(f"computing filtering by color z-score from t={time}")
+    (current_features,) = _compute_features(
+        time, current_nodes, images, [Node.intensity_mean]
+    )
+    # inserting dummy value for missing neighbors
+    current_features = np.append(
+        current_features,
+        np.zeros((1, current_features.shape[1])),
+        axis=0,
+    )
+    next_features, next_features_std = _compute_features(
+        time + 1, next_nodes, images, [Node.intensity_mean, Node.intensity_std]
+    )
+    LOG.info(
+        f"Features Std. Dev. range {next_features_std.min()} {next_features_std.max()}"
+    )
+    next_features_std[next_features_std <= 1e-6] = 1.0
+    difference = next_features[:, None, ...] - current_features[neighbors]
+    difference /= next_features_std[:, None, ...]
+    filtered_by_color = np.abs(difference).max(axis=-1) <= z_score_threshold
+    return filtered_by_color
+
+
 @curry
 def _process(
     time: int,
@@ -116,26 +171,14 @@ def _process(
     )
 
     if len(images) > 0:
-        LOG.info(f"computing filtering by color z-score from t={time}")
-        (current_features,) = _compute_features(
-            time, current_nodes, images, [Node.intensity_mean]
+        filtered_by_color = color_filtering_mask(
+            time,
+            current_nodes,
+            next_nodes,
+            images,
+            neighbors,
+            config.z_score_threshold,
         )
-        # inserting dummy value for missing neighbors
-        current_features = np.append(
-            current_features,
-            np.zeros((1, current_features.shape[1])),
-            axis=0,
-        )
-        next_features, next_features_std = _compute_features(
-            time + 1, next_nodes, images, [Node.intensity_mean, Node.intensity_std]
-        )
-        LOG.info(
-            f"Features Std. Dev. range {next_features_std.min()} {next_features_std.max()}"
-        )
-        next_features_std[next_features_std <= 1e-6] = 1.0
-        difference = next_features[:, None, ...] - current_features[neighbors]
-        difference /= next_features_std[:, None, ...]
-        filtered_by_color = np.abs(difference).max(axis=-1) <= config.z_score_threshold
     else:
         filtered_by_color = np.ones_like(neighbors, dtype=bool)
 
