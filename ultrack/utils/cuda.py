@@ -35,6 +35,18 @@ CUPY_MODULES = {
 }
 
 
+def is_cupy_array(arr: ArrayLike) -> bool:
+    """
+    Checks if array is a cupy array.
+
+    Parameters
+    ----------
+    arr : ArrayLike
+        Array to be checked.
+    """
+    return cp is not None and isinstance(arr, cp.ndarray)
+
+
 @contextmanager
 def unified_memory() -> Generator:
     """

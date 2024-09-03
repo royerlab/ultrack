@@ -39,7 +39,7 @@ def test_solvers_optimize(solver: BaseSolver, config_instance: MainConfig) -> No
 
     1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
-              C   1.0      0.95
+              C   1.0      0.9
               |       \\  /
               5 - 0.5 - 6 - 0.7 - 7
 
@@ -102,7 +102,7 @@ def test_fixed_nodes_constraint_solver(config_instance: MainConfig) -> None:
 
     1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
-              C   1.0      0.95
+              C   1.0      0.9
               |       \\  /
               5 - 0.5 - 6 - 0.7 - 7
                         ^
@@ -113,11 +113,11 @@ def test_fixed_nodes_constraint_solver(config_instance: MainConfig) -> None:
 
     1 - 0.5 - 2                   4
                 \\              /
-                  1.0      0.95
+                  1.0      0.9
                      \\  /
                        6 - 0.7 - 7
 
-    Result: 0.5 + 1.0 + 0.7 + 0.95 - division_weight
+    Result: 0.5 + 1.0 + 0.7 + 0.9 - division_weight
     """
     solver = MIPSolver(config_instance.tracking_config)
 
@@ -170,7 +170,7 @@ def test_fixed_edges_constraint_solver(config_instance: MainConfig) -> None:
 
     1 - 0.5 - 2 - 0.5 - 3 - 0.5 - 4
               |  \\             /      \\ due linting software
-              C   1.0      0.95
+              C   1.0      0.9
               |       \\  /
               5 - 0.5 - 6 - 0.7 - 7
                              ^
@@ -181,11 +181,11 @@ def test_fixed_edges_constraint_solver(config_instance: MainConfig) -> None:
 
     1 - 0.5 - 2                   4
                 \\              /
-                  1.0      0.95
+                  1.0      0.9
                      \\  /
                        6
 
-    Result: 0.5 + 1.0 + 0.95
+    Result: 0.5 + 1.0 + 0.9
     """
     solver = MIPSolver(config_instance.tracking_config)
 
