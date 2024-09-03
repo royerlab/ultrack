@@ -112,6 +112,16 @@ class LinkDB(Base):
     annotation = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
 
 
+class GroundTruthDB(Base):
+    __tablename__ = "ground_truth"
+    t = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    node_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    weight = Column(Float)
+    pickle = Column(MaybePickleType)
+    label = Column(Integer)
+
+
 def maximum_time_from_database(data_config: DataConfig) -> int:
     """Returns the maximum `t` found in the `NodesDB`."""
     engine = sqla.create_engine(data_config.database_path)
