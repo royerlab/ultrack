@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ LOG = logging.getLogger(__name__)
 def tracks_df_movement(
     tracks_df: pd.DataFrame,
     lag: int = 1,
-    cols: tuple[str, ...] = ("z", "y", "x"),
+    cols: Optional[tuple[str, ...]] = None,
 ) -> pd.DataFrame:
     """
     Compute the displacement for track data across given time lags.
@@ -33,7 +33,8 @@ def tracks_df_movement(
         Number of periods to compute the difference over. Default is 1.
 
     cols : tuple[str, ...], optional
-        Columns to compute the displacement for. Default is ("z", "y", "x").
+        Columns to compute the displacement for. If not provided, it will try to
+        find any of ["z", "y", "x"] columns in the dataframe and use them.
 
     Returns
     -------
@@ -62,7 +63,13 @@ def tracks_df_movement(
 
     tracks_df.sort_values(by=["track_id", "t"], inplace=True)
 
-    cols = list(cols)
+    if cols is None:
+        cols = []
+        for c in ["z", "y", "x"]:
+            if c in tracks_df.columns:
+                cols.append(c)
+    else:
+        cols = list(cols)
 
     out = tracks_df.groupby("track_id", as_index=False)[cols].diff(periods=lag)
     out.fillna(0, inplace=True)

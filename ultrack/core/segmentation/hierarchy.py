@@ -63,7 +63,12 @@ def create_hierarchies(
 
     if "min_area" in kwargs and num_labels > 1:
         LOG.info("Filtering small connected components.")
-        morphology.remove_small_objects(labels, min_size=kwargs["min_area"], out=labels)
+        #  To avoid removing small objects, divide by 4 to remove the smallest ones.
+        #  Nodes in hierarchies are still filtered by minimum area.
+        #  This is mainly for lonely cells.
+        morphology.remove_small_objects(
+            labels, min_size=int(kwargs["min_area"] / 4), out=labels
+        )
 
     edge = np.asarray(edge)
 

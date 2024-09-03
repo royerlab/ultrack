@@ -86,6 +86,7 @@ class NodeDB(Base):
     y_shift = Column(Float, default=0.0)
     x_shift = Column(Float, default=0.0)
     area = Column(Integer)
+    frontier = Column(Float, default=-1.0)
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
     features = Column(MaybePickleType, default=None)
