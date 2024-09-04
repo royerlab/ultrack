@@ -1,7 +1,6 @@
 import logging
-import pickle
 from contextlib import nullcontext
-from typing import Literal, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import fasteners
 import mip
@@ -10,6 +9,7 @@ import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from numpy.typing import ArrayLike
+from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from sqlalchemy.orm import Session
 from toolz import curry
@@ -24,12 +24,84 @@ LOG = logging.getLogger(__name__)
 
 def _link_gt(
     time: int,
+    gt_nodes: List[Node],
     config: MainConfig,
-    db_path: str,
     scale: Optional[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock],
-) -> None:
-    pass
+) -> pd.DataFrame:
+
+    if len(gt_nodes) == 0:
+        LOG.warn(f"No ground-truth nodes found at {time}")
+        return
+
+    db_path = config.data_config.database_path
+
+    engine = sqla.create_engine(db_path)
+    with Session(engine) as session:
+        h_nodes = [n for n, in session.query(NodeDB.id).where(NodeDB.t == time)]
+
+    h_nodes_pos = np.asarray([n.centroids for n in h_nodes])
+    gt_pos = np.asarray([n.centroids for n in gt_nodes])
+
+    n_dim = h_nodes_pos.shape[-1]
+
+    if scale is not None:
+        min_n_dim = min(n_dim, len(scale))
+        scale = scale[-min_n_dim:]
+        h_nodes_pos = h_nodes_pos[..., -min_n_dim:] * scale
+        gt_pos = gt_pos[..., -min_n_dim:] * scale
+
+    # finds neighbors nodes within the radius
+    # and connect the pairs with highest edge weight
+    current_kdtree = KDTree(h_nodes_pos)
+
+    distances, neighbors = current_kdtree.query(
+        gt_pos,
+        # twice as expected because we select the nearest with highest edge weight
+        k=2 * config.linking_config.max_neighbors,
+        distance_upper_bound=config.linking_config.max_distance,
+    )
+
+    gt_links = []
+
+    for i, node in enumerate(gt_nodes):
+        valid = ~np.isinf(distances[i])
+        valid_neighbors = neighbors[i, valid]
+        neigh_distances = distances[i, valid]
+
+        neighborhood = []
+        for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
+            neigh = h_nodes[neigh_idx]
+            edge_weight = node.IoU(neigh)
+            # using dist as a tie-breaker
+            neighborhood.append(
+                (edge_weight, -neigh_dist, neigh.id, node.id)
+            )  # current, next
+
+        neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
+        LOG.info("Node %s links %s", node.id, neighborhood)
+        gt_links += neighborhood
+
+    if len(gt_links) == 0:
+        raise ValueError(
+            f"No links found for time {time}. Increase `linking_config.max_distance` parameter."
+        )
+
+    gt_links = np.asarray(gt_links)[:, [0, 2, 3]]
+    df = pd.DataFrame(gt_links, columns=["weight", "source_id", "target_id"])
+
+    with write_lock if write_lock is not None else nullcontext():
+        LOG.info(f"Pushing gt links from time {time} to {db_path}")
+        engine = sqla.create_engine(
+            db_path,
+            hide_parameters=True,
+        )
+        with engine.begin() as conn:
+            df.to_sql(
+                name=GTLinkDB.__tablename__, con=conn, if_exists="append", index=False
+            )
+
+    return df
 
 
 @curry
@@ -48,6 +120,7 @@ def _match_ground_truth_frame(
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
 
+    gt_db_rows = []
     gt_nodes = []
     # adding ground-truth nodes
     for obj in gt_props:
@@ -55,19 +128,20 @@ def _match_ground_truth_frame(
             node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
         )
 
-        gt_nodes.append(
+        gt_db_rows.append(
             GTNodeDB(
                 t=time,
                 label=obj.label,
-                pickle=pickle.dumps(node),
+                pickle=node,
             )
         )
+        gt_nodes.append(node)
 
     with write_lock if write_lock is not None else nullcontext():
         engine = sqla.create_engine(config.data_config.database_path)
 
         with Session(engine) as session:
-            session.add_all(gt_nodes)
+            session.add_all(gt_db_rows)
             session.commit()
 
         engine.dispose()
@@ -78,8 +152,8 @@ def _match_ground_truth_frame(
     gt_matcher = SQLGTMatcher(config, write_lock=write_lock)
     total_score = gt_matcher()
 
-    if len(gt_nodes) > 0:
-        mean_score = total_score / len(gt_nodes)
+    if len(gt_db_rows) > 0:
+        mean_score = total_score / len(gt_db_rows)
     else:
         mean_score = 0.0
 
@@ -172,11 +246,13 @@ class SQLGTMatcher:
         config: MainConfig,
         solver: Literal["CBC", "GUROBI", ""] = "",
         write_lock: Optional[fasteners.InterProcessLock] = None,
+        eps=1e-3,
     ) -> None:
         # TODO
 
         self._data_config = config.data_config
         self._write_lock = write_lock
+        self._eps = eps
 
         try:
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=solver)
@@ -237,9 +313,10 @@ class SQLGTMatcher:
             name="edges",
             var_type=mip.BINARY,
         )
+        # small value to prefer not selecting edges than bad ones
         # setting objective function
         self._model.objective = mip.xsum(
-            self._edges_df["weight"].to_numpy() * self._edges
+            (self._edges_df["weight"].to_numpy() - self._eps) * self._edges
         )
 
         # source_id is time point T (hierarchies id)
@@ -287,4 +364,6 @@ class SQLGTMatcher:
         self._model.optimize()
         self.add_solution()
 
-        return self._model.objective_value
+        n_selected_vars = sum(e_var.x > 0.5 for e_var in self._edges)
+
+        return self._model.objective_value + n_selected_vars * self._eps
