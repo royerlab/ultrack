@@ -312,6 +312,8 @@ class Node(_Node):
             bbox = ndi.find_objects(mask)[0]
             mask = mask[bbox]
 
+        bbox = np.asarray(bbox)
+
         if mask.ndim * 2 != len(bbox):
             raise ValueError(
                 f"Bounding box {bbox} does not match 2x mask ndim {mask.ndim}"

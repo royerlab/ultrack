@@ -9,7 +9,6 @@ from numpy.typing import ArrayLike
 
 from ultrack import export_tracks_by_extension
 from ultrack.config import MainConfig
-from ultrack.core.autotune import match_to_ground_truth
 from ultrack.core.export import (
     to_ctc,
     to_tracks_layer,
@@ -17,6 +16,7 @@ from ultrack.core.export import (
     tracks_layer_to_trackmate,
     tracks_to_zarr,
 )
+from ultrack.core.gt_matching import match_to_ground_truth
 from ultrack.core.linking.processing import add_links, link
 from ultrack.core.main import track
 from ultrack.core.segmentation.processing import get_nodes_features, segment
@@ -172,6 +172,6 @@ class Tracker:
         self.status |= TrackerStatus.LINKED
 
     @functools.wraps(match_to_ground_truth)
-    def match_to_ground_truth(self, **kwargs) -> None:
+    def match_to_ground_truth(self, **kwargs) -> pd.DataFrame:
         self._assert_segmented("match_to_ground_truth")
-        match_to_ground_truth(config=self.config, **kwargs)
+        return match_to_ground_truth(config=self.config, **kwargs)

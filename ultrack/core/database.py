@@ -120,8 +120,8 @@ class LinkDB(Base):
 
 class GTNodeDB(Base):
     __tablename__ = "gt_nodes"
-    t = Column(Integer, primary_key=True)
     id = Column(Integer, primary_key=True, autoincrement=True)
+    t = Column(Integer)
     label = Column(Integer)
     pickle = Column(MaybePickleType)
     z = Column(Float)
