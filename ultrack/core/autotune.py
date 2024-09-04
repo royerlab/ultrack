@@ -1,6 +1,9 @@
 import logging
+import pickle
+from contextlib import nullcontext
 from typing import Literal, Optional, Tuple
 
+import fasteners
 import mip
 import mip.exceptions
 import numpy as np
@@ -12,25 +15,168 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import LinkDB, NodeDB, OverlapDB, clear_all_data
-from ultrack.core.interactive import add_new_node
-from ultrack.core.linking.processing import link
-from ultrack.core.segmentation.processing import segment
-from ultrack.tracks.stats import estimate_drift
+from ultrack.core.database import GTLinkDB, GTNodeDB, NodeDB, OverlapDB
+from ultrack.core.segmentation.node import Node
 from ultrack.utils.multiprocessing import multiprocessing_apply
 
 LOG = logging.getLogger(__name__)
 
 
-class SQLGTMatching:
+def _link_gt(
+    time: int,
+    config: MainConfig,
+    db_path: str,
+    scale: Optional[ArrayLike],
+    write_lock: Optional[fasteners.InterProcessLock],
+) -> None:
+    pass
+
+
+@curry
+def _match_ground_truth_frame(
+    time: int,
+    gt_labels: ArrayLike,
+    config: MainConfig,
+    scale: Optional[ArrayLike],
+    write_lock: Optional[fasteners.InterProcessLock],
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    # TODO
+
+    gt_labels = np.asarray(gt_labels[time])
+    gt_props = regionprops(gt_labels)
+
+    if len(gt_props) == 0:
+        LOG.warning(f"No objects found in time point {time}")
+
+    gt_nodes = []
+    # adding ground-truth nodes
+    for obj in gt_props:
+        node = Node.from_mask(
+            node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
+        )
+
+        gt_nodes.append(
+            GTNodeDB(
+                t=time,
+                label=obj.label,
+                pickle=pickle.dumps(node),
+            )
+        )
+
+    with write_lock if write_lock is not None else nullcontext():
+        engine = sqla.create_engine(config.data_config.database_path)
+
+        with Session(engine) as session:
+            session.add_all(gt_nodes)
+            session.commit()
+
+        engine.dispose()
+
+        _link_gt(config, scale=scale, overwrite=False)
+
+    # computing GT matching
+    gt_matcher = SQLGTMatcher(config, write_lock=write_lock)
+    total_score = gt_matcher()
+
+    if len(gt_nodes) > 0:
+        mean_score = total_score / len(gt_nodes)
+    else:
+        mean_score = 0.0
+
+    LOG.info(f"time {time} total score: {total_score:0.4f}")
+    LOG.info(f"time {time} mean score: {mean_score:0.4f}")
+
+
+def _get_matched_nodes_df(database_path: str) -> pd.DataFrame:
+    # TODO
+    engine = sqla.create_engine(database_path)
+
+    with Session(engine) as session:
+        node_query = session.query(
+            NodeDB.id,
+            NodeDB.hier_parent_id,
+            NodeDB.t_hier_id,
+            NodeDB.area,
+            NodeDB.frontier,
+        ).where(NodeDB.t == 0)
+        node_df = pd.read_sql(node_query.statement, session.bind, index_col="id")
+
+        gt_query = session.query(GTLinkDB.source_id, GTLinkDB.target_id).where(
+            GTLinkDB.selected
+        )
+        gt_df = pd.read_sql(gt_query.statement, session.bind, index="source_id")
+
+    node_df = node_df.join(gt_df)
+
+    frontiers = node_df["frontier"]
+    node_df["parent_frontier"] = node_df["hier_parent_id"].map(
+        lambda x: frontiers.get(x, -1.0)
+    )
+    node_df.loc[node_df["parent_frontier"] < 0, "parent_frontier"] = node_df[
+        "frontier"
+    ].max()
+
+    return node_df
+
+
+def match_to_ground_truth(
+    config: MainConfig,
+    gt_labels: ArrayLike,
+    scale: Optional[ArrayLike] = None,
+) -> pd.DataFrame:
+    # TODO
+
+    multiprocessing_apply(
+        _match_ground_truth_frame(
+            gt_labels=gt_labels,
+            config=config,
+            scale=scale,
+        ),
+        range(gt_labels.shape[0]),
+        n_workers=config.segmentation_config.n_workers,
+        desc="Matching hierarchy nodes with ground-truth",
+    )
+
+    # if scale is not None:
+    #     cols = ["z", "y", "x"][-len(scale) :]
+    #     gt_df[cols] *= scale
+
+    # if "z" not in gt_df.columns:
+    #     gt_df["z"] = 0.0
+
+    # if len(gt_df) > 0:
+    #     max_distance = estimate_drift(gt_df)
+    #     if not np.isnan(max_distance) or max_distance > 0:
+    #         config.linking_config.max_distance = max_distance + 1.0
+
+    # if "solution" in df.columns:
+    #     matched_df = df[df["solution"] > 0.5]
+    #     config.segmentation_config.min_area = matched_df["area"].min() * 0.95
+
+    #     config.segmentation_config.max_area = matched_df["area"].max() * 1.025
+
+    #     config.segmentation_config.min_frontier = max(
+    #         matched_df["parent_frontier"].min() - 0.025, 0.0
+    #     )
+    # else:
+    #     LOG.warning("No nodes were matched. Keeping previous configuration.")
+
+    # config.data_config.database = prev_db
+
+    # return config, df
+
+
+class SQLGTMatcher:
     def __init__(
         self,
         config: MainConfig,
         solver: Literal["CBC", "GUROBI", ""] = "",
+        write_lock: Optional[fasteners.InterProcessLock] = None,
     ) -> None:
         # TODO
 
         self._data_config = config.data_config
+        self._write_lock = write_lock
 
         try:
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=solver)
@@ -40,7 +186,6 @@ class SQLGTMatching:
 
     def _add_nodes(self) -> None:
         # TODO
-
         engine = sqla.create_engine(self._data_config.database_path)
 
         # t = 0 is hierarchies
@@ -77,7 +222,9 @@ class SQLGTMatching:
 
         engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
-            query = session.query(LinkDB).join(NodeDB, NodeDB.id == LinkDB.source_id)
+            query = session.query(GTLinkDB).join(
+                NodeDB, NodeDB.id == GTLinkDB.source_id
+            )
             self._edges_df = pd.read_sql(query.statement, session.bind)
 
         self._edges_df["source_id"] = self._nodes_df.index.get_indexer(
@@ -105,186 +252,39 @@ class SQLGTMatching:
         for _, group in self._edges_df.groupby("target_id", as_index=False):
             self._model.add_constr(mip.xsum(self._edges[group.index.to_numpy()]) <= 1)
 
-    def __call__(self) -> Tuple[float, pd.DataFrame]:
+    def add_solution(self) -> None:
+        # TODO
+        engine = sqla.create_engine(self._data_config.database_path)
+
+        edges_records = []
+        for idx, e_var in zip(self._edges_df.index, self._edges):
+            if e_var.x > 0.5:
+                edges_records.append(
+                    {
+                        "id": idx,
+                        "selected": e_var.x > 0.5,
+                    }
+                )
+
+        with self._write_lock if self._write_lock is not None else nullcontext():
+            with Session(engine) as session:
+                stmt = (
+                    sqla.update(GTLinkDB)
+                    .where(GTLinkDB.id == sqla.bindparam("id"))
+                    .values(selected=sqla.bindparam("selected"))
+                )
+                session.connection().execute(
+                    stmt,
+                    edges_records,
+                    execution_options={"synchronize_session": False},
+                )
+                session.commit()
+
+    def __call__(self) -> float:
         # TODO
         self._add_nodes()
         self._add_edges()
         self._model.optimize()
+        self.add_solution()
 
-        data = []
-
-        for i, e_var in enumerate(self._edges):
-            if e_var.x > 0.5:
-                data.append(
-                    {
-                        "id": self._nodes_df.index.get_indexer(
-                            self._edges_df.iloc[i]["source_id"]
-                        ),
-                        "gt_id": self._edges_df.iloc[i]["target_id"],
-                    }
-                )
-
-        score = self._model.objective_value
-        matching_df = pd.DataFrame(data)
-
-        return score, matching_df
-
-
-@curry
-def _tune_time_point(
-    t: int,
-    foreground: ArrayLike,
-    contours: ArrayLike,
-    gt_labels: ArrayLike,
-    config: MainConfig,
-    scale: Optional[ArrayLike],
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    # TODO
-
-    config = config.copy(deep=True)
-    config.data_config.in_memory_db_id = t
-
-    clear_all_data(config.data_config.database_path)
-
-    gt_labels = np.asarray(gt_labels[t])
-    gt_rows = []
-
-    props = regionprops(gt_labels)
-
-    if len(props) == 0:
-        LOG.warning(f"No objects found in time point {t}")
-
-    foreground = np.asarray(foreground[t])
-    contours = np.asarray(contours[t])
-
-    # adding hierarchy nodes
-    segment(
-        foreground=foreground[None, ...],
-        contours=contours[None, ...],
-        config=config,
-        overwrite=False,
-    )
-
-    # adding ground-truth nodes
-    for obj in props:
-        add_new_node(
-            config=config,
-            time=1,
-            mask=obj.image,
-            bbox=obj.bbox,
-            index=obj.label,  # _generate_id(obj.label, 1, 10_000_000),
-            include_overlaps=False,
-        )
-        row = {c: v for c, v in zip("xyz", obj.centroid[::-1])}
-        row["track_id"] = obj.label
-        gt_rows.append(row)
-
-    gt_df = pd.DataFrame.from_records(gt_rows)
-    gt_df["t"] = t
-
-    # computing GT matching
-    link(config, scale=scale, overwrite=False)
-
-    matching = SQLGTMatching(config)
-    total_score, solution_df = matching()
-
-    if len(gt_df) > 0:
-        mean_score = total_score / len(gt_df)
-    else:
-        mean_score = 0.0
-
-    print(f"Total score: {total_score:0.4f}")
-    print(f"Mean score: {mean_score:0.4f}")
-
-    engine = sqla.create_engine(config.data_config.database_path)
-
-    with Session(engine) as session:
-        query = session.query(
-            NodeDB.id,
-            NodeDB.hier_parent_id,
-            NodeDB.t_hier_id,
-            NodeDB.area,
-            NodeDB.frontier,
-        ).where(NodeDB.t == 0)
-
-        df = pd.read_sql(query.statement, session.bind, index_col="id")
-
-    df = df.join(solution_df)
-
-    frontiers = df["frontier"]
-
-    df["parent_frontier"] = df["hier_parent_id"].map(lambda x: frontiers.get(x, -1.0))
-    df.loc[df["parent_frontier"] < 0, "parent_frontier"] = df["frontier"].max()
-
-    # selecting only nodes in solution
-    # must be after parent_frontier computation
-    # matched_df = df[df["solution"] > 0.5]
-
-    # config.segmentation_config.min_frontier = matched_df["parent_frontier"].min()
-    # config.segmentation_config.min_area = matched_df["area"].min()
-    # config.segmentation_config.max_area = matched_df["area"].max()
-
-    # config.data_config.in_memory_db_id = prev_in_memory_db_id
-
-    return df, gt_df
-
-
-def auto_tune_config(
-    foreground: ArrayLike,
-    contours: ArrayLike,
-    ground_truth_labels: ArrayLike,
-    config: Optional[MainConfig] = None,
-    scale: Optional[ArrayLike] = None,
-) -> Tuple[MainConfig, pd.DataFrame]:
-
-    if config is None:
-        config = MainConfig()
-    else:
-        config = config.copy(deep=True)
-
-    prev_db = config.data_config.database
-    config.data_config.database = "memory"
-
-    tuning_tup = multiprocessing_apply(
-        _tune_time_point(
-            foreground=foreground,
-            contours=contours,
-            gt_labels=ground_truth_labels,
-            config=config,
-            scale=scale,
-        ),
-        range(foreground.shape[0]),
-        n_workers=config.segmentation_config.n_workers,
-        desc="Auto-tuning individual time points",
-    )
-    tuning_tup = tuple(zip(*tuning_tup))
-    df = pd.concat(tuning_tup[0], ignore_index=True)
-    gt_df = pd.concat(tuning_tup[1], ignore_index=True)
-
-    if scale is not None:
-        cols = ["z", "y", "x"][-len(scale) :]
-        gt_df[cols] *= scale
-
-    if "z" not in gt_df.columns:
-        gt_df["z"] = 0.0
-
-    if len(gt_df) > 0:
-        max_distance = estimate_drift(gt_df)
-        if not np.isnan(max_distance) or max_distance > 0:
-            config.linking_config.max_distance = max_distance + 1.0
-
-    if "solution" in df.columns:
-        matched_df = df[df["solution"] > 0.5]
-        config.segmentation_config.min_area = matched_df["area"].min() * 0.95
-
-        config.segmentation_config.max_area = matched_df["area"].max() * 1.025
-
-        config.segmentation_config.min_frontier = max(
-            matched_df["parent_frontier"].min() - 0.025, 0.0
-        )
-    else:
-        LOG.warning("No nodes were matched. Keeping previous configuration.")
-
-    config.data_config.database = prev_db
-
-    return config, df
+        return self._model.objective_value

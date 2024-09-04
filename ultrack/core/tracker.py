@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 
 from ultrack import export_tracks_by_extension
 from ultrack.config import MainConfig
+from ultrack.core.autotune import match_to_ground_truth
 from ultrack.core.export import (
     to_ctc,
     to_tracks_layer,
@@ -169,3 +170,8 @@ class Tracker:
         self._assert_segmented("add_links")
         add_links(config=self.config, **kwargs)
         self.status |= TrackerStatus.LINKED
+
+    @functools.wraps(match_to_ground_truth)
+    def match_to_ground_truth(self, **kwargs) -> None:
+        self._assert_segmented("match_to_ground_truth")
+        match_to_ground_truth(config=self.config, **kwargs)

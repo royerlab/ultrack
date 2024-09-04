@@ -118,14 +118,24 @@ class LinkDB(Base):
     annotation = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
 
 
-class GroundTruthDB(Base):
-    __tablename__ = "ground_truth"
+class GTNodeDB(Base):
+    __tablename__ = "gt_nodes"
     t = Column(Integer, primary_key=True)
     id = Column(Integer, primary_key=True, autoincrement=True)
-    node_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
-    weight = Column(Float)
-    pickle = Column(MaybePickleType)
     label = Column(Integer)
+    pickle = Column(MaybePickleType)
+    z = Column(Float)
+    y = Column(Float)
+    x = Column(Float)
+
+
+class GTLinkDB(Base):
+    __tablename__ = "gt_links"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    target_id = Column(BigInteger, ForeignKey(f"{GTNodeDB.__tablename__}.id"))
+    weight = Column(Float)
+    selected = Column(Boolean, default=False)
 
 
 def maximum_time_from_database(data_config: DataConfig) -> int:
