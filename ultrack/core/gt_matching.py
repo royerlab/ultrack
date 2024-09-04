@@ -126,26 +126,26 @@ def _get_matched_nodes_df(database_path: str) -> pd.DataFrame:
             session.query(
                 GTLinkDB.source_id,
                 GTLinkDB.target_id,
-                GTNodeDB.z,
-                GTNodeDB.y,
-                GTNodeDB.x,
-            )
-            .join(GTNodeDB, GTNodeDB.id == GTLinkDB.target_id)
-            .where(GTLinkDB.selected)
+                # GTNodeDB.z,
+                # GTNodeDB.y,
+                # GTNodeDB.x,
+            ).where(GTLinkDB.selected)
+            # .join(GTNodeDB, GTNodeDB.id == GTLinkDB.target_id)
         )
         gt_df = pd.read_sql(
             gt_edge_query.statement, session.bind, index_col="source_id"
         )
         gt_df.rename(
-            # columns={"target_id": "gt_id"}, # , "z": "gt_z", "y": "gt_y", "x": "gt_x"},
-            columns={"target_id": "gt_id", "z": "gt_z", "y": "gt_y", "x": "gt_x"},
+            columns={
+                "target_id": "gt_track_id"
+            },  # , "z": "gt_z", "y": "gt_y", "x": "gt_x"},
             inplace=True,
         )
 
         LOG.info(f"Found {len(node_df)} nodes and {len(gt_df)} ground-truth links")
 
     node_df = node_df.join(gt_df)
-    node_df["gt_id"] = node_df["gt_id"].fillna(NO_PARENT).astype(int)
+    node_df["gt_track_id"] = node_df["gt_track_id"].fillna(NO_PARENT).astype(int)
 
     # frontiers = node_df["frontier"]
     # node_df["parent_frontier"] = node_df["hier_parent_id"].map(
