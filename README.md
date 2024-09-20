@@ -132,7 +132,7 @@ This project is licensed under the BSD-3 License - see the [LICENSE](LICENSE) fi
 
 ## Citing
 
-If you use ultrack in your research, please cite the following [paper](https://arxiv.org/pdf/2308.04526):
+If you use ultrack in your research, please cite the following papers, [the algorithm](https://arxiv.org/pdf/2308.04526) and [the biological applications and software](https://www.biorxiv.org/content/10.1101/2024.09.02.610652).
 
 ```
 @misc{bragantini2023ucmtracking,
@@ -143,7 +143,17 @@ If you use ultrack in your research, please cite the following [paper](https://a
       archivePrefix={arXiv},
       primaryClass={cs.CV}
 }
+
+@article{bragantini2024ultrack,
+  title={Ultrack: pushing the limits of cell tracking across biological scales},
+  author={Bragantini, Jordao and Theodoro, Ilan and Zhao, Xiang and Huijben, Teun APM and Hirata-Miyasaki, Eduardo and VijayKumar, Shruthi and Balasubramanian, Akilandeswari and Lao, Tiger and Agrawal, Richa and Xiao, Sheng and others},
+  journal={bioRxiv},
+  pages={2024--09},
+  year={2024},
+  publisher={Cold Spring Harbor Laboratory}
+}
 ```
+
 Include citations for auxiliary methods (e.g., Cellpose, napari) depending on your usage.
 
 ## Acknowledgements
