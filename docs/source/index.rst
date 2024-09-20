@@ -80,7 +80,7 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 Citing
 ------
 
-If you use ``ultrack`` in your research, please cite the following papers, [the algorithm](https://arxiv.org/pdf/2308.04526) and [the biological applications and software](https://www.biorxiv.org/content/10.1101/2024.09.02.610652).
+If you use ``ultrack`` in your research, please cite the following papers, `the algorithm <https://arxiv.org/pdf/2308.04526>`_ and `the biological applications and software <https://www.biorxiv.org/content/10.1101/2024.09.02.610652>`_.
 
 .. code-block:: bibtex
 
