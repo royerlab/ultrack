@@ -230,3 +230,40 @@ def link(
         multiprocessing_apply(
             process, time_points, config.linking_config.n_workers, desc="Linking nodes."
         )
+
+
+def add_links(
+    config: MainConfig,
+    sources: ArrayLike,
+    targets: ArrayLike,
+    weights: ArrayLike,
+) -> None:
+    """
+    Adds user-defined links to the database.
+
+    Parameters
+    ----------
+    config : MainConfig
+        Configuration parameters.
+    sources : ArrayLike
+        Sources (t) node id.
+    targets : ArrayLike
+        Targets (t + 1) node id.
+    weights : ArrayLike
+        Link weights, the higher the weight the more likely the link.
+    """
+    df = pd.DataFrame(
+        {
+            "source_id": np.asarray(sources, dtype=int),
+            "target_id": np.asarray(targets, dtype=int),
+            "weight": weights,
+        }
+    )
+
+    engine = sqla.create_engine(
+        config.data_config.database_path,
+        hide_parameters=True,
+    )
+
+    with engine.begin() as conn:
+        df.to_sql(name=LinkDB.__tablename__, con=conn, if_exists="append", index=False)
