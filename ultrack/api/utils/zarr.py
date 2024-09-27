@@ -72,7 +72,7 @@ def get_channels_from_ome_zarr(
     named_data = {}
     for name, channel in valid_channels.items():
         try:
-            image_index = node.metadata["name"].index(channel)
+            image_index = node.metadata["channel_names"].index(channel)
         except ValueError as ex:
             raise ValueError(
                 f"node {node} doesn't have a channel named {channel}. {ex}"

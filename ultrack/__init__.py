@@ -10,9 +10,7 @@ if os.environ.get("ULTRACK_DEBUG", False):
 # ignoring small float32/64 zero flush warning
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal for")
 
-from importlib.metadata import version as _version
-
-__version__ = _version(__name__)
+__version__ = "0.6.0"
 
 from ultrack.config.config import MainConfig, load_config
 from ultrack.core.export.ctc import to_ctc

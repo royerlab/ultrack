@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict
 
 import higra as hg
-from pydantic import BaseModel, Extra, root_validator, validator
+from pydantic.v1 import BaseModel, Extra, root_validator, validator
 
 NAME_TO_WS_HIER = {
     "area": hg.watershed_hierarchy_by_area,

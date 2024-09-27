@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Callable, Optional
 
 import numpy as np
-from pydantic import BaseModel, Extra
+from pydantic.v1 import BaseModel, Extra
 
 
 class LinkFunctionChoices(Enum):

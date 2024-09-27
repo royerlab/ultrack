@@ -21,7 +21,11 @@ from ultrack.utils.printing import pretty_print_df
 
 def _plot_column_over_time(df: pd.DataFrame, column: str, output_dir: Path) -> None:
     """Plots column average over time."""
-    df = df.groupby("t").agg({column: ["mean", "min", "max"]})
+    df = pd.melt(
+        df.groupby("t").agg({column: ["mean", "min", "max"]}),
+        var_name="stat",
+        value_name=f"stat_{column}",
+    )
 
     sns.set_theme(style="whitegrid")
     plot = sns.lineplot(data=df, palette="tab10")

@@ -103,7 +103,7 @@ def test_config():
     default_config = MainConfig()
     default_config.data_config = None
 
-    assert MainConfig.parse_raw(response.text) == default_config
+    assert response.json() == default_config.dict()
 
 
 def test_manual_segment(experiment_instance: Experiment):

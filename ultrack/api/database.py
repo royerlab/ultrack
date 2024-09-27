@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sqla
-from pydantic import BaseModel, Json, validator
+from pydantic.v1 import BaseModel, Json, validator
 from sqlalchemy import JSON, Column, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -17,6 +17,13 @@ from ultrack.core.database import clear_all_data
 LOG = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+
+def _clean_db_on_exit():
+    try:
+        Session._temp_dir.cleanup()
+    except:
+        pass
 
 
 class Session:
@@ -37,7 +44,7 @@ class Session:
         if cls._instance is None:
             cls._temp_dir = tempfile.TemporaryDirectory()
             settings.ultrack_data_config.working_dir = cls._temp_dir.name
-            atexit.register(cls._temp_dir.cleanup)
+            atexit.register(_clean_db_on_exit)
             engine = sqla.create_engine(
                 settings.ultrack_data_config.database_path, hide_parameters=False
             )
