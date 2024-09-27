@@ -90,7 +90,8 @@ def test_gap_closing() -> None:
 
     expected_segments = np.zeros((8, 7), dtype=np.uint8)
     expected_segments[
-        expected_tracks_df["t"].astype(int), expected_tracks_df["x"].round().astype(int)
+        expected_tracks_df["t"].astype(int),
+        np.floor(expected_tracks_df["x"]).astype(int),
     ] = expected_tracks_df["track_id"].values
 
     # +1 of 9 to 7

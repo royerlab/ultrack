@@ -9,7 +9,7 @@ Once you have conda (mamba) installed, you should create an environment for ``ul
 
 .. code-block:: bash
 
-    conda create -n ultrack python=3.11 gurobi pytorch pyqt -c pytorch -c gurobi -c conda-forge
+    conda create -n ultrack python=3.11 higra gurobi pytorch pyqt -c pytorch -c gurobi -c conda-forge
 
 Then, you can activate the environment and install ``ultrack``:
 
@@ -18,21 +18,29 @@ Then, you can activate the environment and install ``ultrack``:
     conda activate ultrack
     pip install ultrack
 
-If you're using OSX you may need to install ``higra`` from source. You can do this by running the following commands:
-
-.. code-block:: bash
-
-    conda activate ultrack
-    pip install numpy
-    pip install -vv git+https://github.com/higra/Higra
-    pip install ultrack
-
 You can check if the installation was successful by running:
 
 .. code-block:: bash
 
     ultrack --help
 
+
+GPU acceleration
+----------------
+
+Ultrack makes use of GPU for image processing operations.
+You can install the additional packages required for GPU acceleration by running (Linux and Windows only):
+
+.. code-block:: bash
+
+    conda install pytorch-cuda -c pytorch -c nvidia
+    conda install cupy -c conda-forge
+    # linux only
+    conda install cucim -c rapidsai
+    # for windows, you can install cucim using pip
+    pip install git+https://github.com/rapidsai/cucim.git#egg=cucim&subdirectory=python/cucim"
+
+See the `PyTorch website <https://pytorch.org/get-started/locally/>`_ for more information on how to install PyTorch with GPU support.
 
 Gurobi setup
 ------------
