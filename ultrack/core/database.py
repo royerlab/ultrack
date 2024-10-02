@@ -23,6 +23,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DatabaseChoices, DataConfig
+from ultrack.utils.array import assert_same_length
 
 # constant value to indicate it has no parent
 NO_PARENT = -1
@@ -182,6 +183,8 @@ def set_node_values(
         for k, v in kwargs.items():
             if hasattr(v, "tolist"):
                 kwargs[k] = v.tolist()
+
+    assert_same_length(**kwargs)
 
     records = [
         {k: v[i] for k, v in kwargs.items()} for i in range(len(kwargs["node_id"]))

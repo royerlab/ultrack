@@ -12,6 +12,7 @@ from skimage.util._map_array import ArrayMap
 from ultrack.config.config import TrackingConfig
 from ultrack.core.database import NO_PARENT
 from ultrack.core.solve.solver.base_solver import BaseSolver
+from ultrack.utils.array import assert_same_length
 
 LOG = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ class MIPSolver(BaseSolver):
         if self._nodes is not None:
             raise ValueError("Nodes have already been added.")
 
-        self._assert_same_length(
+        assert_same_length(
             indices=indices,
             is_first_t=is_first_t,
             is_last_t=is_last_t,
@@ -158,7 +159,7 @@ class MIPSolver(BaseSolver):
         if self._edges is not None:
             raise ValueError("Edges have already been added.")
 
-        self._assert_same_length(sources=sources, targets=targets, weights=weights)
+        assert_same_length(sources=sources, targets=targets, weights=weights)
 
         weights = self._config.apply_link_function(weights.astype(float))
 

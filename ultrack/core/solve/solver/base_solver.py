@@ -22,18 +22,6 @@ class BaseSolver(ABC):
         """
         self._config = config
 
-    @staticmethod
-    def _assert_same_length(**kwargs) -> None:
-        """Validates if key-word arguments have the same length."""
-        for k1, v1 in kwargs.items():
-            if v1 is None:
-                continue
-            for k2, v2 in kwargs.items():
-                if v2 is not None and len(v2) != len(v1):
-                    raise ValueError(
-                        f"`{k1}` and `{k2}` must have the same length. Found {len(v1)} and {len(v2)}."
-                    )
-
     @abstractmethod
     def add_nodes(
         self,
