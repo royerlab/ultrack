@@ -3,8 +3,8 @@ import pandas as pd
 import zarr
 import zarr.storage
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks import close_tracks_gaps
+from ultrack.utils.constants import NO_PARENT
 
 
 def test_gap_closing() -> None:

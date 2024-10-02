@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks.stats import (
     estimate_drift,
     tracks_df_movement,
     tracks_length,
     tracks_profile_matrix,
 )
+from ultrack.utils.constants import NO_PARENT
 
 
 def spatial_df(group_drift: Sequence[int], length_per_group: int = 10) -> pd.DataFrame:

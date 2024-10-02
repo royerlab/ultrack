@@ -7,12 +7,12 @@ from scipy import sparse
 from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.solve.solver.base_solver import BaseSolver
 from ultrack.core.solve.solver.heuristic._numba_heuristic_solver import (
     NumbaHeuristicSolver,
 )
 from ultrack.utils.array import assert_same_length
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 

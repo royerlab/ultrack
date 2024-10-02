@@ -24,9 +24,7 @@ from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DatabaseChoices, DataConfig
 from ultrack.utils.array import assert_same_length
-
-# constant value to indicate it has no parent
-NO_PARENT = -1
+from ultrack.utils.constants import NO_PARENT
 
 Base = declarative_base()
 

@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from ultrack import solve, to_tracks_layer
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, VarAnnotation
+from ultrack.core.database import LinkDB, NodeDB, VarAnnotation
 from ultrack.core.solve.sqltracking import SQLTracking
+from ultrack.utils.constants import NO_PARENT
 
 _CONFIG_PARAMS = {
     "segmentation.n_workers": 4,

@@ -6,12 +6,12 @@ import pandas as pd
 import pytest
 from napari.viewer import ViewerModel
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks.video import (
     tracks_df_to_3D_video,
     tracks_df_to_moving_2D_plane_video,
     tracks_df_to_videos,
 )
+from ultrack.utils.constants import NO_PARENT
 
 pytest.importorskip("napari_animation")
 
