@@ -2,9 +2,12 @@ import enum
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 
+import numpy as np
+import pandas as pd
 import sqlalchemy as sqla
+from numpy.typing import ArrayLike
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -161,6 +164,9 @@ def set_node_values(
     annot : NodeAnnotation
         Node annotation.
     """
+    if hasattr(node_id, "item"):
+        node_id = node_id.item()
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
         stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
@@ -169,27 +175,57 @@ def set_node_values(
 
 
 def get_node_values(
-    data_config: DataConfig, node_id: int, values: Union[Column, List[Column]]
-) -> Any:
+    data_config: DataConfig,
+    indices: Optional[Union[int, ArrayLike]],
+    values: Union[Column, List[Column]],
+) -> List[Any]:
     """Get the annotation of `node_id`.
 
     Parameters
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    node_id : int
-        Node database index.
+    indices : int
+        Node database indices.
     values : List[Column]
         List of columns to be queried.
     """
     if not isinstance(values, List):
         values = [values]
 
+    values.insert(0, NodeDB.id)
+
+    is_scalar = False
+    if isinstance(indices, int):
+        indices = [indices]
+        is_scalar = True
+
+    elif isinstance(indices, np.ndarray):
+        indices = indices.astype(int).tolist()
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
+        query = session.query(*values)
 
-    return annotation
+        if indices is not None:
+            query = query.where(NodeDB.id.in_(indices))
+
+        df = pd.read_sql_query(query.statement, session.bind, index_col="id")
+
+    if indices is not None and len(df) != len(indices):
+        raise ValueError(
+            f"Query returned {len(df)} rows, expected {len(indices)}."
+            "\nCheck if node_id exists in database."
+        )
+
+    df = df.squeeze()
+    if is_scalar:
+        try:
+            df = df.item()
+        except ValueError:
+            pass
+
+    return df
 
 
 def clear_all_data(database_path: str) -> None:

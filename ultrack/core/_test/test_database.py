@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from ultrack.config.config import MainConfig
@@ -39,6 +40,7 @@ def test_set_get_node_values(
     segmentation_database_mock_data: MainConfig,
 ) -> None:
 
+    # test single node
     index = _generate_id(1, 1, 1_000_000)
 
     set_node_values(
@@ -54,3 +56,21 @@ def test_set_get_node_values(
     )
 
     assert value == 0
+
+    # test multiple nodes
+    indices = np.asarray([_generate_id(i, 1, 1_000_000) for i in range(1, 3)])
+
+    for i, index in enumerate(indices):
+        set_node_values(
+            segmentation_database_mock_data.data_config,
+            index.item(),
+            area=i,
+        )
+
+    value = get_node_values(
+        segmentation_database_mock_data.data_config,
+        indices,
+        NodeDB.area,
+    )
+
+    np.testing.assert_array_equal(value, np.arange(len(indices)))
