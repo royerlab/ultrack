@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from napari.viewer import ViewerModel
 
-from ultrack.core.database import NO_PARENT
+from ultrack.utils.constants import NO_PARENT
 from ultrack.validation.link_validation import Annotation, LinkValidation
 
 

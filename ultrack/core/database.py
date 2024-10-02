@@ -23,9 +23,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DatabaseChoices, DataConfig
-
-# constant value to indicate it has no parent
-NO_PARENT = -1
+from ultrack.utils.array import assert_same_length
+from ultrack.utils.constants import NO_PARENT
 
 Base = declarative_base()
 
@@ -95,6 +94,7 @@ class NodeDB(Base):
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
     features = Column(MaybePickleType, default=None)
+    node_prob = Column(Float, default=-1.0)
     segm_annot = Column(Enum(NodeSegmAnnotation), default=NodeSegmAnnotation.UNKNOWN)
     node_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
     appear_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
@@ -172,7 +172,7 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
 
 def set_node_values(
     data_config: DataConfig,
-    node_id: int,
+    indices: ArrayLike,
     **kwargs,
 ) -> None:
     """Set arbitrary values to a node in the database given its `node_id`.
@@ -181,18 +181,47 @@ def set_node_values(
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    node_id : int
-        Node database index.
-    annot : NodeAnnotation
-        Node annotation.
+    indices : ArrayLike
+        Nodes' indices database index.
+    **kwargs : Any
+        Arbitrary keyword arguments to be set.
     """
-    if hasattr(node_id, "item"):
-        node_id = node_id.item()
+
+    keys = list(kwargs.keys())
+    kwargs["node_id"] = indices
+
+    if isinstance(indices, int):
+        for k, v in kwargs.items():
+            # it might be a numpy scalar
+            try:
+                v = v.item()
+            except AttributeError:
+                pass
+            kwargs[k] = [v]
+
+    else:
+        for k, v in kwargs.items():
+            if hasattr(v, "tolist"):
+                kwargs[k] = v.tolist()
+
+    assert_same_length(**kwargs)
+
+    records = [
+        {k: v[i] for k, v in kwargs.items()} for i in range(len(kwargs["node_id"]))
+    ]
 
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
-        session.execute(stmt)
+        stmt = (
+            sqla.update(NodeDB)
+            .where(NodeDB.id == sqla.bindparam("node_id"))
+            .values({k: sqla.bindparam(k) for k in keys})
+        )
+        session.connection().execute(
+            stmt,
+            records,
+            execution_options={"synchronize_session": False},
+        )
         session.commit()
 
 

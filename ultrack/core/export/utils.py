@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.dataconfig import DataConfig
-from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.core.database import NodeDB
 from ultrack.core.segmentation.node import Node
+from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.multiprocessing import multiprocessing_apply
 
 LOG = logging.getLogger(__name__)

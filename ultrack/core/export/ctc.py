@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 from ultrack.config.config import MainConfig
 from ultrack.config.dataconfig import DataConfig
-from ultrack.core.database import NO_PARENT, NodeDB
+from ultrack.core.database import NodeDB
 from ultrack.core.export.utils import (
     export_segmentation_generic,
     filter_nodes_generic,
@@ -32,6 +32,7 @@ from ultrack.tracks.graph import (
     tracks_df_forest,
 )
 from ultrack.tracks.stats import estimate_drift
+from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.data import validate_and_overwrite_path
 
 logging.basicConfig()

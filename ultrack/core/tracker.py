@@ -22,6 +22,7 @@ from ultrack.core.main import track
 from ultrack.core.segmentation.processing import get_nodes_features, segment
 from ultrack.core.solve.processing import solve
 from ultrack.imgproc.flow import add_flow
+from ultrack.ml.classification import add_nodes_prob
 from ultrack.utils.deprecation import rename_argument
 
 
@@ -175,3 +176,11 @@ class Tracker:
     def match_to_ground_truth(self, **kwargs) -> pd.DataFrame:
         self._assert_segmented("match_to_ground_truth")
         return match_to_ground_truth(config=self.config, **kwargs)
+
+    @functools.wraps(add_nodes_prob)
+    def add_nodes_prob(
+        self,
+        indices: ArrayLike,
+        probs: ArrayLike,
+    ) -> None:
+        add_nodes_prob(self.config, indices, probs)

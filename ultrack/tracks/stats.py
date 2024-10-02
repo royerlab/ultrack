@@ -4,8 +4,8 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks.sorting import sort_track_ids
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 

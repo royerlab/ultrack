@@ -10,7 +10,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
-from ultrack.core.database import NO_PARENT
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 

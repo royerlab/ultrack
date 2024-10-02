@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export.trackmate import tracks_layer_to_trackmate
+from ultrack.utils.constants import NO_PARENT
 
 pytrackmate = pytest.importorskip("pytrackmate")
 
