@@ -193,7 +193,6 @@ def set_node_values(
             .where(NodeDB.id == sqla.bindparam("node_id"))
             .values({k: sqla.bindparam(k) for k in keys})
         )
-        print(records)
         session.connection().execute(
             stmt,
             records,
