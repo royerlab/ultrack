@@ -148,9 +148,17 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     return is_empty
 
 
+def try_item(item: Any) -> Any:
+    """Try to convert item to scalar."""
+    if hasattr(item, "item"):
+        return item.item()
+    else:
+        return item
+
+
 def set_node_values(
     data_config: DataConfig,
-    node_id: int,
+    indices: ArrayLike,
     **kwargs,
 ) -> None:
     """Set arbitrary values to a node in the database given its `node_id`.
@@ -159,18 +167,36 @@ def set_node_values(
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    node_id : int
-        Node database index.
-    annot : NodeAnnotation
-        Node annotation.
+    indices : ArrayLike
+        Nodes' indices database index.
+    **kwargs : Any
+        Arbitrary keyword arguments to be set.
     """
-    if hasattr(node_id, "item"):
-        node_id = node_id.item()
+
+    keys = list(kwargs.keys())
+    kwargs["node_id"] = indices
+
+    for k, v in kwargs.items():
+        kwargs[k] = np.atleast_1d(v)
+
+    records = [
+        {k: try_item(v[i]) for k, v in kwargs.items()}
+        for i in range(len(kwargs["node_id"]))
+    ]
 
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
-        session.execute(stmt)
+        stmt = (
+            sqla.update(NodeDB)
+            .where(NodeDB.id == sqla.bindparam("node_id"))
+            .values({k: sqla.bindparam(k) for k in keys})
+        )
+        print(records)
+        session.connection().execute(
+            stmt,
+            records,
+            execution_options={"synchronize_session": False},
+        )
         session.commit()
 
 

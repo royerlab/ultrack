@@ -60,12 +60,11 @@ def test_set_get_node_values(
     # test multiple nodes
     indices = np.asarray([_generate_id(i, 1, 1_000_000) for i in range(1, 3)])
 
-    for i, index in enumerate(indices):
-        set_node_values(
-            segmentation_database_mock_data.data_config,
-            index.item(),
-            area=i,
-        )
+    set_node_values(
+        segmentation_database_mock_data.data_config,
+        indices,
+        area=list(range(len(indices))),
+    )
 
     value = get_node_values(
         segmentation_database_mock_data.data_config,
