@@ -2,9 +2,12 @@ import enum
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 
+import numpy as np
+import pandas as pd
 import sqlalchemy as sqla
+from numpy.typing import ArrayLike
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -147,7 +150,7 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
 
 def set_node_values(
     data_config: DataConfig,
-    node_id: int,
+    indices: ArrayLike,
     **kwargs,
 ) -> None:
     """Set arbitrary values to a node in the database given its `node_id`.
@@ -156,40 +159,100 @@ def set_node_values(
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    node_id : int
-        Node database index.
-    annot : NodeAnnotation
-        Node annotation.
+    indices : ArrayLike
+        Nodes' indices database index.
+    **kwargs : Any
+        Arbitrary keyword arguments to be set.
     """
+
+    keys = list(kwargs.keys())
+    kwargs["node_id"] = indices
+
+    if isinstance(indices, int):
+        for k, v in kwargs.items():
+            # it might be a numpy scalar
+            try:
+                v = v.item()
+            except AttributeError:
+                pass
+            kwargs[k] = [v]
+
+    else:
+        for k, v in kwargs.items():
+            if hasattr(v, "tolist"):
+                kwargs[k] = v.tolist()
+
+    records = [
+        {k: v[i] for k, v in kwargs.items()} for i in range(len(kwargs["node_id"]))
+    ]
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        stmt = sqla.update(NodeDB).where(NodeDB.id == node_id).values(**kwargs)
-        session.execute(stmt)
+        stmt = (
+            sqla.update(NodeDB)
+            .where(NodeDB.id == sqla.bindparam("node_id"))
+            .values({k: sqla.bindparam(k) for k in keys})
+        )
+        session.connection().execute(
+            stmt,
+            records,
+            execution_options={"synchronize_session": False},
+        )
         session.commit()
 
 
 def get_node_values(
-    data_config: DataConfig, node_id: int, values: Union[Column, List[Column]]
-) -> Any:
+    data_config: DataConfig,
+    indices: Optional[Union[int, ArrayLike]],
+    values: Union[Column, List[Column]],
+) -> List[Any]:
     """Get the annotation of `node_id`.
 
     Parameters
     ----------
     data_config : DataConfig
         Data configuration parameters.
-    node_id : int
-        Node database index.
+    indices : int
+        Node database indices.
     values : List[Column]
         List of columns to be queried.
     """
     if not isinstance(values, List):
         values = [values]
 
+    values.insert(0, NodeDB.id)
+
+    is_scalar = False
+    if isinstance(indices, int):
+        indices = [indices]
+        is_scalar = True
+
+    elif isinstance(indices, np.ndarray):
+        indices = indices.astype(int).tolist()
+
     engine = sqla.create_engine(data_config.database_path)
     with Session(engine) as session:
-        annotation = session.query(*values).where(NodeDB.id == node_id).first()[0]
+        query = session.query(*values)
 
-    return annotation
+        if indices is not None:
+            query = query.where(NodeDB.id.in_(indices))
+
+        df = pd.read_sql_query(query.statement, session.bind, index_col="id")
+
+    if indices is not None and len(df) != len(indices):
+        raise ValueError(
+            f"Query returned {len(df)} rows, expected {len(indices)}."
+            "\nCheck if node_id exists in database."
+        )
+
+    df = df.squeeze()
+    if is_scalar:
+        try:
+            df = df.item()
+        except ValueError:
+            pass
+
+    return df
 
 
 def clear_all_data(database_path: str) -> None:
