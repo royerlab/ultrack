@@ -23,9 +23,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, declarative_base
 
 from ultrack.config.dataconfig import DatabaseChoices, DataConfig
-
-# constant value to indicate it has no parent
-NO_PARENT = -1
+from ultrack.utils.array import assert_same_length
+from ultrack.utils.constants import NO_PARENT
 
 Base = declarative_base()
 
@@ -93,6 +92,7 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
+    node_prob = Column(Float, default=-1.0)
     segm_annot = Column(Enum(NodeSegmAnnotation), default=NodeSegmAnnotation.UNKNOWN)
     node_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
     appear_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
@@ -181,6 +181,8 @@ def set_node_values(
         for k, v in kwargs.items():
             if hasattr(v, "tolist"):
                 kwargs[k] = v.tolist()
+
+    assert_same_length(**kwargs)
 
     records = [
         {k: v[i] for k, v in kwargs.items()} for i in range(len(kwargs["node_id"]))

@@ -21,6 +21,7 @@ from ultrack.core.main import track
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
 from ultrack.imgproc.flow import add_flow
+from ultrack.ml.classification import add_nodes_prob
 from ultrack.utils.deprecation import rename_argument
 
 
@@ -153,3 +154,11 @@ class Tracker:
     def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
         self._assert_solved()
         export_tracks_by_extension(self.config, filename, overwrite=overwrite)
+
+    @functools.wraps(add_nodes_prob)
+    def add_nodes_prob(
+        self,
+        indices: ArrayLike,
+        probs: ArrayLike,
+    ) -> None:
+        add_nodes_prob(self.config, indices, probs)

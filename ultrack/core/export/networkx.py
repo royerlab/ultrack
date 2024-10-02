@@ -4,9 +4,9 @@ import networkx as nx
 import pandas as pd
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.tracks.graph import _create_tracks_forest
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 

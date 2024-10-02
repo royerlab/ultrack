@@ -7,11 +7,12 @@ from scipy import sparse
 from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.solve.solver.base_solver import BaseSolver
 from ultrack.core.solve.solver.heuristic._numba_heuristic_solver import (
     NumbaHeuristicSolver,
 )
+from ultrack.utils.array import assert_same_length
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 
@@ -68,9 +69,7 @@ class HeuristicSolver(BaseSolver):
         if hasattr(self, "_forbidden"):
             raise ValueError("Nodes have already been added.")
 
-        self._assert_same_length(
-            indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
-        )
+        assert_same_length(indices=indices, is_first_t=is_first_t, is_last_t=is_last_t)
 
         indices = np.asarray(indices)
         size = len(indices)
@@ -111,7 +110,7 @@ class HeuristicSolver(BaseSolver):
         if hasattr(self, "_weights"):
             raise ValueError("Edges have already been added.")
 
-        self._assert_same_length(weights=weights, sources=sources, targets=targets)
+        assert_same_length(weights=weights, sources=sources, targets=targets)
 
         self._weights = np.asarray(
             self._config.apply_link_function(weights), np.float32

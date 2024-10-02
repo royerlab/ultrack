@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 from numba import typed, types
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks import (
     left_first_search,
     sort_track_ids,
     sort_trees_by_length,
     sort_trees_by_max_radius,
 )
+from ultrack.utils.constants import NO_PARENT
 
 
 def test_sortrees_by_length() -> None:

@@ -241,7 +241,7 @@ class SQLTracking:
 
         engine = sqla.create_engine(self._data_config.database_path)
         with Session(engine) as session:
-            query = session.query(NodeDB.id, NodeDB.t).where(
+            query = session.query(NodeDB.id, NodeDB.t, NodeDB.node_prob).where(
                 NodeDB.t.between(start_time, end_time)
             )
             df = pd.read_sql(query.statement, session.bind)
@@ -251,10 +251,22 @@ class SQLTracking:
 
         LOG.info(f"Batch {index}, nodes with t between {start_time} and {end_time}")
 
+        n_invalid_prob = (df["node_prob"] < 0).sum()
+        if n_invalid_prob == df.shape[0]:
+            nodes_prob = None
+        elif n_invalid_prob == 0:
+            nodes_prob = df["node_prob"]
+        else:
+            raise ValueError(
+                "None or all nodes' probabilities must be provided found "
+                f"Found {df.shape[0] - n_invalid_prob} / {df.shape[0]} valid probs."
+            )
+
         solver.add_nodes(
             df["id"],
             df["t"] == start_time,
             df["t"] == end_time,
+            nodes_prob=nodes_prob,
         )
 
     def _add_edges(self, solver: BaseSolver, index: int) -> None:
