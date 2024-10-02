@@ -148,14 +148,6 @@ def is_table_empty(data_config: DataConfig, table: Base) -> bool:
     return is_empty
 
 
-def try_item(item: Any) -> Any:
-    """Try to convert item to scalar."""
-    if hasattr(item, "item"):
-        return item.item()
-    else:
-        return item
-
-
 def set_node_values(
     data_config: DataConfig,
     indices: ArrayLike,
@@ -176,12 +168,22 @@ def set_node_values(
     keys = list(kwargs.keys())
     kwargs["node_id"] = indices
 
-    for k, v in kwargs.items():
-        kwargs[k] = np.atleast_1d(v)
+    if isinstance(indices, int):
+        for k, v in kwargs.items():
+            # it might be a numpy scalar
+            try:
+                v = v.item()
+            except AttributeError:
+                pass
+            kwargs[k] = [v]
+
+    else:
+        for k, v in kwargs.items():
+            if hasattr(v, "tolist"):
+                kwargs[k] = v.tolist()
 
     records = [
-        {k: try_item(v[i]) for k, v in kwargs.items()}
-        for i in range(len(kwargs["node_id"]))
+        {k: v[i] for k, v in kwargs.items()} for i in range(len(kwargs["node_id"]))
     ]
 
     engine = sqla.create_engine(data_config.database_path)
