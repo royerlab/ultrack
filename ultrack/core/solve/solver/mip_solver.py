@@ -1,7 +1,7 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 import mip
 import numpy as np
@@ -75,7 +75,11 @@ class MIPSolver(BaseSolver):
         self._model.max_mip_gap = self._config.solution_gap
 
     def add_nodes(
-        self, indices: ArrayLike, is_first_t: ArrayLike, is_last_t: ArrayLike
+        self,
+        indices: ArrayLike,
+        is_first_t: ArrayLike,
+        is_last_t: ArrayLike,
+        nodes_prob: Optional[ArrayLike] = None,
     ) -> None:
         """Add nodes slack variables to gurobi model.
 
@@ -87,12 +91,17 @@ class MIPSolver(BaseSolver):
             Boolean array indicating if it belongs to first time point and it won't receive appearance penalization.
         is_last_t : ArrayLike
             Boolean array indicating if it belongs to last time point and it won't receive disappearance penalization.
+        nodes_prob: Optional[ArrayLike]
+            If provided assigns a node probability score to the objective function.
         """
         if self._nodes is not None:
             raise ValueError("Nodes have already been added.")
 
         self._assert_same_length(
-            indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
+            indices=indices,
+            is_first_t=is_first_t,
+            is_last_t=is_last_t,
+            nodes_prob=nodes_prob,
         )
 
         LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
@@ -119,10 +128,17 @@ class MIPSolver(BaseSolver):
             size, name="division", var_type=mip.BINARY
         )
 
+        if nodes_prob is None:
+            node_weights = 0
+        else:
+            nodes_prob = self._config.apply_link_function(np.asarray(nodes_prob))
+            node_weights = mip.xsum(nodes_prob * self._nodes)
+
         self._model.objective = (
             mip.xsum(self._divisions * self._config.division_weight)
             + mip.xsum(self._appearances * appear_weight)
             + mip.xsum(self._disappearances * disappear_weight)
+            + node_weights
         )
 
     def add_edges(

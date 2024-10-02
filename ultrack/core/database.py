@@ -90,6 +90,7 @@ class NodeDB(Base):
     area = Column(Integer)
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
+    node_prob = Column(Float, default=-1.0)
     segm_annot = Column(Enum(NodeSegmAnnotation), default=NodeSegmAnnotation.UNKNOWN)
     node_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
     appear_annot = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)

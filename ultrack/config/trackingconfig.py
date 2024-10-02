@@ -49,7 +49,7 @@ class TrackingConfig(BaseModel):
     """``SPECIAL``: Solver method, `reference <https://docs.python-mip.com/en/latest/classes.html#lp-method>`_"""
 
     link_function: LinkFunctionChoices = "power"
-    """``SPECIAL``: Function used to transform the edge weights, `identity` or `power`"""
+    """``SPECIAL``: Function used to transform the edge and node weights, `identity` or `power`"""
 
     power: float = 4
     r"""``SPECIAL``: Expoent :math:`\eta` of power transform, :math:`w_{pq}^\eta` """

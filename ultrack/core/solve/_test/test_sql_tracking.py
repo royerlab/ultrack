@@ -125,7 +125,6 @@ def test_annotations_sql_tracking(
 
     solve(config, overwrite=True, use_annotations=True)
     tracks_df, _ = to_tracks_layer(config)
-    print(tracks_df)
 
     engine = sqla.create_engine(config.data_config.database_path)
     with Session(engine) as session:
@@ -136,6 +135,5 @@ def test_annotations_sql_tracking(
 
     solve(config, overwrite=True, use_annotations=True)
     tracks_df_annot, _ = to_tracks_layer(config)
-    print(tracks_df_annot)
 
     assert len(tracks_df) > len(tracks_df_annot)
