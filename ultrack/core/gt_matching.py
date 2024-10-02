@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import Optional, Tuple
+from typing import Optional
 
 import fasteners
 import numpy as np
@@ -31,9 +31,24 @@ def _match_ground_truth_frame(
     config: MainConfig,
     scale: Optional[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock],
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    # TODO
+) -> None:
+    """
+    Matches candidate hypotheses to ground-truth labels for a given time point.
+    Segmentation hypotheses must be pre-computed.
 
+    Parameters
+    ----------
+    time : int
+        Time point to match.
+    gt_labels : ArrayLike
+        Ground-truth labels.
+    config : MainConfig
+        Configuration object.
+    scale : Optional[ArrayLike]
+        Scale of the data for distance computation.
+    write_lock : Optional[fasteners.InterProcessLock]
+        Lock for writing to the database.
+    """
     gt_labels = np.asarray(gt_labels[time])
     gt_props = regionprops(gt_labels)
 
@@ -108,8 +123,20 @@ def _match_ground_truth_frame(
     LOG.info(f"time {time} mean score: {mean_score:0.4f}")
 
 
-def _get_matched_nodes_df(database_path: str) -> pd.DataFrame:
-    # TODO
+def _get_nodes_df_with_matches(database_path: str) -> pd.DataFrame:
+    """
+    Gets nodes data frame with matched ground-truth labels.
+
+    Parameters
+    ----------
+    database_path : str
+        Path to the database file.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with matched nodes.
+    """
     engine = sqla.create_engine(database_path)
 
     with Session(engine) as session:
@@ -163,7 +190,23 @@ def match_to_ground_truth(
     gt_labels: ArrayLike,
     scale: Optional[ArrayLike] = None,
 ) -> pd.DataFrame:
-    # TODO
+    """
+    Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
+
+    Parameters
+    ----------
+    config : MainConfig
+        Configuration object.
+    gt_labels : ArrayLike
+        Ground-truth labels.
+    scale : Optional[ArrayLike], optional
+        Scale of the data for distance computation, by default None.
+
+    Returns
+    -------
+    pd.DataFrame
+        Data frame containing matched ground-truth labels to their respective nodes.
+    """
 
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         multiprocessing_apply(
@@ -178,7 +221,7 @@ def match_to_ground_truth(
             desc="Matching hierarchy nodes with ground-truth",
         )
 
-        df_nodes = _get_matched_nodes_df(config.data_config.database_path)
+        df_nodes = _get_nodes_df_with_matches(config.data_config.database_path)
 
     return df_nodes
 
