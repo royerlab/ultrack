@@ -39,8 +39,6 @@ class SQLGTMatcher:
         # TODO
         engine = sqla.create_engine(self._data_config.database_path)
 
-        # t = 0 is hierarchies
-        # t = 1 is ground-truth nodes
         with Session(engine) as session:
             query = session.query(NodeDB.id, NodeDB.t).where(NodeDB.t == time)
             self._nodes_df = pd.read_sql(query.statement, session.bind, index_col="id")
@@ -102,13 +100,11 @@ class SQLGTMatcher:
         # source_id is time point T (hierarchies id)
         # target_id is time point T+1 (ground-truth)
         for source_id, group in self._edges_df.groupby("source_id", as_index=False):
-            print("SOURCE", group)
             self._model.add_constr(
                 self._nodes[source_id] == mip.xsum(self._edges[group.index.to_numpy()])
             )
 
         for _, group in self._edges_df.groupby("target_id", as_index=False):
-            print("TARGET", group)
             self._model.add_constr(mip.xsum(self._edges[group.index.to_numpy()]) <= 1)
 
     def add_solution(self) -> None:
