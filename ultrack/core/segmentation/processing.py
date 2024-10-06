@@ -86,6 +86,23 @@ def _insert_db(
     overlaps.clear()
 
 
+class _ImageCachedLazyLoader:
+    """
+    Wrapper class to cache dask/zarr data loading for feature computation.
+    """
+
+    def __init__(self, image: ArrayLike):
+        self._image = image
+        self._current_t = -1
+        self._frame = None
+
+    def __getitem__(self, index: int) -> np.ndarray:
+        if index != self._current_t:
+            self._frame = np.asarray(self._image[index])
+            self._current_t = index
+        return self._frame
+
+
 def create_feats_callback(
     shape: ArrayLike, image: Optional[ArrayLike], properties: List[str]
 ) -> Callable[[Node], np.ndarray]:
@@ -108,6 +125,9 @@ def create_feats_callback(
     """
     mask = np.zeros(shape, dtype=bool)
 
+    if image is not None:
+        image = _ImageCachedLazyLoader(image)
+
     def _feats_callback(node: Node) -> np.ndarray:
 
         node.paint_buffer(mask, True, include_time=False)
@@ -115,7 +135,7 @@ def create_feats_callback(
         if image is None:
             frame = None
         else:
-            frame = np.asarray(image[node.time])
+            frame = image[node.time]
 
         obj = RegionProperties(
             node.slice,
