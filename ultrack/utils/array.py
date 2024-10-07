@@ -3,7 +3,7 @@ import logging
 import shutil
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type, Union
 
 import numpy as np
 import zarr
@@ -95,29 +95,45 @@ def check_array_chunk(array: ArrayLike) -> None:
 
 def array_apply(
     *in_arrays: ArrayLike,
-    out_array: ArrayLike,
     func: Callable,
+    out_array: Optional[ArrayLike] = None,
     axis: Union[Tuple[int], int] = 0,
+    out_zarr_kwargs: Optional[Dict[str, Any]] = {},
     **kwargs,
-) -> None:
+) -> zarr.Array:
     """Apply a function over a given dimension of an array.
 
     Parameters
     ----------
     in_arrays : ArrayLike
         Arrays to apply function to.
-    out_array : ArrayLike
-        Array to store result of function.
     func : function
         Function to apply over time.
+    out_array : ArrayLike, optional
+        Array to store result of function if not provided a new array is created, by default None.
+        See `create_zarr` for more information.
     axis : Union[Tuple[int], int], optional
         Axis of data to apply func, by default 0.
     args : tuple
         Positional arguments to pass to func.
+    out_zarr_kwargs : Dict[str, Any], optional
+        Keyword arguments to pass to `create_zarr`.
+        If `dtype` and `shape` are not provided, they are inferred from the first input array.
     **kwargs :
         Keyword arguments to pass to func.
+
+    Returns
+    -------
+    zarr.Array
+        `out_array` or new array with result of function.
     """
     name = func.__name__ if hasattr(func, "__name__") else type(func).__name__
+
+    if out_array is None:
+        for param in ("shape", "dtype"):
+            if param not in out_zarr_kwargs:
+                out_zarr_kwargs[param] = getattr(in_arrays[0], param)
+        out_array = create_zarr(**out_zarr_kwargs)
 
     try:
         in_shape = [arr.shape for arr in in_arrays]
@@ -141,6 +157,8 @@ def array_apply(
         func_result = func(*[a[indexing] for a in in_arrays], **kwargs)
         output_shape = out_array[indexing].shape
         out_array[indexing] = np.broadcast_to(func_result, output_shape)
+
+    return out_array
 
 
 def create_zarr(
@@ -193,15 +211,3 @@ def create_zarr(
         chunks = large_chunk_size(shape, dtype=dtype)
 
     return zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
-
-
-def assert_same_length(**kwargs) -> None:
-    """Validates if key-word arguments have the same length."""
-    for k1, v1 in kwargs.items():
-        if v1 is None:
-            continue
-        for k2, v2 in kwargs.items():
-            if v2 is not None and len(v2) != len(v1):
-                raise ValueError(
-                    f"`{k1}` and `{k2}` must have the same length. Found {len(v1)} and {len(v2)}."
-                )
