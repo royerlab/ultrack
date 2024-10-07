@@ -204,6 +204,7 @@ def inverted_edt(
     ArrayLike
         Inverted and normalized EDT.
     """
+    mask = np.asarray(mask)
     if axis is None:
         dist = edt.edt(mask, anisotropy=voxel_size)
     else:
@@ -216,7 +217,7 @@ def inverted_edt(
         )
     dist = dist / dist.max()
     dist = 1.0 - dist
-    dist[~mask] = 1
+    dist[mask == 0] = 1
     return dist
 
 
