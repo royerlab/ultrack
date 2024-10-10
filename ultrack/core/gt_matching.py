@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import Optional
+from typing import Dict, Optional
 
 import fasteners
 import numpy as np
@@ -189,6 +189,7 @@ def match_to_ground_truth(
     config: MainConfig,
     gt_labels: ArrayLike,
     scale: Optional[ArrayLike] = None,
+    track_id_graph: Optional[Dict[int, int]] = None,
 ) -> pd.DataFrame:
     """
     Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
@@ -201,6 +202,8 @@ def match_to_ground_truth(
         Ground-truth labels.
     scale : Optional[ArrayLike], optional
         Scale of the data for distance computation, by default None.
+    track_id_graph : Optional[Dict[int, int]], optional
+        Ground-truth graph of track IDs, by default None.
 
     Returns
     -------
@@ -222,6 +225,13 @@ def match_to_ground_truth(
         )
 
         df_nodes = _get_nodes_df_with_matches(config.data_config.database_path)
+
+    if track_id_graph is not None:
+        df_nodes["gt_parent_track_id"] = df_nodes["gt_track_id"].apply(
+            lambda x: track_id_graph.get(x, NO_PARENT)
+        )
+    else:
+        df_nodes["gt_parent_track_id"] = NO_PARENT
 
     return df_nodes
 
