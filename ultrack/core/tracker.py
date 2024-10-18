@@ -16,7 +16,7 @@ from ultrack.core.export import (
     tracks_layer_to_trackmate,
     tracks_to_zarr,
 )
-from ultrack.core.linking.processing import link
+from ultrack.core.linking.processing import add_links, link
 from ultrack.core.main import track
 from ultrack.core.segmentation.processing import segment
 from ultrack.core.solve.processing import solve
@@ -71,32 +71,31 @@ class Tracker:
     @rename_argument("edges", "contours")
     def segment(self, foreground: ArrayLike, contours: ArrayLike, **kwargs) -> None:
         segment(foreground=foreground, contours=contours, config=self.config, **kwargs)
-        self.status = TrackerStatus.SEGMENTED
+        self.status &= ~TrackerStatus.NOT_COMPUTED
+        self.status |= TrackerStatus.SEGMENTED
 
     @functools.wraps(add_flow)
     def add_flow(self, vector_field: ArrayLike) -> None:
-        if TrackerStatus.SEGMENTED not in self.status:
-            raise ValueError("You must call `segment` before calling `add_flow`.")
+        self._assert_segmented("add_flow")
         add_flow(config=self.config, vector_field=vector_field)
 
     @functools.wraps(link)
     def link(self, *args, **kwargs) -> None:
-        if TrackerStatus.SEGMENTED not in self.status:
-            raise ValueError("You must call `segment` before calling `link`.")
+        self._assert_segmented("link")
         link(config=self.config, *args, **kwargs)
-        self.status = TrackerStatus.LINKED
+        self.status |= TrackerStatus.LINKED
 
     @functools.wraps(solve)
     def solve(self, *args, **kwargs) -> None:
         if TrackerStatus.LINKED not in self.status:
             raise ValueError("You must call `segment` & `link` before calling `solve`.")
         solve(config=self.config, *args, **kwargs)
-        self.status = TrackerStatus.SOLVED
+        self.status |= TrackerStatus.SOLVED
 
     @functools.wraps(track)
     def track(self, *args, **kwargs) -> None:
         track(config=self.config, *args, **kwargs)
-        self.status = TrackerStatus.SOLVED
+        self.status |= TrackerStatus.SOLVED
 
     def _assert_solved(self) -> None:
         """Raise an error if the tracking is not solved."""
@@ -105,6 +104,11 @@ class Tracker:
                 "The tracking is not ready! Please make sure that you "
                 "called `segment` &a `link` & `solve` or `track`."
             )
+
+    def _assert_segmented(self, method_name: str) -> None:
+        """Raise an error if segmentation is not done."""
+        if TrackerStatus.SEGMENTED not in self.status:
+            raise ValueError(f"You must call `segment` before calling `{method_name}`.")
 
     @functools.wraps(tracks_layer_to_networkx)
     def to_networkx(
@@ -154,6 +158,12 @@ class Tracker:
     def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
         self._assert_solved()
         export_tracks_by_extension(self.config, filename, overwrite=overwrite)
+
+    @functools.wraps(add_links)
+    def add_links(self, **kwargs) -> None:
+        self._assert_segmented("add_links")
+        add_links(config=self.config, **kwargs)
+        self.status |= TrackerStatus.LINKED
 
     @functools.wraps(add_nodes_prob)
     def add_nodes_prob(
