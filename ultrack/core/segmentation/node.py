@@ -280,6 +280,7 @@ class Node(_Node):
         time: int,
         mask: ArrayLike,
         bbox: Optional[ArrayLike] = None,
+        node_id: int = -1,
     ) -> "Node":
         """
         Create a new node from a mask.
@@ -293,6 +294,8 @@ class Node(_Node):
         bbox : Optional[ArrayLike], optional
             Bounding box of the node, (min_0, min_1, ..., max_0, max_1, ...).
             When provided it assumes the mask is a crop of the original image, by default None
+        node_id : int, optional
+            Node ID, by default -1
 
         Returns
         -------
@@ -303,11 +306,13 @@ class Node(_Node):
         if mask.dtype != bool:
             raise ValueError(f"Mask should be a boolean array. Found {mask.dtype}")
 
-        node = Node(h_node_index=-1, time=time, parent=None)
+        node = Node(h_node_index=-1, id=node_id, time=time, parent=None)
 
         if bbox is None:
             bbox = ndi.find_objects(mask)[0]
             mask = mask[bbox]
+
+        bbox = np.asarray(bbox)
 
         if mask.ndim * 2 != len(bbox):
             raise ValueError(
