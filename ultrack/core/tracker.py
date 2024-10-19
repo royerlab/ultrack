@@ -16,7 +16,7 @@ from ultrack.core.export import (
     tracks_layer_to_trackmate,
     tracks_to_zarr,
 )
-from ultrack.core.linking.processing import link
+from ultrack.core.linking.processing import add_links, link
 from ultrack.core.main import track
 from ultrack.core.segmentation.processing import get_nodes_features, segment
 from ultrack.core.solve.processing import solve
@@ -164,6 +164,12 @@ class Tracker:
         self._assert_segmented("get_nodes_features")
         nodes_features_df = get_nodes_features(self.config, **kwargs)
         return nodes_features_df
+
+    @functools.wraps(add_links)
+    def add_links(self, **kwargs) -> None:
+        self._assert_segmented("add_links")
+        add_links(config=self.config, **kwargs)
+        self.status |= TrackerStatus.LINKED
 
     @functools.wraps(add_nodes_prob)
     def add_nodes_prob(
