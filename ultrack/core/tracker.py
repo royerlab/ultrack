@@ -18,7 +18,7 @@ from ultrack.core.export import (
 )
 from ultrack.core.linking.processing import add_links, link
 from ultrack.core.main import track
-from ultrack.core.segmentation.processing import segment
+from ultrack.core.segmentation.processing import get_nodes_features, segment
 from ultrack.core.solve.processing import solve
 from ultrack.imgproc.flow import add_flow
 from ultrack.ml.classification import add_nodes_prob
@@ -158,6 +158,12 @@ class Tracker:
     def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
         self._assert_solved()
         export_tracks_by_extension(self.config, filename, overwrite=overwrite)
+
+    @functools.wraps(get_nodes_features)
+    def get_nodes_features(self, **kwargs) -> pd.DataFrame:
+        self._assert_segmented("get_nodes_features")
+        nodes_features_df = get_nodes_features(self.config, **kwargs)
+        return nodes_features_df
 
     @functools.wraps(add_links)
     def add_links(self, **kwargs) -> None:
