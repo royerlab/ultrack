@@ -6,7 +6,7 @@ import numpy as np
 from scipy import interpolate
 from magicgui.widgets import FloatSlider, Container, Label
 
-from ultrack.utils.array import UltrackArray
+from ultrack.utils.ultrackArray import UltrackArray
 from ultrack.config import MainConfig
 from ultrack.widgets.ultrackwidget import UltrackWidget
 
