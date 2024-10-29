@@ -1,3 +1,9 @@
+"""
+This example how request for each segmentation hypotheses features and use them
+to compute a custom edge weight between nodes, in this case, the cosine distance.
+
+For this we consider a 3D image as a 2D video, it's more a didactic example than a real use case.
+"""
 import napari
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -22,10 +28,12 @@ def main() -> None:
     # mocking a 3D image as 2D video
     image = cells3d()[:, 1]  # nuclei
 
+    # simple foreground extraction
     foreground = image > image.mean()
     foreground = morph.opening(foreground, morph.disk(3)[None, :])
     foreground = morph.closing(foreground, morph.disk(3)[None, :])
 
+    # contour as inverse of the image
     contour = 1 - image / image.max()
 
     tracker.segment(
@@ -51,14 +59,17 @@ def main() -> None:
         "equivalent_diameter_area",
     ]
 
+    # normalizing features
     df[cols] -= df[cols].mean()
     df[cols] /= df[cols].std()
 
     df_by_t = df.groupby("t")
     t_max = df["t"].max()
 
+    # iterating over time and querying pair of frames
     for t in range(t_max + 1):
         try:
+            # some frames might be without nodes
             source_df = df_by_t.get_group(t)
             target_df = df_by_t.get_group(t + 1)
         except KeyError:
@@ -70,13 +81,10 @@ def main() -> None:
         source_ids = np.repeat(source_df.index.to_numpy(), len(target_df))
         target_ids = np.tile(target_df.index.to_numpy(), len(source_df))
 
-        # very dense graph, not recommended, select k-nearest neighbors
+        # for very dense graph this not recommended because the ILP problem will be huge
         tracker.add_links(sources=source_ids, targets=target_ids, weights=weights)
 
     tracker.solve()
-
-    # for CTC use this
-    # tracker.to_ctc()
 
     tracks, graph = tracker.to_tracks_layer()
     segments = tracker.to_zarr()

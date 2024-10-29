@@ -35,17 +35,19 @@ Install or update [conda](https://docs.conda.io/projects/conda/en/latest/user-gu
 To avoid conflicts between different packages, we recommend using conda to create an isolated environment:
 
 ```bash
-conda create --name tracking -c conda-forge python=3.10 pyqt
-conda activate tracking
+conda create -n ultrack python=3.11 higra gurobi pytorch pyqt -c pytorch -c gurobi -c conda-forge
+conda activate ultrack
 pip install ultrack
 ```
 
+NOTE: `gurobi` and `-c gurobi` are optional but recommended; they can be installed later, as shown below.
+
 ## Usage
 
-**ATTENTION**: every time you need to run this software you'll have to activate this environment
+**ATTENTION**: every time you need to run this software, you'll have to activate this environment
 
 ```bash
-conda activate tracking
+conda activate ultrack
 ```
 
 Here is a basic example to get you started:
