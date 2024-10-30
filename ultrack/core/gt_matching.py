@@ -137,7 +137,8 @@ def _get_nodes_df_with_matches(database_path: str) -> pd.DataFrame:
     pd.DataFrame
         DataFrame with matched nodes.
     """
-    engine = sqla.create_engine(database_path)
+    connect_args = {"timeout": 45}
+    engine = sqla.create_engine(database_path, connect_args=connect_args)
 
     with Session(engine) as session:
         node_query = session.query(

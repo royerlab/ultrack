@@ -27,6 +27,7 @@ class SQLGTMatcher:
 
         self._data_config = config.data_config
         self._write_lock = write_lock
+        self._connect_args = {"timeout": 45} if self._write_lock is not None else {}
         self._eps = eps
 
         try:
@@ -37,7 +38,9 @@ class SQLGTMatcher:
 
     def _add_nodes(self, time: int) -> None:
         # TODO
-        engine = sqla.create_engine(self._data_config.database_path)
+        engine = sqla.create_engine(
+            self._data_config.database_path, connect_args=self._connect_args
+        )
 
         with Session(engine) as session:
             query = session.query(NodeDB.id, NodeDB.t).where(NodeDB.t == time)
@@ -69,7 +72,9 @@ class SQLGTMatcher:
         if not hasattr(self, "_nodes"):
             raise ValueError("Nodes must be added before adding edges.")
 
-        engine = sqla.create_engine(self._data_config.database_path)
+        engine = sqla.create_engine(
+            self._data_config.database_path, connect_args=self._connect_args
+        )
 
         with Session(engine) as session:
 
@@ -109,7 +114,9 @@ class SQLGTMatcher:
 
     def add_solution(self) -> None:
         # TODO
-        engine = sqla.create_engine(self._data_config.database_path)
+        engine = sqla.create_engine(
+            self._data_config.database_path, connect_args=self._connect_args
+        )
 
         edges_records = []
         for idx, e_var in zip(self._edges_df["id"], self._edges):
