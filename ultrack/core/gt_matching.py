@@ -31,6 +31,7 @@ def _match_ground_truth_frame(
     config: MainConfig,
     scale: Optional[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock],
+    segmentation_gt: bool,
 ) -> None:
     """
     Matches candidate hypotheses to ground-truth labels for a given time point.
@@ -48,6 +49,8 @@ def _match_ground_truth_frame(
         Scale of the data for distance computation.
     write_lock : Optional[fasteners.InterProcessLock]
         Lock for writing to the database.
+    segmentation_gt : bool
+        Whether the ground-truth labels are segmentation masks or points.
     """
     gt_labels = np.asarray(gt_labels[time])
     gt_props = regionprops(gt_labels)
@@ -98,6 +101,16 @@ def _match_ground_truth_frame(
 
         engine.dispose()
 
+    if segmentation_gt:
+
+        def _weight_func(tgt, src):
+            return tgt.IoU(src)
+
+    else:
+
+        def _weight_func(tgt, src):
+            return src.area * tgt.IoU(src)
+
     compute_spatial_neighbors(
         time,
         config=config.linking_config,
@@ -109,6 +122,7 @@ def _match_ground_truth_frame(
         scale=scale,
         images=[],
         write_lock=write_lock,
+        weight_func=_weight_func,
     )
 
     # computing GT matching
@@ -192,6 +206,7 @@ def match_to_ground_truth(
     gt_labels: ArrayLike,
     scale: Optional[ArrayLike] = None,
     track_id_graph: Optional[Dict[int, int]] = None,
+    segmentation_gt: bool = True,
 ) -> pd.DataFrame:
     """
     Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
@@ -206,6 +221,8 @@ def match_to_ground_truth(
         Scale of the data for distance computation, by default None.
     track_id_graph : Optional[Dict[int, int]], optional
         Ground-truth graph of track IDs, by default None.
+    segmentation_gt : bool, optional
+        Whether the ground-truth labels are segmentation masks or points, by default True.
 
     Returns
     -------
@@ -220,6 +237,7 @@ def match_to_ground_truth(
                 config=config,
                 scale=scale,
                 write_lock=lock,
+                segmentation_gt=segmentation_gt,
             ),
             range(gt_labels.shape[0]),
             n_workers=config.segmentation_config.n_workers,
