@@ -85,7 +85,8 @@ def _match_ground_truth_frame(
         gt_nodes.append(node)
 
     with write_lock if write_lock is not None else nullcontext():
-        engine = sqla.create_engine(config.data_config.database_path)
+        connect_args = {"timeout": 45}
+        engine = sqla.create_engine(config.data_config.database_path, connect_args=connect_args)
 
         with Session(engine) as session:
             session.add_all(gt_db_rows)
