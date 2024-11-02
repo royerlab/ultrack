@@ -258,6 +258,7 @@ def _process(
                 x=int(x),
                 area=int(hier_node.area),
                 frontier=hier_node.frontier,
+                height=hier_node.height,
                 pickle=pickle.dumps(hier_node),  # pickling to reduce memory usage
                 features=node_feats,
             )
@@ -479,6 +480,7 @@ def segment(
 def get_nodes_features(
     config: MainConfig,
     indices: Optional[ArrayLike] = None,
+    include_persistence: bool = False,
 ) -> pd.DataFrame:
     """
     Creates a pandas dataframe from nodes features defined during segmentation
@@ -490,6 +492,8 @@ def get_nodes_features(
         Configuration parameters.
     indices : Optional[ArrayLike], optional
         List of node indices, by default
+    include_persistence : bool, optional
+        Include persistence features, by default False
 
     Returns
     -------
@@ -497,9 +501,39 @@ def get_nodes_features(
         Dataframe with nodes features
     """
     feats_cols = [NodeDB.t, NodeDB.z, NodeDB.y, NodeDB.x, NodeDB.area, NodeDB.features]
-    df = get_node_values(config.data_config, indices=indices, values=feats_cols)
+    if include_persistence:
+        feats_cols += [NodeDB.hier_parent_id, NodeDB.height]
+
+    df: pd.DataFrame = get_node_values(
+        config.data_config, indices=indices, values=feats_cols
+    )
     feat_columns = config.data_config.metadata["properties"]
     df.loc[:, feat_columns] = np.vstack(df["features"].to_numpy())
     df.drop(columns=["features"], inplace=True)
+
+    df["id"] = df.index
+
+    if include_persistence:
+
+        df.rename(columns={"height": "node_death"}, inplace=True)
+
+        min_height = df["node_death"].min()
+        max_height = df["node_death"].max()
+        eps = 1e-5
+
+        df.loc[(df["node_death"] < 0) & df["node_death"].isna(), "node_death"] = (
+            max_height + eps
+        )
+
+        children_df = df[df["hier_parent_id"] > 0]
+
+        df.loc[
+            children_df["hier_parent_id"].to_numpy(),
+            "node_birth",
+        ] = children_df["node_death"].to_numpy()
+
+        df.loc[df["node_birth"].isna(), "node_birth"] = min_height - eps
+
+        df.drop(columns="hier_parent_id", inplace=True)
 
     return df

@@ -92,11 +92,17 @@ def test_multiprocessing_segment(
     assert len(feats) == len(feats_name)
     assert isinstance(feats, np.ndarray)
 
-    df = get_nodes_features(config_instance)
+    df = get_nodes_features(config_instance, include_persistence=True)
+
+    assert (df["node_death"] >= df["node_birth"]).all()
 
     centroids_cols = [f"centroid-{i}" for i in range(contours.ndim - 1)]
 
     assert df.shape[0] == len(nodes)
     np.testing.assert_array_equal(
-        df.columns.to_numpy(dtype=str), ["t", "z", "y", "x", "area"] + centroids_cols
+        sorted(df.columns.to_numpy(dtype=str)),
+        sorted(
+            ["id", "t", "z", "y", "x", "area", "node_birth", "node_death"]
+            + centroids_cols
+        ),
     )

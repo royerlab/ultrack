@@ -211,6 +211,14 @@ class Hierarchy:
 
     @property
     @_cached
+    def height(self) -> ArrayLike:
+        height = hg.attribute_height(self.tree, self.alt)
+        if self.cache:
+            self._cache["height"] = height
+        return height
+
+    @property
+    @_cached
     def tree(self) -> hg.Tree:
         tree, alt, frontier = self.watershed_hierarchy()
         if self.cache:
@@ -270,6 +278,7 @@ class Hierarchy:
         tree = self.tree
         area = self.area
         frontier = self.frontier
+        height = self.height
 
         for node_idx in tree.leaves_to_root_iterator(include_leaves=False):
             if area[node_idx] > self._max_area:
@@ -279,6 +288,7 @@ class Hierarchy:
                 self,
                 area=area[node_idx].item(),
                 frontier=frontier[node_idx].item(),
+                height=height[node_idx].item(),
             )
 
     def _fix_empty_nodes(self) -> None:
