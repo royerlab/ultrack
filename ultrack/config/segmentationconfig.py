@@ -37,7 +37,7 @@ class SegmentationConfig(BaseModel):
     max_noise: float = 0.0
     """``SPECIAL``: Upper limit of uniform distribution for additive noise on contour map """
 
-    random_seed: Literal["frame", None] = "frame"
+    random_seed: Literal["frame", "none", None] = "frame"
     """``SPECIAL``: Random seed initialization, if `frame` the seed is the timelapse frame number """
 
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
