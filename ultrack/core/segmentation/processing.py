@@ -197,7 +197,8 @@ def _process(
     properties : Optional[List[str]], optional
         List of properties to compute for each segment, by default None.
     """
-    np.random.seed(time)
+    if config.random_seed == "frame":
+        np.random.seed(time)
 
     edge_map = contours[time]
     if config.max_noise > 0:

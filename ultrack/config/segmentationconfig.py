@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Literal
 
 import higra as hg
 from pydantic.v1 import BaseModel, Extra, root_validator, validator
@@ -36,6 +36,9 @@ class SegmentationConfig(BaseModel):
 
     max_noise: float = 0.0
     """``SPECIAL``: Upper limit of uniform distribution for additive noise on contour map """
+
+    random_seed: Literal["frame", None] = "frame"
+    """``SPECIAL``: Random seed initialization, if `frame` the seed is the timelapse frame number """
 
     ws_hierarchy: Callable = hg.watershed_hierarchy_by_area
     """
