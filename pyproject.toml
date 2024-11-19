@@ -7,7 +7,7 @@ name = "ultrack"
 dynamic = ["version"]
 description = "Large-scale multi-hypotheses cell tracking"
 readme = "README.md"
-license = ""
+license = "BSD-3-Clause"
 requires-python = ">=3.9,<3.13"
 authors = [
     { name = "Jordao Bragantini", email = "jordao.bragantini@czbiohub.org" },
