@@ -35,7 +35,7 @@ def make_segmentation_mock_data(
 def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
     """Generates a mock configuration content dictionary."""
     content = {
-        "data": {},
+        "data": {"database": "memory"},
         "segmentation": {
             "threshold": 0.5,
             "max_area": 7500,
@@ -59,7 +59,7 @@ def make_config_content(kwargs: Dict[str, Any] = {}) -> Dict[str, Any]:
             "solution_gap": 0.001,
             "time_limit": 36000,
             "method": -1,
-            "n_threads": 0,
+            "n_threads": 1,
             "link_function": "identity",
         },
     }
