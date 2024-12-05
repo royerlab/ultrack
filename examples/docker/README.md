@@ -9,6 +9,7 @@ In the following sections, we will discuss:
 - [Running the Docker Image](#running-the-docker-image) for basic introduction to the Ultrack software inside the Docker 
     container.
 - [Gurobi support](#gurobi-support) for using Gurobi inside the Ultrack Docker image.
+- [GPU support](#gpu-support) for using GPU acceleration inside the Ultrack Docker image.
 - [Running the Docker Image with Jupyter Notebook](#running-the-docker-image-with-jupyter-notebook) for running a Jupyter
     Notebook server inside the Docker container.
 - [Building the Docker Image](#optional-building-the-docker-image) for building the Ultrack Docker image from scratch.
@@ -45,6 +46,17 @@ ultrack check_gurobi
 ```
 
 which should display the Gurobi license information if the license file is valid.
+
+## GPU support
+
+The Ultrack Docker image also supports GPU acceleration using CUDA. To use the GPU support, you need to have a compatible
+NVIDIA GPU and the NVIDIA driver installed on your host machine. Then, you need to include the `--gpus all` flag in the
+`docker run` command. For example, you can run the Ultrack Docker image with GPU support as follows:
+
+```bash
+docker run -it --rm -v /path/to/your/data:/data --gpus all ultrack/0.6.1-cuda11.8  # replace 6.0.1-cuda11.8 with the 
+                                                                                   # desired version and variant
+```
 
 ## Running the Docker Image with Jupyter Notebook
 
