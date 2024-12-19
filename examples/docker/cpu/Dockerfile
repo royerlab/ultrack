@@ -22,6 +22,7 @@ RUN curl -fsSL -v -o ~/miniconda.sh -O  "https://github.com/conda-forge/miniforg
 ENV PATH=/opt/conda/bin:$PATH
 
 RUN conda install -y -c conda-forge pyqt uv && \
+    uv pip install --no-cache --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
     uv pip install --no-cache --system gurobipy higra && \
     pip install --no-cache --root-user-action ignore "ultrack==${ULTRACK_VERSION}" && \
     conda clean -ay
