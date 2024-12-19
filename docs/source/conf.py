@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.abspath("../.."))
 if not os.path.exists("examples"):
     os.symlink("../../examples", "examples", target_is_directory=True)
 
+if not os.path.exists("docker"):
+    os.symlink("../../docker", "docker", target_is_directory=True)
+
 # -- Project information -----------------------------------------------------
 
 project = "ultrack"

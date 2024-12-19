@@ -55,6 +55,10 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 ---------------
 
+.. include:: docker/README.rst
+
+---------------
+
 .. include:: examples.rst
    :end-line: 6
 
@@ -122,6 +126,7 @@ Documentation contents
    napari
    fiji
    getting_started
+   docker/README
    examples
    optimizing
    configuration
