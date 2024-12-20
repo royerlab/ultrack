@@ -3,7 +3,7 @@ Ultrack Docker Image
 
 This example shows how to use the Ultrack Docker image. The Docker image is a pre-configured environment that includes
 the Ultrack software and all its dependencies. The images are available on Docker Hub at
-`TBD <https://hub.docker.com/>`_. You can also build the image from scratch (see the
+`royerlab/ultrack repository <https://hub.docker.com/r/royerlab/ultrack/tags>`_. You can also build the image from scratch (see the
 :ref:`running-the-docker-image` section).
 
 In the following sections, we will discuss:
@@ -24,8 +24,8 @@ To run the Ultrack Docker image, you can use the following command:
 
 .. code-block:: bash
 
-    docker run -it --rm -v /path/to/your/data:/data ultrack/0.6.1-cpu  # replace 6.0.1-cpu with the desired version and
-                                                                       # variant (e.g., 6.0.1-cpu, 6.0.1-cuda11.8)
+    docker run -it --rm -v /path/to/your/data:/data royerlab/ultrack:0.6.1-cpu  # replace 6.0.1-cpu with the desired version and
+                                                                                # variant (e.g., 6.0.1-cpu, 6.0.1-cuda11.8)
 
 This command will start the Ultrack Docker image and mount the `/path/to/your/data` directory to the `/data` directory
 inside the container. Replace `/path/to/your/data` with the path to your data directory. Then, you can use the
@@ -42,7 +42,9 @@ file (`gurobi.lic`), mount it to the `/opt/gurobi/gurobi.lic` directory inside t
 
 .. code-block:: bash
 
-    docker run -it --rm -v /path/to/your/data:/data -v /path/to/your/gurobi.lic:/opt/gurobi/gurobi.lic ultrack/0.6.1-cpu
+    docker run -it --rm -v /path/to/your/data:/data \
+           -v /path/to/your/gurobi.lic:/opt/gurobi/gurobi.lic \
+           royerlab/ultrack:0.6.1-cpu
 
 Check the Gurobi support by running:
 
@@ -61,8 +63,9 @@ the NVIDIA driver installed on your host machine. Include the `--gpus all` flag 
 
 .. code-block:: bash
 
-    docker run -it --rm -v /path/to/your/data:/data --gpus all ultrack/0.6.1-cuda11.8  # replace 6.0.1-cuda11.8 with the
-                                                                                       # desired version and variant
+    docker run -it --rm -v /path/to/your/data:/data --gpus all \
+           royerlab/ultrack:0.6.1-cuda11.8  # replace 6.0.1-cuda11.8 with the
+                                            # desired version and variant
 
 .. _running-the-docker-image-with-jupyter-notebook:
 Running the Docker Image with Jupyter Notebook

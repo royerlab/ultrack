@@ -80,10 +80,10 @@ def available_versions():
 
 def build_image(image_type, ultrack_version, docker_torch_tag=None, cuda=None):
     if image_type == "cpu":
-        os.system(f"docker build -t ultrack:{ultrack_version}-cpu "
+        os.system(f"docker build -t royerlab/ultrack:{ultrack_version}-cpu "
                   f"--build-arg ULTRACK_VERSION={ultrack_version} cpu")
     elif image_type == "gpu" and docker_torch_tag and cuda:
-        os.system(f"docker build -t ultrack:{ultrack_version}-cuda{cuda} "
+        os.system(f"docker build -t royerlab/ultrack:{ultrack_version}-cuda{cuda} "
                   f"--build-arg PYTORCH_VERSION={docker_torch_tag} "
                   f"--build-arg ULTRACK_VERSION={ultrack_version} gpu")
 
