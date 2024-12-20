@@ -126,10 +126,10 @@ Documentation contents
    napari
    fiji
    getting_started
-   docker/README
    examples
    optimizing
    configuration
+   docker/README
    faq
    theory
 

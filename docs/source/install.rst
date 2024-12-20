@@ -88,3 +88,5 @@ Troubleshooting
 ```````````````
 
 Depending on the operating system, the gurobi library might be missing and you need to install it from `here <https://www.gurobi.com/downloads/gurobi-software>`_.
+
+If you're still having trouble, with the installation we recommend reaching out to us or using the docker image, see  :doc:`Docker instructions <docker/README>`.
