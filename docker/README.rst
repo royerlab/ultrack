@@ -76,7 +76,7 @@ host machine using `-p 8888:8888`. If the port is in use, use a different port (
 
 .. code-block:: bash
 
-    docker run -it --rm -v /path/to/your/data:/data -p 8888:8888 ultrack/0.6.1-cpu
+    docker run -it --rm -v /path/to/your/data:/data -p 8888:8888 royerlab/ultrack:0.6.1-cpu
 
 After starting the container, install the Jupyter Notebook server:
 
