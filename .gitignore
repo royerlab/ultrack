@@ -171,6 +171,9 @@ examples/*/*
 !examples/*/*.yml
 docs/source/examples
 
+# Ignore docker docs
+docs/source/docker
+
 # ultrack files
 metadata.toml
 data.db
