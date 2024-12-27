@@ -13,6 +13,9 @@ class LinkFunctionChoices(Enum):
 class TrackingConfig(BaseModel):
     """Tracking (segmentation & linking selection) configuration"""
 
+    # define solver_name explicitly to support non Gurobi solvers
+    solver_name: Optional[str] = None
+
     appear_weight: float = -0.001
     """Penalization weight for appearing cell, should be negative """
     disappear_weight: float = -0.001
@@ -59,6 +62,8 @@ class TrackingConfig(BaseModel):
 
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
+
+    
 
     class Config:
         use_enum_values = True
