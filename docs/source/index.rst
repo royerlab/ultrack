@@ -80,6 +80,9 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 ---------------
 
+.. include:: appearances.rst
+
+---------------
 
 Citing
 ------
@@ -132,6 +135,7 @@ Documentation contents
    docker/README
    faq
    theory
+   appearances
 
 .. toctree::
    :caption: Reference:
