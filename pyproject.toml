@@ -40,7 +40,7 @@ dependencies = [
     "seaborn >=0.13.0",
     "SQLAlchemy >=2.0.0",
     "toml >=0.10.2",
-    "torch >=2.0.1",
+    "torch >=2.4.0",
     "urllib3",
     "uvicorn >= 0.27.0.post1",
     "websocket >= 0.2.1",
@@ -109,7 +109,7 @@ scikit-image = ">=0.21.0"
 seaborn = ">=0.13.0"
 SQLAlchemy = ">=2.0.0"
 toml = ">=0.10.2"
-pytorch = {version = ">=2.0.1", channel = "pytorch"}
+pytorch = {version = ">=2.4.0", channel = "pytorch"}
 urllib3 = "*"
 uvicorn = ">= 0.27.0.post1"
 websocket = ">= 0.2.1"
