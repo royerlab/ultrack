@@ -34,7 +34,7 @@ def test_clear_solution(
 ) -> None:
 
     mask = np.ones((7, 12, 12), dtype=bool)
-    bbox = np.array([15, 24, 24, 22, 36, 36], dtype=int)
+    bbox = np.array([25, 4, 42, 32, 16, 54], dtype=int)
 
     engine = create_engine(linked_database_mock_data.data_config.database_path)
     with Session(engine) as session:
