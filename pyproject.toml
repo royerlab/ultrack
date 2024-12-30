@@ -46,7 +46,6 @@ dependencies = [
     "websocket >= 0.2.1",
     "websockets >= 12.0",
     "zarr >=2.15.0,<3.0.0",
-    "pyqt5 >=5.15.4",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +68,7 @@ test = [
     "pytest-qt >=4.2.0",
     "pytrackmate @ git+https://github.com/hadim/pytrackmate.git",
     "napari[testing] > 0.4.18",
+    "pyqt5 >=5.15.4",
 ]
 
 [project.scripts]
@@ -115,7 +115,6 @@ uvicorn = ">= 0.27.0.post1"
 websocket = ">= 0.2.1"
 websockets = ">= 12.0"
 zarr = ">=2.15.0,<3.0.0"
-pyqt = ">=5.15.4"
 
 [tool.pixi.feature.cuda]
 channels = ["conda-forge", "rapidsai"]
