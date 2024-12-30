@@ -59,6 +59,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
