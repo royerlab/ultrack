@@ -14,7 +14,7 @@ class TrackingConfig(BaseModel):
     """Tracking (segmentation & linking selection) configuration"""
 
     # define solver_name explicitly to support non Gurobi solvers
-    solver_name: Optional[str] = None
+    solver_name: Literal["GUROBI", "CBC", ""] = ""
 
     appear_weight: float = -0.001
     """Penalization weight for appearing cell, should be negative """
