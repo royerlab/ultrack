@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 
 import numpy as np
 from pydantic.v1 import BaseModel, Extra
