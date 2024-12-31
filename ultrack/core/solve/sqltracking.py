@@ -75,7 +75,7 @@ class SQLTracking:
             )
 
         try:
-            solver = MIPSolver(self._tracking_config, self._solver_name)
+            solver = MIPSolver(self._tracking_config)
         except InterfacingError as e:
             LOG.warning(e)
             solver = MIPSolver(self._tracking_config, "CBC")
