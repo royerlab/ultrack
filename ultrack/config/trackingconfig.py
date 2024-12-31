@@ -63,8 +63,6 @@ class TrackingConfig(BaseModel):
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
 
-    
-
     class Config:
         use_enum_values = True
         extra = Extra.forbid
