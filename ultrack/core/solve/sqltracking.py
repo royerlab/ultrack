@@ -49,8 +49,6 @@ class SQLTracking:
         self._tracking_config = config.tracking_config
         self._data_config = config.data_config
         self._solver: Optional[MIPSolver] = None
-        if self._solver is None:
-            self._solver_name = self._tracking_config.solver_name
 
         self._max_t = maximum_time_from_database(self._data_config)
         if self._tracking_config.window_size is None:
