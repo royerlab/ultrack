@@ -16,12 +16,17 @@ from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 
+_KEY_TO_SOLVER_NAME = {
+    "CBC": "Coin-OR Branch and Cut",
+    "GRB": "Gurobi",
+    "GUROBI": "Gurobi",
+}
+
 
 class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
-        solver: Literal["CBC", "GUROBI", ""] = "",
     ) -> None:
         """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
@@ -29,21 +34,21 @@ class MIPSolver(BaseSolver):
         ----------
         config : TrackingConfig
             Tracking configuration parameters.
-        solver : str
-            MIP solver name.
         """
-
         self._config = config
-        self._solver_name = solver
         self.reset()
 
     def reset(self) -> None:
         """Sets model to an empty state."""
         try:
-            self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
+            self._model = mip.Model(
+                sense=mip.MAXIMIZE, solver_name=self._config.solver_name
+            )
         except mip.exceptions.InterfacingError as e:
             LOG.warning(e)
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=mip.CBC)
+
+        print(f"Using {_KEY_TO_SOLVER_NAME[self._model.solver_name]} solver")
 
         if self._model.solver_name == mip.CBC:
             LOG.warning(
