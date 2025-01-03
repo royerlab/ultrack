@@ -305,6 +305,7 @@ class Hierarchy:
             self,
             area=self.props.area,
             frontier=-1.0,
+            height=-1.0,
         )
 
     @property
