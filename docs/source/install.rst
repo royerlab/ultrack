@@ -42,6 +42,8 @@ You can install the additional packages required for GPU acceleration by running
 
 See the `PyTorch website <https://pytorch.org/get-started/locally/>`_ for more information on how to install PyTorch with GPU support.
 
+.. _gurobi_install:
+
 Gurobi setup
 ------------
 
@@ -88,3 +90,5 @@ Troubleshooting
 ```````````````
 
 Depending on the operating system, the gurobi library might be missing and you need to install it from `here <https://www.gurobi.com/downloads/gurobi-software>`_.
+
+If you're still having trouble, with the installation we recommend reaching out to us or using the docker image, see  :doc:`Docker instructions <docker/README>`.

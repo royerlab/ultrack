@@ -55,6 +55,10 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 ---------------
 
+.. include:: docker/README.rst
+
+---------------
+
 .. include:: examples.rst
    :end-line: 6
 
@@ -76,6 +80,9 @@ Zebrafish imaged using `DaXi <https://www.nature.com/articles/s41592-022-01417-2
 
 ---------------
 
+.. include:: appearances.rst
+
+---------------
 
 Citing
 ------
@@ -125,8 +132,10 @@ Documentation contents
    examples
    optimizing
    configuration
+   docker/README
    faq
    theory
+   appearances
 
 .. toctree::
    :caption: Reference:

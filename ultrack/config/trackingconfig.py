@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable, Literal, Optional
 
 import numpy as np
 from pydantic.v1 import BaseModel, Extra
@@ -12,6 +12,18 @@ class LinkFunctionChoices(Enum):
 
 class TrackingConfig(BaseModel):
     """Tracking (segmentation & linking selection) configuration"""
+
+    solver_name: Literal["GUROBI", "CBC", ""] = ""
+    """
+    Constrained optimization solver name.
+
+    * GUROBI: Commercial solver, requires license, see :ref:`gurobi_install` for extra information.
+
+    * CBC: Open-source solver, slower, uses more memory than Gurobi and harder to install on Window.
+
+    * "": Use default solver, GUROBI if available, otherwise CBC.
+
+    """
 
     appear_weight: float = -0.001
     """Penalization weight for appearing cell, should be negative """
