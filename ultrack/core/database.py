@@ -91,6 +91,7 @@ class NodeDB(Base):
     x_shift = Column(Float, default=0.0)
     area = Column(Integer)
     frontier = Column(Float, default=-1.0)
+    height = Column(Float, default=-1.0)
     selected = Column(Boolean, default=False)
     pickle = Column(MaybePickleType)
     features = Column(MaybePickleType, default=None)
@@ -116,6 +117,26 @@ class LinkDB(Base):
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     weight = Column(Float)
     annotation = Column(Enum(VarAnnotation), default=VarAnnotation.UNKNOWN)
+
+
+class GTNodeDB(Base):
+    __tablename__ = "gt_nodes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    t = Column(Integer)
+    label = Column(Integer)
+    pickle = Column(MaybePickleType)
+    z = Column(Float)
+    y = Column(Float)
+    x = Column(Float)
+
+
+class GTLinkDB(Base):
+    __tablename__ = "gt_links"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
+    target_id = Column(BigInteger, ForeignKey(f"{GTNodeDB.__tablename__}.id"))
+    weight = Column(Float)
+    selected = Column(Boolean, default=False)
 
 
 def maximum_time_from_database(data_config: DataConfig) -> int:

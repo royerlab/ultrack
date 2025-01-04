@@ -16,6 +16,7 @@ from ultrack.core.export import (
     tracks_layer_to_trackmate,
     tracks_to_zarr,
 )
+from ultrack.core.gt_matching import match_to_ground_truth
 from ultrack.core.linking.processing import add_links, link
 from ultrack.core.main import track
 from ultrack.core.segmentation.processing import get_nodes_features, segment
@@ -170,6 +171,11 @@ class Tracker:
         self._assert_segmented("add_links")
         add_links(config=self.config, **kwargs)
         self.status |= TrackerStatus.LINKED
+
+    @functools.wraps(match_to_ground_truth)
+    def match_to_ground_truth(self, **kwargs) -> pd.DataFrame:
+        self._assert_segmented("match_to_ground_truth")
+        return match_to_ground_truth(config=self.config, **kwargs)
 
     @functools.wraps(add_nodes_prob)
     def add_nodes_prob(
