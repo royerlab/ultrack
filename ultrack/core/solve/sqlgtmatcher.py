@@ -22,8 +22,18 @@ class SQLGTMatcher:
         write_lock: Optional[fasteners.InterProcessLock] = None,
         eps: float = 1e-3,
     ) -> None:
-        # TODO
+        """
+        Ground-truth matching solver from SQL database content.
 
+        Parameters
+        ----------
+        config : MainConfig
+            Ultrack's main configuration parameters.
+        write_lock : Optional[fasteners.InterProcessLock], optional
+            Lock object for SQLite multiprocessing.
+        eps : float, optional
+            Weight epsilon to prefer not selecting bad matches than bad ones.
+        """
         self._data_config = config.data_config
         self._write_lock = write_lock
         self._connect_args = {"timeout": 45} if self._write_lock is not None else {}
@@ -38,7 +48,14 @@ class SQLGTMatcher:
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name="CBC")
 
     def _add_nodes(self, time: int) -> None:
-        # TODO
+        """
+        Add nodes to the ILP model.
+
+        Parameters
+        ----------
+        time : int
+            Time point to query and match.
+        """
         engine = sqla.create_engine(
             self._data_config.database_path, connect_args=self._connect_args
         )
@@ -68,8 +85,14 @@ class SQLGTMatcher:
             self._model.add_constr(self._nodes[node_id] + self._nodes[anc_id] <= 1)
 
     def _add_edges(self, time: int) -> None:
-        # TODO
+        """
+        Add edges to the ILP model.
 
+        Parameters
+        ----------
+        time : int
+            Time point to query and match.
+        """
         if not hasattr(self, "_nodes"):
             raise ValueError("Nodes must be added before adding edges.")
 
@@ -114,7 +137,9 @@ class SQLGTMatcher:
             self._model.add_constr(mip.xsum(self._edges[group.index.to_numpy()]) <= 1)
 
     def add_solution(self) -> None:
-        # TODO
+        """
+        Add the solution to the database.
+        """
         engine = sqla.create_engine(
             self._data_config.database_path, connect_args=self._connect_args
         )
@@ -146,8 +171,19 @@ class SQLGTMatcher:
                 session.commit()
 
     def __call__(self, time: int) -> float:
-        # TODO
+        """
+        Build the ground-truth matching ILP and solve it.
 
+        Parameters
+        ----------
+        time : int
+            Time point to query and match.
+
+        Returns
+        -------
+        float
+            Objective value.
+        """
         LOG.info(f"Computing GT matching for time {time}")
 
         self._add_nodes(time)
