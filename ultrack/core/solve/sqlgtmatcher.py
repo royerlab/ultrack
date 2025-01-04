@@ -1,6 +1,6 @@
 import logging
 from contextlib import nullcontext
-from typing import Literal, Optional
+from typing import Optional
 
 import fasteners
 import mip
@@ -19,7 +19,6 @@ class SQLGTMatcher:
     def __init__(
         self,
         config: MainConfig,
-        solver: Literal["CBC", "GUROBI", ""] = "",
         write_lock: Optional[fasteners.InterProcessLock] = None,
         eps: float = 1e-3,
     ) -> None:
@@ -31,7 +30,9 @@ class SQLGTMatcher:
         self._eps = eps
 
         try:
-            self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=solver)
+            self._model = mip.Model(
+                sense=mip.MAXIMIZE, solver_name=config.tracking_config.solver_name
+            )
         except mip.exceptions.InterfacingError as e:
             LOG.warning(e)
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name="CBC")
