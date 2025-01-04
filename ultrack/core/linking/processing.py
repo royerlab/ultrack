@@ -171,6 +171,7 @@ def compute_spatial_neighbors(
     db_path: str,
     images: Sequence[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock] = None,
+    weight_func: Callable[[Node, Node], float] = Node.IoU,
 ) -> pd.DataFrame:
 
     source_pos = np.asarray([n.centroid for n in source_nodes])
@@ -226,7 +227,7 @@ def compute_spatial_neighbors(
         neighborhood = []
         for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
             neigh = source_nodes[neigh_idx]
-            edge_weight = node.IoU(neigh) - distance_w * neigh_dist
+            edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
             # using dist as a tie-breaker
             neighborhood.append(
                 (edge_weight, -neigh_dist, neigh.id, node.id)
