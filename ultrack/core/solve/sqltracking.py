@@ -5,7 +5,6 @@ from typing import Optional, Tuple
 
 import pandas as pd
 import sqlalchemy as sqla
-from mip.exceptions import InterfacingError
 from sqlalchemy.orm import Session
 
 from ultrack.config.config import MainConfig
@@ -24,11 +23,6 @@ logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
-
-_KEY_TO_SOLVER_NAME = {
-    "CBC": "Coin-OR Branch and Cut",
-    "GRB": "Gurobi",
-}
 
 
 class SQLTracking:
@@ -74,13 +68,8 @@ class SQLTracking:
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
             )
 
-        try:
-            solver = MIPSolver(self._tracking_config)
-        except InterfacingError as e:
-            LOG.warning(e)
-            solver = MIPSolver(self._tracking_config, "CBC")
+        solver = MIPSolver(self._tracking_config)
 
-        print(f"Using {_KEY_TO_SOLVER_NAME[solver._model.solver_name]} solver")
         print(f"Solving ILP batch {index}")
         print("Constructing ILP ...")
 

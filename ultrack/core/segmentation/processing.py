@@ -197,7 +197,8 @@ def _process(
     properties : Optional[List[str]], optional
         List of properties to compute for each segment, by default None.
     """
-    np.random.seed(time)
+    if config.random_seed == "frame":
+        np.random.seed(time)
 
     edge_map = contours[time]
     if config.max_noise > 0:
@@ -258,6 +259,7 @@ def _process(
                 x=int(x),
                 area=int(hier_node.area),
                 frontier=hier_node.frontier,
+                height=hier_node.height,
                 pickle=pickle.dumps(hier_node),  # pickling to reduce memory usage
                 features=node_feats,
             )
@@ -355,7 +357,7 @@ def _get_properties_names(
     Parameters
     ----------
     shape : ArrayLike
-        Volume (plane) shape.
+        Volume (plane) shape including time.
     image : Optional[ArrayLike]
         Image array for segments properties, could have channel dimension on last axis.
     properties : Optional[List[str]]
@@ -365,12 +367,18 @@ def _get_properties_names(
     if properties is None:
         return None
 
+    ndim = len(shape) - 1
+
     if image is None:
         dummy_image = None
     else:
-        dummy_image = np.ones((4,) * (image.ndim - 1), dtype=np.float32)
+        if image.ndim == len(shape):  # no channel dimension
+            dummy_image = np.ones((4,) * ndim, dtype=np.float32)
+        else:
+            # adding channel dimension
+            dummy_image = np.ones((4,) * ndim + (image.shape[-1],), dtype=np.float32)
 
-    dummy_labels = np.zeros((4,) * len(shape), dtype=np.uint32)
+    dummy_labels = np.zeros((4,) * ndim, dtype=np.uint32)
     dummy_labels[:2, :2] = 1
 
     data_dict = regionprops_table(dummy_labels, dummy_image, properties=properties)
@@ -449,7 +457,7 @@ def segment(
             {
                 "shape": foreground.shape,
                 "properties": _get_properties_names(
-                    foreground.shape[1:], image, properties=properties
+                    foreground.shape, image, properties=properties
                 ),
             }
         )
@@ -479,6 +487,7 @@ def segment(
 def get_nodes_features(
     config: MainConfig,
     indices: Optional[ArrayLike] = None,
+    include_persistence: bool = False,
 ) -> pd.DataFrame:
     """
     Creates a pandas dataframe from nodes features defined during segmentation
@@ -490,6 +499,8 @@ def get_nodes_features(
         Configuration parameters.
     indices : Optional[ArrayLike], optional
         List of node indices, by default
+    include_persistence : bool, optional
+        Include persistence features, by default False
 
     Returns
     -------
@@ -497,9 +508,42 @@ def get_nodes_features(
         Dataframe with nodes features
     """
     feats_cols = [NodeDB.t, NodeDB.z, NodeDB.y, NodeDB.x, NodeDB.area, NodeDB.features]
-    df = get_node_values(config.data_config, indices=indices, values=feats_cols)
-    feat_columns = config.data_config.metadata["properties"]
-    df.loc[:, feat_columns] = np.vstack(df["features"].to_numpy())
-    df.drop(columns=["features"], inplace=True)
+    if include_persistence:
+        feats_cols += [NodeDB.hier_parent_id, NodeDB.height]
+
+    df: pd.DataFrame = get_node_values(
+        config.data_config, indices=indices, values=feats_cols
+    )
+
+    if "features" in df.columns:
+        feat_columns = config.data_config.metadata["properties"]
+        feat_mat = np.asarray(df["features"].tolist())
+        df.loc[:, feat_columns] = feat_mat
+        df.drop(columns=["features"], inplace=True)
+
+    df["id"] = df.index
+
+    if include_persistence:
+
+        df.rename(columns={"height": "node_death"}, inplace=True)
+
+        min_height = df["node_death"].min()
+        max_height = df["node_death"].max()
+        eps = 1e-5
+
+        df.loc[(df["node_death"] < 0) & df["node_death"].isna(), "node_death"] = (
+            max_height + eps
+        )
+
+        children_df = df[df["hier_parent_id"] > 0]
+
+        df.loc[
+            children_df["hier_parent_id"].to_numpy(),
+            "node_birth",
+        ] = children_df["node_death"].to_numpy()
+
+        df.loc[df["node_birth"].isna(), "node_birth"] = min_height - eps
+
+        df.drop(columns="hier_parent_id", inplace=True)
 
     return df

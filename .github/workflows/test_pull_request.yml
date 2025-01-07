@@ -3,9 +3,11 @@ name: test PR
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
     branches:
       - main
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   test:
@@ -56,9 +58,11 @@ jobs:
 
       - uses: tlambert03/setup-qt-libs@v1
 
-      - uses: yezz123/setup-uv@v4
+      - uses: astral-sh/setup-uv@v5
         with:
-          uv-venv: "ultrack-env"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
@@ -92,4 +96,4 @@ jobs:
 
       - name: Coverage
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
