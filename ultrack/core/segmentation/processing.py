@@ -357,7 +357,7 @@ def _get_properties_names(
     Parameters
     ----------
     shape : ArrayLike
-        Volume (plane) shape.
+        Volume (plane) shape including time.
     image : Optional[ArrayLike]
         Image array for segments properties, could have channel dimension on last axis.
     properties : Optional[List[str]]
@@ -367,12 +367,18 @@ def _get_properties_names(
     if properties is None:
         return None
 
+    ndim = len(shape) - 1
+
     if image is None:
         dummy_image = None
     else:
-        dummy_image = np.ones((4,) * (image.ndim - 1), dtype=np.float32)
+        if image.ndim == len(shape):  # no channel dimension
+            dummy_image = np.ones((4,) * ndim, dtype=np.float32)
+        else:
+            # adding channel dimension
+            dummy_image = np.ones((4,) * ndim + (image.shape[-1],), dtype=np.float32)
 
-    dummy_labels = np.zeros((4,) * len(shape), dtype=np.uint32)
+    dummy_labels = np.zeros((4,) * ndim, dtype=np.uint32)
     dummy_labels[:2, :2] = 1
 
     data_dict = regionprops_table(dummy_labels, dummy_image, properties=properties)
@@ -451,7 +457,7 @@ def segment(
             {
                 "shape": foreground.shape,
                 "properties": _get_properties_names(
-                    foreground.shape[1:], image, properties=properties
+                    foreground.shape, image, properties=properties
                 ),
             }
         )
@@ -508,9 +514,12 @@ def get_nodes_features(
     df: pd.DataFrame = get_node_values(
         config.data_config, indices=indices, values=feats_cols
     )
-    feat_columns = config.data_config.metadata["properties"]
-    df.loc[:, feat_columns] = np.vstack(df["features"].to_numpy())
-    df.drop(columns=["features"], inplace=True)
+
+    if "features" in df.columns:
+        feat_columns = config.data_config.metadata["properties"]
+        feat_mat = np.asarray(df["features"].tolist())
+        df.loc[:, feat_columns] = feat_mat
+        df.drop(columns=["features"], inplace=True)
 
     df["id"] = df.index
 
