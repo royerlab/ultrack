@@ -110,7 +110,7 @@ class TestCommandLine:
                 str(classif_path),
                 "-cfg",
                 instance_config_path,
-                "--persistense",
+                "--persistence",
             ]
         )
 

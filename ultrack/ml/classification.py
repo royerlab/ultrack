@@ -51,7 +51,8 @@ def predict_nodes_prob(
     config: MainConfig,
     classifier: ProbabilisticClassifier,
     insert_prob: bool = True,
-    persistense_features: bool = False,
+    persistence_features: bool = False,
+    coord_features: bool = False,
 ) -> pd.Series:
     """
     Predicts the probabilities of the nodes' features.
@@ -64,13 +65,20 @@ def predict_nodes_prob(
         Probabilistic classifier object.
     insert_prob : bool, optional
         Whether to insert the probabilities to the database, by default True.
+    persistence_features : bool, optional
+        Whether to include persistence features, by default False.
+    coord_features : bool, optional
+        Whether to include coordinate (t, (z), y, x) features, by default False.
 
     Returns
     -------
     pd.Series
         Nodes' probabilities.
     """
-    features = get_nodes_features(config, include_persistence=persistense_features)
+    features = get_nodes_features(config, include_persistence=persistence_features)
+
+    if not coord_features:
+        features = features.drop(columns=["t", "z", "y", "x"], errors="ignore")
 
     LOG.info("Predicting classifier with features: %s", str(features.columns))
 
@@ -87,7 +95,8 @@ def fit_nodes_prob(
     ground_truth: Union[ArrayLike, pd.Series],
     classifier: Optional[ProbabilisticClassifier] = None,
     insert_prob: bool = True,
-    persistense_features: bool = False,
+    persistence_features: bool = False,
+    coord_features: bool = False,
 ) -> ProbabilisticClassifier:
     """
     Fit a probabilistic classifier to the nodes' features.
@@ -106,15 +115,20 @@ def fit_nodes_prob(
         * pandas Series indexed by the nodes' indices.
     insert_prob : bool, optional
         Whether to insert the probabilities to the database, by default True.
-    persistense_features : bool, optional
+    persistence_features : bool, optional
         Whether to include persistence features, by default False.
+    coord_features : bool, optional
+        Whether to include coordinate (t, (z), y, x) features, by default False.
 
     Returns
     -------
     ProbabilisticClassifier
         Fitted probabilistic classifier.
     """
-    features = get_nodes_features(config, persistense_features)
+    features = get_nodes_features(config, persistence_features)
+
+    if not coord_features:
+        features = features.drop(columns=["t", "z", "y", "x"], errors="ignore")
 
     if "id" in features.columns:
         raise ValueError("Features cannot contain 'id' column")

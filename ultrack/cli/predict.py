@@ -4,7 +4,7 @@ from typing import Literal
 import click
 from cloudpickle import load
 
-from ultrack.cli.utils import config_option, persistense_option
+from ultrack.cli.utils import config_option, persistence_option
 from ultrack.config import MainConfig
 from ultrack.ml.classification import predict_nodes_prob
 
@@ -18,12 +18,12 @@ from ultrack.ml.classification import predict_nodes_prob
     help="Variable to assign probabilities.",
 )
 @config_option()
-@persistense_option()
+@persistence_option()
 def add_probs_cli(
     classif_pickle_path: Path,
     var: Literal["nodes", "edges", "divisions", "appearances", "disappearances"],
     config: MainConfig,
-    persistense: bool,
+    persistence: bool,
 ) -> None:
     """Predicts and adds nodes' probabilities to the database."""
 
@@ -31,7 +31,7 @@ def add_probs_cli(
         classifier = load(f)
 
     if var == "nodes":
-        predict_nodes_prob(config, classifier, persistense_features=persistense)
+        predict_nodes_prob(config, classifier, persistence_features=persistence)
     else:
         # TODO add edges and other probabilities
         raise NotImplementedError(f"Variable {var} not implemented.")

@@ -172,10 +172,10 @@ def channel_axis_option(default: Optional[int], help: str) -> Callable:
     return _decorator
 
 
-def persistense_option() -> Callable:
+def persistence_option() -> Callable:
     def _decorator(f: Callable) -> Callable:
         return click.option(
-            "--persistense",
+            "--persistence",
             is_flag=True,
             default=False,
             type=bool,

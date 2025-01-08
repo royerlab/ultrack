@@ -102,7 +102,6 @@ def test_multiprocessing_segment(
     np.testing.assert_array_equal(
         sorted(df.columns.to_numpy(dtype=str)),
         sorted(
-            ["id", "t", "z", "y", "x", "area", "node_birth", "node_death"]
-            + centroids_cols
+            ["t", "z", "y", "x", "area", "node_birth", "node_death"] + centroids_cols
         ),
     )
