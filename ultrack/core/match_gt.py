@@ -317,13 +317,25 @@ def match_to_ground_truth(
 
     max_distance = estimate_drift(gt_df)
     if not np.isnan(max_distance) and max_distance > 0:
-        opt_config.linking_config.max_distance = max_distance + 1.0
+        opt_config.linking_config.max_distance = float(max_distance + 1.0)
 
-    opt_config.segmentation_config.min_area = gt_df["area"].min() * 0.95
-    opt_config.segmentation_config.max_area = gt_df["area"].max() * 1.025
+    min_area = gt_df["area"].min() * 0.95
+    max_area = gt_df["area"].max() * 1.025
 
-    opt_config.segmentation_config.min_frontier = max(
-        gt_df["parent_frontier"].min() - 0.025, 0.0
+    if min_area > max_area:
+        LOG.warning(
+            f"Minimum area is greater than maximum area ({min_area} > {max_area}).\n"
+            "Check the ground-truth matches and adjust the segmentation parameters.\n"
+            "This could mean that all candidate segments have the same size.\n"
+            "Swapping min and max area values."
+        )
+        max_area, min_area = min_area, max_area
+
+    opt_config.segmentation_config.min_area = float(min_area)
+    opt_config.segmentation_config.max_area = float(max_area)
+
+    opt_config.segmentation_config.min_frontier = float(
+        max(gt_df["parent_frontier"].min() - 0.025, 0.0)
     )
 
     return df_nodes, opt_config

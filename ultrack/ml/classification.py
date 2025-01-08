@@ -40,6 +40,9 @@ def add_nodes_prob(
     probs : ArrayLike
         Nodes' probabilities.
     """
+    if probs.ndim == 2:
+        probs = probs[:, -1]
+
     set_node_values(
         config.data_config,
         indices,
@@ -83,6 +86,9 @@ def predict_nodes_prob(
     LOG.info("Predicting classifier with features: %s", str(features.columns))
 
     probs = classifier.predict_proba(features)
+
+    if probs.ndim == 2:
+        probs = probs[:, -1]
 
     if insert_prob:
         add_nodes_prob(config, features.index, probs)
@@ -147,14 +153,23 @@ def fit_nodes_prob(
                 "`xgboost` is required if classifier is not provided.\n"
                 "Please install it with `pip install xgboost` or `pip install 'ultrack[ml]'`."
             ) from e
-        classifier = XGBClassifier()
+        classifier = XGBClassifier(objective="binary:logistic")
 
     if ground_truth.dtype != bool:
         raise ValueError(
             f"Ground-truth dataframe must be a binary classification problem (bool dtype), got {ground_truth.dtype}"
         )
 
-    training_labels = ground_truth.loc[features.index].astype(int)
+    training_labels = ground_truth.loc[features.index]
+
+    if training_labels.all():
+        LOG.warning(
+            "All labels are True, inverting the labels.\n"
+            "ARE YOU SURE THIS IS CORRECT?\n"
+            "Check if ground-truth matching is correct.\n"
+            "Considering it an anomaly detection problem."
+        )
+        training_labels = ~training_labels
 
     # Fit the classifier
     classifier.fit(features, training_labels)
