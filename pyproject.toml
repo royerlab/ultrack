@@ -94,7 +94,6 @@ httpx = ">= 0.26.0"
 imagecodecs = ">=2023.3.16"
 imageio = ">=2.28.0"
 magicgui = ">=0.7.2"
-# mip = ">=1.16.0"  # TODO: change to python-mip for OSX is released and when available in conda-forge
 napari = ">=0.4.18"
 numba = {version = ">=0.57.0", channel = "numba"}
 ome-zarr = ">= 0.9"
@@ -137,11 +136,12 @@ filterwarnings = [
 
 [tool.pixi.pypi-dependencies]
 ultrack = { path = ".", editable = true }
+mip = ">=1.16.0rc0"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
 cuda = { features = ["cuda"] }
-docs = { features = ["docs"], solve-group = "default" }
+# docs = { features = ["docs"]}  # Current dependencies aren't compatible with pixi
 test = { features = ["test"], solve-group = "default" }
 
 [tool.pixi.tasks]
