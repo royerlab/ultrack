@@ -71,6 +71,9 @@ test = [
     "napari[testing] > 0.4.18",
     "pyqt5 >=5.15.4",
 ]
+ml = [
+    "xgboost",
+]
 
 [project.scripts]
 ultrack = "ultrack.cli.main:main"

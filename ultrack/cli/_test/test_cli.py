@@ -4,6 +4,8 @@ from multiprocessing import Process
 from pathlib import Path
 from typing import List
 
+import cloudpickle
+import numpy as np
 import pytest
 import requests
 import toml
@@ -65,6 +67,12 @@ class TestCommandLine:
                 "foreground",
                 "-cl",
                 "contours",
+                "-il",
+                "labels",
+                "-il",
+                "contours",
+                "-p",
+                "intensity_mean",
             ]
             + zarr_dataset_paths
         )
@@ -84,6 +92,26 @@ class TestCommandLine:
         # using foreground and contours layer to simulate image channel
         _run_command(
             ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
+        )
+
+    def test_add_probs(self, instance_config_path: str, tmp_path: Path) -> None:
+        class _MockPredictor:
+            def predict_proba(self, X):
+                return np.zeros(len(X))
+
+        classif_path = tmp_path / "classifier.pkl"
+
+        with open(classif_path, "wb") as f:
+            cloudpickle.dump(_MockPredictor(), f)
+
+        _run_command(
+            [
+                "add_probs",
+                str(classif_path),
+                "-cfg",
+                instance_config_path,
+                "--persistense",
+            ]
         )
 
     def test_solve(self, instance_config_path: str) -> None:

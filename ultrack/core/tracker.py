@@ -22,7 +22,12 @@ from ultrack.core.main import track
 from ultrack.core.segmentation.processing import get_nodes_features, segment
 from ultrack.core.solve.processing import solve
 from ultrack.imgproc.flow import add_flow
-from ultrack.ml.classification import add_nodes_prob
+from ultrack.ml.classification import (
+    ProbabilisticClassifier,
+    add_nodes_prob,
+    fit_nodes_prob,
+    predict_nodes_prob,
+)
 from ultrack.utils.deprecation import rename_argument
 
 
@@ -184,3 +189,11 @@ class Tracker:
         probs: ArrayLike,
     ) -> None:
         add_nodes_prob(self.config, indices, probs)
+
+    @functools.wraps(fit_nodes_prob)
+    def fit_nodes_prob(self, **kwargs) -> ProbabilisticClassifier:
+        return fit_nodes_prob(self.config, **kwargs)
+
+    @functools.wraps(predict_nodes_prob)
+    def predict_nodes_prob(self, **kwargs) -> pd.Series:
+        return predict_nodes_prob(self.config, **kwargs)

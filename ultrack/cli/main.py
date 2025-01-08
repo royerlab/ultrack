@@ -9,6 +9,7 @@ from ultrack.cli.export import export_cli
 from ultrack.cli.flow import add_flow_cli
 from ultrack.cli.labels_to_edges import labels_to_contours_cli
 from ultrack.cli.link import link_cli
+from ultrack.cli.predict import add_probs_cli
 from ultrack.cli.segment import segmentation_cli
 from ultrack.cli.server import server_cli
 from ultrack.cli.solve import solve_cli
@@ -28,6 +29,7 @@ main.add_command(estimate_params_cli)
 main.add_command(export_cli)
 main.add_command(labels_to_contours_cli)
 main.add_command(link_cli)
+main.add_command(add_probs_cli)
 main.add_command(segmentation_cli)
 main.add_command(solve_cli)
 main.add_command(server_cli)

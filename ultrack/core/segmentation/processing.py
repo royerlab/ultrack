@@ -167,7 +167,7 @@ def _process(
     write_lock: Optional[fasteners.InterProcessLock] = None,
     catch_duplicates_expection: bool = False,
     insertion_throttle_rate: int = 50,
-    image: Optional[ArrayLike] = None,
+    images: Optional[ArrayLike] = None,
     properties: Optional[List[str]] = None,
 ) -> None:
     """Process `foreground` and `edge` of current time and add data to database.
@@ -228,7 +228,7 @@ def _process(
     feats_callback = None
 
     if properties is not None:
-        feats_callback = create_feats_callback(foreground.shape[1:], image, properties)
+        feats_callback = create_feats_callback(foreground.shape[1:], images, properties)
 
     for h, hierarchy in enumerate(hiers):
         hierarchy.cache = True
@@ -396,7 +396,7 @@ def segment(
     batch_index: Optional[int] = None,
     overwrite: bool = False,
     insertion_throttle_rate: int = 50,
-    image: Optional[ArrayLike] = None,
+    images: Optional[ArrayLike] = None,
     properties: Optional[List[str]] = None,
 ) -> None:
     """Add candidate segmentation (nodes) from `foreground` and `edge` to database.
@@ -418,7 +418,7 @@ def segment(
     insertion_throttle_rate : int
         Throttling rate for insertion, by default 50.
         Only used with non-sqlite databases.
-    image : Optional[ArrayLike], optional
+    images : Optional[ArrayLike], optional
         Image array of shape (T, (Z), Y, X, (C)) for segments properties, by default None.
         Channel and Z dimensions are optional.
     properties : Optional[List[str]], optional
@@ -457,7 +457,7 @@ def segment(
             {
                 "shape": foreground.shape,
                 "properties": _get_properties_names(
-                    foreground.shape, image, properties=properties
+                    foreground.shape, images, properties=properties
                 ),
             }
         )
@@ -472,7 +472,7 @@ def segment(
             max_segments_per_time=max_segments_per_time,
             catch_duplicates_expection=batch_index is not None,
             insertion_throttle_rate=insertion_throttle_rate,
-            image=image,
+            images=images,
             properties=properties,
         )
 
@@ -520,8 +520,6 @@ def get_nodes_features(
         feat_mat = np.asarray(df["features"].tolist())
         df.loc[:, feat_columns] = feat_mat
         df.drop(columns=["features"], inplace=True)
-
-    df["id"] = df.index
 
     if include_persistence:
 
