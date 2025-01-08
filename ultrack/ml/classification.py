@@ -163,13 +163,13 @@ def fit_nodes_prob(
 
     if classifier is None:
         try:
-            from xgboost import XGBClassifier
+            from catboost import CatBoostClassifier
         except ImportError as e:
             raise ImportError(
-                "`xgboost` is required if classifier is not provided.\n"
-                "Please install it with `pip install xgboost` or `pip install 'ultrack[ml]'`."
+                "`catboost` is required if classifier is not provided.\n"
+                "Please install it with `pip install catboost` or `pip install 'ultrack[ml]'`."
             ) from e
-        classifier = XGBClassifier(objective="binary:logistic")
+        classifier = CatBoostClassifier(allow_const_label=True)
 
     if ground_truth.dtype != bool:
         raise ValueError(
@@ -177,15 +177,6 @@ def fit_nodes_prob(
         )
 
     training_labels = ground_truth.loc[features.index]
-
-    if training_labels.all():
-        LOG.warning(
-            "All labels are True, inverting the labels.\n"
-            "ARE YOU SURE THIS IS CORRECT?\n"
-            "Check if ground-truth matching is correct.\n"
-            "Considering it an anomaly detection problem."
-        )
-        training_labels = ~training_labels
 
     # Fit the classifier
     classifier.fit(features, training_labels)
