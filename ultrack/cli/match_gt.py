@@ -57,7 +57,8 @@ LOG.addHandler(RichHandler())
     is_flag=True,
     type=bool,
     default=False,
-    help="Ground-truth is segmentation. When activated different costs are used for insertions and deletions.",
+    help="Indicates ground-truth are fully curated segmentation masks. "
+    "When activated different costs are used for insertions and deletions.",
 )
 @click.option(
     "--insert-prob",
@@ -134,7 +135,7 @@ def match_gt_cli(
     if insert_prob or output_model is not None:
         model = fit_nodes_prob(
             config,
-            gt_df["gt_track_id"] > 0,  # binary assignment
+            gt_df["gt_track_id"],
             persistence_features=persistence,
             insert_prob=insert_prob,
         )

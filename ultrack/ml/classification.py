@@ -7,7 +7,7 @@ from rich.logging import RichHandler
 
 from ultrack.config.config import MainConfig
 from ultrack.core.database import set_node_values
-from ultrack.core.match_gt import match_to_ground_truth
+from ultrack.core.match_gt import UnmatchedNode, match_to_ground_truth
 from ultrack.core.segmentation import get_nodes_features
 
 LOG = logging.getLogger(__name__)
@@ -100,6 +100,7 @@ def fit_nodes_prob(
     config: MainConfig,
     ground_truth: Union[ArrayLike, pd.Series],
     classifier: Optional[ProbabilisticClassifier] = None,
+    remove_no_overlap: bool = True,
     insert_prob: bool = True,
     persistence_features: bool = False,
     coord_features: bool = False,
@@ -111,14 +112,17 @@ def fit_nodes_prob(
     ----------
     config : MainConfig
         Main configuration parameters.
-    classifier : ProbabilisticClassifier
-        Probabilistic classifier object.
-        Classifier is fit in-place.
-        If not provided, it will use `xgboost.XGBClassifier`.
     ground_truth : Union[ArrayLike, pd.Series]
         Ground-truth labels, either a:
         * timelapse array of labels (T, (Z), Y, X) with the same shape as the input data.
         * pandas Series indexed by the nodes' indices.
+    classifier : ProbabilisticClassifier
+        Probabilistic classifier object.
+        Classifier is fit in-place.
+        If not provided, it will use `xgboost.XGBClassifier`.
+    remove_no_overlap : bool, optional
+        Whether to remove **NO_OVERLAP** nodes (-1) from the ground-truth.
+        Classification will compare **matched** (>0) vs **unmatched** nodes (0).
     insert_prob : bool, optional
         Whether to insert the probabilities to the database, by default True.
     persistence_features : bool, optional
@@ -140,8 +144,20 @@ def fit_nodes_prob(
         raise ValueError("Features cannot contain 'id' column")
 
     if not isinstance(ground_truth, (pd.Series, pd.DataFrame)):
-        ground_truth = match_to_ground_truth(config, ground_truth)
-        ground_truth = ground_truth["gt_track_id"] > 0
+        ground_truth = match_to_ground_truth(config, ground_truth)["gt_track_id"]
+
+    # removing cells with no ground-truth, therefore we cannot decide they are blocked or not
+    no_overlap = ground_truth != UnmatchedNode.NO_OVERLAP
+
+    LOG.info("Found %f of nodes with no overlap", no_overlap.mean())
+
+    if remove_no_overlap:
+        ground_truth = ground_truth[no_overlap]
+
+    # making it a binary classification problem
+    ground_truth = (
+        ground_truth > UnmatchedNode.BLOCKED
+    )  # (includes NO_OVERLAP as negative class)
 
     LOG.info("Fitting classifier with features: %s", str(features.columns))
 

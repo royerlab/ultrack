@@ -1,5 +1,6 @@
 import logging
 from contextlib import nullcontext
+from enum import IntEnum
 from typing import Dict, Optional, Tuple, Union
 
 import fasteners
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB
+from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB, OverlapDB
 from ultrack.core.linking.processing import compute_spatial_neighbors
 from ultrack.core.segmentation.node import Node
 from ultrack.core.solve.sqlgtmatcher import SQLGTMatcher
@@ -23,6 +24,15 @@ from ultrack.utils.multiprocessing import (
 )
 
 LOG = logging.getLogger(__name__)
+
+
+class UnmatchedNode(IntEnum):
+    """
+    Kinds of unmatched nodes.
+    """
+
+    NO_OVERLAP = -1
+    BLOCKED = 0
 
 
 @curry
@@ -203,8 +213,26 @@ def _get_nodes_df_with_matches(
 
         LOG.info(f"Found {len(node_df)} nodes and {len(gt_df)} ground-truth links")
 
+        overlap_query = session.query(
+            OverlapDB.node_id,
+            OverlapDB.ancestor_id,
+        )
+        overlap_df = pd.read_sql(
+            overlap_query.statement,
+            session.bind,
+        )
+
     node_df = node_df.join(gt_df)
-    node_df["gt_track_id"] = node_df["gt_track_id"].fillna(NO_PARENT).astype(int)
+    # nodes that didn't match with ground-truth are assigned to NO_PARENT
+    node_df["gt_track_id"] = (
+        node_df["gt_track_id"].fillna(UnmatchedNode.NO_OVERLAP).astype(int)
+    )
+
+    # nodes that were blocked by overlap are assigned to 0
+    for ref_col, other_col in [("node_id", "ancestor_id"), ("ancestor_id", "node_id")]:
+        ref, other = overlap_df[ref_col].to_numpy(), overlap_df[other_col].to_numpy()
+        selected_nodes = node_df.loc[ref, "gt_track_id"] != UnmatchedNode.NO_OVERLAP
+        node_df.loc[other[selected_nodes], "gt_track_id"] = UnmatchedNode.BLOCKED
 
     if features:
         # similar to persistence, see segmentation.processing.get_nodes_features
@@ -230,6 +258,13 @@ def match_to_ground_truth(
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, MainConfig]]:
     """
     Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
+
+    `gt_track_id` is the ground-truth track ID matched to the node.
+    `gt_parent_track_id` is the parent ground-truth track ID matched to the node.
+    `gt_track_id` can be of:
+    * -1 means no overlap with ground-truth, therefore it could be a potential segmentation without annotation.
+    *  0 means blocked by overlap, so we are sure it is not a cell.
+    * >0 means it is a cell and the value is the ground-truth track ID.
 
     Tolerances for optimal configuration based on ground-truth matches:
     * `max_distance` + 1.0
