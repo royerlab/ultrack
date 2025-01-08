@@ -6,8 +6,8 @@ from numpy.typing import ArrayLike
 from rich.logging import RichHandler
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, set_node_values
-from ultrack.core.gt_matching import match_to_ground_truth
+from ultrack.core.database import set_node_values
+from ultrack.core.match_gt import match_to_ground_truth
 from ultrack.core.segmentation import get_nodes_features
 
 LOG = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ def fit_nodes_prob(
     ProbabilisticClassifier
         Fitted probabilistic classifier.
     """
-    features = get_nodes_features(config, persistence_features)
+    features = get_nodes_features(config, include_persistence=persistence_features)
 
     if not coord_features:
         features = features.drop(columns=["t", "z", "y", "x"], errors="ignore")
@@ -135,7 +135,7 @@ def fit_nodes_prob(
 
     if not isinstance(ground_truth, (pd.Series, pd.DataFrame)):
         ground_truth = match_to_ground_truth(config, ground_truth)
-        ground_truth = ground_truth["gt_track_id"] > NO_PARENT
+        ground_truth = ground_truth["gt_track_id"] > 0
 
     LOG.info("Fitting classifier with features: %s", str(features.columns))
 
@@ -149,8 +149,15 @@ def fit_nodes_prob(
             ) from e
         classifier = XGBClassifier()
 
+    if ground_truth.dtype != bool:
+        raise ValueError(
+            f"Ground-truth dataframe must be a binary classification problem (bool dtype), got {ground_truth.dtype}"
+        )
+
+    training_labels = ground_truth.loc[features.index].astype(int)
+
     # Fit the classifier
-    classifier.fit(features, ground_truth.loc[features.index])
+    classifier.fit(features, training_labels)
 
     if insert_prob:
         LOG.info("Adding probabilities to the database")

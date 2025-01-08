@@ -225,7 +225,7 @@ def match_to_ground_truth(
     gt_labels: ArrayLike,
     scale: Optional[ArrayLike] = None,
     track_id_graph: Optional[Dict[int, int]] = None,
-    segmentation_gt: bool = True,
+    is_segmentation: bool = True,
     optimize_config: bool = False,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, MainConfig]]:
     """
@@ -247,7 +247,7 @@ def match_to_ground_truth(
         Scale of the data for distance computation, by default None.
     track_id_graph : Optional[Dict[int, int]], optional
         Ground-truth graph of track IDs, by default None.
-    segmentation_gt : bool, optional
+    is_segmentation : bool, optional
         Whether the ground-truth labels are segmentation masks or points, by default True.
     optimize_config : bool, optional
         Whether to find optimal configuration based on the ground-truth matches, by default False.
@@ -267,7 +267,7 @@ def match_to_ground_truth(
                 config=config,
                 scale=scale,
                 write_lock=lock,
-                segmentation_gt=segmentation_gt,
+                segmentation_gt=is_segmentation,
             ),
             range(gt_labels.shape[0]),
             n_workers=config.segmentation_config.n_workers,
@@ -298,7 +298,7 @@ def match_to_ground_truth(
         LOG.warning("No ground-truth matches found. Keeping previous configuration.")
         return df_nodes, opt_config
 
-    if segmentation_gt:
+    if is_segmentation:
         print(f"GT matching mean IoU (per frame): {mean_iou}")
         if mean_iou < 0.5:
             LOG.warning(
@@ -309,6 +309,7 @@ def match_to_ground_truth(
 
     if scale is not None:
         cols = ["z", "y", "x"][-len(scale) :]
+        scale = scale[-len(cols) :]  # in case scale has more dimensions (e.g. time)
         gt_df[cols] *= scale
 
     if "z" not in gt_df.columns:

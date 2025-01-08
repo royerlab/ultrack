@@ -4,8 +4,6 @@ from multiprocessing import Process
 from pathlib import Path
 from typing import List
 
-import cloudpickle
-import numpy as np
 import pytest
 import requests
 import toml
@@ -94,20 +92,40 @@ class TestCommandLine:
             ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
         )
 
-    def test_add_probs(self, instance_config_path: str, tmp_path: Path) -> None:
-        class _MockPredictor:
-            def predict_proba(self, X):
-                return np.zeros(len(X))
+    def test_fit_and_add_probs(
+        self, instance_config_path: str, tmp_path: Path, zarr_dataset_paths: List[str]
+    ) -> None:
+        # required by match gt with model output
+        pytest.importorskip("xgboost")
+        pytest.importorskip("sklearn")
 
-        classif_path = tmp_path / "classifier.pkl"
+        model_path = tmp_path / "model.pkl"
+        new_cfg_path = tmp_path / "new_config.toml"
 
-        with open(classif_path, "wb") as f:
-            cloudpickle.dump(_MockPredictor(), f)
+        _run_command(
+            [
+                "match_gt",
+                "-cfg",
+                instance_config_path,
+                "-gl",
+                "labels",
+                "-om",
+                str(model_path),
+                "-oc",
+                str(new_cfg_path),
+                "--is-segmentation",
+                "--persistence",
+            ]
+            + zarr_dataset_paths
+        )
+
+        # testing loading new config
+        load_config(new_cfg_path)
 
         _run_command(
             [
                 "add_probs",
-                str(classif_path),
+                str(model_path),
                 "-cfg",
                 instance_config_path,
                 "--persistence",

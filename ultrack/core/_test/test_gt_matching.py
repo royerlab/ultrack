@@ -3,7 +3,7 @@ from typing import Tuple
 import zarr
 
 from ultrack.config import MainConfig
-from ultrack.core.gt_matching import match_to_ground_truth
+from ultrack.core.match_gt import match_to_ground_truth
 
 
 def test_match_to_ground_truth(
@@ -19,7 +19,7 @@ def test_match_to_ground_truth(
         config,
         gt,
         track_id_graph={},
-        segmentation_gt=True,
+        is_segmentation=True,
         optimize_config=True,
     )
 
