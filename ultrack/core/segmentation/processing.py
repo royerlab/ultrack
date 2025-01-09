@@ -1,4 +1,5 @@
 import logging
+import os
 import pickle
 from contextlib import nullcontext
 from typing import Callable, List, Optional
@@ -445,8 +446,10 @@ def segment(
         length, config.segmentation_config.n_workers, batch_index
     )
     LOG.info(f"Segmenting time points {time_points}")
+    
+    batch_start_index = int(os.getenv("ULTRACK_BATCH_INDEX_START", "0"))
 
-    if batch_index is None or batch_index == 0:
+    if batch_index is None or batch_index == batch_start_index:
         engine = sqla.create_engine(config.data_config.database_path)
 
         if overwrite:
