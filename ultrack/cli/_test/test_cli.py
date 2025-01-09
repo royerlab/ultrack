@@ -96,7 +96,7 @@ class TestCommandLine:
         self, instance_config_path: str, tmp_path: Path, zarr_dataset_paths: List[str]
     ) -> None:
         # required by match gt with model output
-        pytest.importorskip("xgboost")
+        pytest.importorskip("catboost")
         pytest.importorskip("sklearn")
 
         model_path = tmp_path / "model.pkl"
