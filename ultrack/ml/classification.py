@@ -176,10 +176,8 @@ def fit_nodes_prob(
             f"Ground-truth dataframe must be a binary classification problem (bool dtype), got {ground_truth.dtype}"
         )
 
-    training_labels = ground_truth.loc[features.index]
-
     # Fit the classifier
-    classifier.fit(features, training_labels)
+    classifier.fit(features.loc[ground_truth.index], ground_truth)
 
     if insert_prob:
         LOG.info("Adding probabilities to the database")
