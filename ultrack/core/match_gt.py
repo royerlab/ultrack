@@ -294,6 +294,12 @@ def match_to_ground_truth(
         Data frame containing matched ground-truth labels to their respective nodes.
         If `optimize_config` is True, it will return a tuple with the data frame and the updated configuration object.
     """
+    shape = tuple(config.data_config.metadata.get("shape", gt_labels.shape))
+    if shape[1:] != gt_labels.shape[1:]:
+        raise ValueError(
+            "Ground-truth labels shape does not match the data shape. "
+            f"Expected {shape}, got {gt_labels.shape}."
+        )
 
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         ious = multiprocessing_apply(
