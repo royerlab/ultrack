@@ -42,6 +42,8 @@ pip install ultrack
 
 NOTE: `gurobi` and `-c gurobi` are optional but recommended; they can be installed later, as shown below.
 
+Optionally, we provide multiple Docker images. For instructions, see the [docker folder](https://github.com/royerlab/ultrack/tree/main/docker).
+
 ## Usage
 
 **ATTENTION**: every time you need to run this software, you'll have to activate this environment
