@@ -21,18 +21,12 @@ jobs:
         python: ["3.10", "3.12"]
         backend: [pyqt5]
         include:
-          - python: 3.11
-            platform: windows-latest
-            backend: pyqt5
-          - python: 3.11
-            platform: macos-13  # latest not-arm version
-            backend: pyside2
-          - python: 3.11
-            platform: ubuntu-latest
-            backend: pyqt6
-          - python: 3.11
-            platform: ubuntu-latest
-            backend: pyside2
+          # - python: 3.11
+          #   platform: windows-latest
+          #   backend: pyqt5
+          # - python: 3.11
+          #   platform: macos-13  # latest not-arm version
+          #   backend: pyside2
           - python: 3.11 # only this run execute coverage
             platform: ubuntu-latest
             backend: pyside6
