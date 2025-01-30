@@ -1,8 +1,8 @@
+import argparse
 import http.client
 import json
-from urllib.parse import urlparse
 import os
-import argparse
+from urllib.parse import urlparse
 
 
 def get_ultrack_version():
@@ -43,6 +43,7 @@ def fetch_tags():
 
     return tags
 
+
 def parse_tags(tags):
     cuda_versions = {}
 
@@ -53,7 +54,11 @@ def parse_tags(tags):
             version = parts[0]
             if len(parts) > 1 and "cuda" in parts[1]:
                 cuda_version = parts[1].split("cuda")[1].split("-")[0]
-                cudnn_version = parts[2].split("cudnn")[1] if len(parts) > 2 and "cudnn" in parts[2] else "unknown"
+                cudnn_version = (
+                    parts[2].split("cudnn")[1]
+                    if len(parts) > 2 and "cudnn" in parts[2]
+                    else "unknown"
+                )
                 if version not in cuda_versions:
                     cuda_versions[version] = []
                 if (cuda_version, cudnn_version) not in cuda_versions[version]:
@@ -73,33 +78,50 @@ def available_versions():
         raise Exception("No CUDA versions found.")
 
     # Find the latest version
-    latest_version = max(cuda_versions.keys(), key=lambda v: list(map(int, v.split("."))))
+    latest_version = max(
+        cuda_versions.keys(), key=lambda v: list(map(int, v.split(".")))
+    )
 
-    return [(latest_version, cuda, cudnn) for cuda, cudnn in cuda_versions[latest_version]]
+    return [
+        (latest_version, cuda, cudnn) for cuda, cudnn in cuda_versions[latest_version]
+    ]
 
 
 def build_image(image_type, ultrack_version, docker_torch_tag=None, cuda=None):
     if image_type == "cpu":
-        os.system(f"docker build -t royerlab/ultrack:{ultrack_version}-cpu "
-                  f"--build-arg ULTRACK_VERSION={ultrack_version} cpu")
+        os.system(
+            f"docker build -t royerlab/ultrack:{ultrack_version}-cpu "
+            f"--build-arg ULTRACK_VERSION={ultrack_version} cpu"
+        )
     elif image_type == "gpu" and docker_torch_tag and cuda:
-        os.system(f"docker build -t royerlab/ultrack:{ultrack_version}-cuda{cuda} "
-                  f"--build-arg PYTORCH_VERSION={docker_torch_tag} "
-                  f"--build-arg ULTRACK_VERSION={ultrack_version} gpu")
+        os.system(
+            f"docker build -t royerlab/ultrack:{ultrack_version}-cuda{cuda} "
+            f"--build-arg PYTORCH_VERSION={docker_torch_tag} "
+            f"--build-arg ULTRACK_VERSION={ultrack_version} gpu"
+        )
+
 
 def main():
     parser = argparse.ArgumentParser(description="Docker image builder for Ultrack.")
-    parser.add_argument("image", nargs="?", help="Image type to build (e.g., cpu, cuda<version>) or '--all' for all images.")
+    parser.add_argument(
+        "image",
+        nargs="?",
+        help="Image type to build (e.g., cpu, cuda<version>) or '--all' for all images.",
+    )
 
     args = parser.parse_args()
     ultrack_version = get_ultrack_version()
 
     if not args.image:
-        print(f"Error: No argument provided. Available options to build ultrack version {ultrack_version}:")
+        print(
+            f"Error: No argument provided. Available options to build ultrack version {ultrack_version}:"
+        )
         print("all: Build all images")
         print("cpu: Build CPU image")
         for latest_torch, cuda, cudnn in available_versions():
-            print(f"cuda{cuda}: Build GPU image for PyTorch {latest_torch} with CUDA {cuda} and cuDNN {cudnn}")
+            print(
+                f"cuda{cuda}: Build GPU image for PyTorch {latest_torch} with CUDA {cuda} and cuDNN {cudnn}"
+            )
         return
 
     if args.image == "all":
@@ -117,9 +139,14 @@ def main():
                 build_image("gpu", ultrack_version, docker_torch_tag, cuda)
                 break
         else:
-            print(f"Error: CUDA version {cuda_version} not found in available versions.")
+            print(
+                f"Error: CUDA version {cuda_version} not found in available versions."
+            )
     else:
-        print(f"Error: Unknown argument '{args.image}'. Use 'all', 'cpu', or 'cuda<version>'.")
+        print(
+            f"Error: Unknown argument '{args.image}'. Use 'all', 'cpu', or 'cuda<version>'."
+        )
+
 
 if __name__ == "__main__":
     main()
