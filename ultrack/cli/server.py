@@ -1,12 +1,10 @@
 from typing import Optional
 
 import click
-import toml
 
 from ultrack import MainConfig
 from ultrack.api import start_server
 from ultrack.cli.utils import config_option
-from ultrack.config import DataConfig
 
 
 @click.command("server")

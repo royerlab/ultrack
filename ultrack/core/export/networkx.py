@@ -40,8 +40,8 @@ def tracks_layer_to_networkx(
     else:
         tracks_df = tracks_df.set_index("id")
 
-    for index, row in tracks_df.iterrows():
-        graph.add_node(index, **row.to_dict())
+    for index, row in tracks_df.to_dict(orient="index").items():
+        graph.add_node(index, **row)
 
     if "parent_id" not in tracks_df.columns:
         LOG.warning(
