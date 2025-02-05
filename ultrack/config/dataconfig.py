@@ -27,7 +27,7 @@ class DataConfig(BaseModel):
     working_dir: Path = Path(".")
     """Working directory for auxiliary files (e.g. sqlite database, metadata)"""
 
-    database_name: str = "data.db"
+    database_file_name: str = "data.db"
     """Database name, used for sqlite databases, by default: `data.db`"""
 
     database: DatabaseChoices = "sqlite"
