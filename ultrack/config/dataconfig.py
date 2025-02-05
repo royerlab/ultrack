@@ -81,7 +81,7 @@ class DataConfig(BaseModel):
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
         if self.database == DatabaseChoices.sqlite.value:
-            return f"sqlite:///{self.working_dir.absolute()}/{self.database_name}"
+            return f"sqlite:///{self.working_dir.absolute()}/{self.database_file_name}"
 
         elif self.database == DatabaseChoices.memory.value:
             return f"sqlite:///file:{self.in_memory_db_id}?mode=memory&cache=shared&uri=true"
