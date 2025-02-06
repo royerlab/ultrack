@@ -131,6 +131,11 @@ class GTNodeDB(Base):
 
 
 class GTLinkDB(Base):
+    """
+    Ground-truth links database.
+    These links are between GTNodes and (non-GT) Nodes.
+    """
+
     __tablename__ = "gt_links"
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
