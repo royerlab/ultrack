@@ -11,6 +11,7 @@ from rich.logging import RichHandler
 
 from ultrack.cli.segment import _get_layer_data
 from ultrack.cli.utils import (
+    batch_index_option,
     config_option,
     napari_reader_option,
     overwrite_option,
@@ -67,6 +68,7 @@ LOG.addHandler(RichHandler())
     default=False,
     help="Insert estimated probabilities into the database.",
 )
+@batch_index_option()
 @overwrite_option()
 @persistence_option()
 def match_gt_cli(
@@ -78,6 +80,7 @@ def match_gt_cli(
     output_config: Optional[Path],
     is_segmentation: bool,
     insert_prob: bool,
+    batch_index: Optional[int],
     overwrite: bool,
     persistence: bool,
 ) -> None:
@@ -124,6 +127,7 @@ def match_gt_cli(
         scale=config.data_config.metadata.get("scale"),
         is_segmentation=is_segmentation,
         optimize_config=True,
+        batch_index=batch_index,
     )
 
     if output_config is not None:

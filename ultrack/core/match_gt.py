@@ -19,6 +19,7 @@ from ultrack.core.segmentation.node import Node
 from ultrack.core.solve.sqlgtmatcher import SQLGTMatcher
 from ultrack.tracks.stats import estimate_drift
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
@@ -255,6 +256,7 @@ def match_to_ground_truth(
     track_id_graph: Optional[Dict[int, int]] = None,
     is_segmentation: bool = True,
     optimize_config: bool = False,
+    batch_index: Optional[int] = None,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, MainConfig]]:
     """
     Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
@@ -287,6 +289,8 @@ def match_to_ground_truth(
     optimize_config : bool, optional
         Whether to find optimal configuration based on the ground-truth matches, by default False.
         If True, it will return the configuration object with updated parameters.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of frames, by default everything is processed.
 
     Returns
     -------
@@ -301,6 +305,12 @@ def match_to_ground_truth(
             f"Expected {shape}, got {gt_labels.shape}."
         )
 
+    time_points = batch_index_range(
+        gt_labels.shape[0],
+        config.segmentation_config.n_workers,
+        batch_index,
+    )
+
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         ious = multiprocessing_apply(
             _match_ground_truth_frame(
@@ -310,7 +320,7 @@ def match_to_ground_truth(
                 write_lock=lock,
                 segmentation_gt=is_segmentation,
             ),
-            range(gt_labels.shape[0]),
+            time_points,
             n_workers=config.segmentation_config.n_workers,
             desc="Matching hierarchy nodes with ground-truth",
         )
