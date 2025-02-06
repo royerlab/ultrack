@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable, Literal, Optional
+from typing import Callable, Literal, Optional, Tuple
 
 import numpy as np
 from pydantic.v1 import BaseModel, Extra
@@ -31,7 +31,10 @@ class TrackingConfig(BaseModel):
     """Penalization for disappearing cell, should be negative """
     division_weight: float = -0.001
     """Penalization for dividing cell, should be negative """
-
+    image_border_size: Optional[Tuple[int, ...]] = None
+    """Image border size in pixels (Z,Y,X) to avoid tracking cells within this border.
+       If cells are within the border they not penalized when appearing or disappearing
+    """
     n_threads: int = -1
     """Number of worker threads """
 

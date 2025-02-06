@@ -28,6 +28,7 @@ class BaseSolver(ABC):
         indices: ArrayLike,
         is_first_t: ArrayLike,
         is_last_t: ArrayLike,
+        is_border: ArrayLike = False,
         node_prob: Optional[ArrayLike] = None,
     ) -> None:
         """Add nodes variables solver.
@@ -40,6 +41,9 @@ class BaseSolver(ABC):
             Boolean array indicating if it belongs to first time point and it won't receive appearance penalization.
         is_last_t : ArrayLike
             Boolean array indicating if it belongs to last time point and it won't receive disappearance penalization.
+        is_border : ArrayLike
+            Boolean array indicating if it belongs to the border and it won't receive (dis)apperance penalization.
+            Default: False.
         node_prob: Optional[ArrayLike]
             If provided assigns a node probability score to the objective function.
         """

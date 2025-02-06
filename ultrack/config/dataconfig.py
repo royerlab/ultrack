@@ -27,6 +27,9 @@ class DataConfig(BaseModel):
     working_dir: Path = Path(".")
     """Working directory for auxiliary files (e.g. sqlite database, metadata)"""
 
+    database_file_name: str = "data.db"
+    """Database name, used for sqlite databases, by default: `data.db`"""
+
     database: DatabaseChoices = "sqlite"
     """``SPECIAL``: Database type ``sqlite`` and ``postgresql`` supported"""
 
@@ -78,7 +81,7 @@ class DataConfig(BaseModel):
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
         if self.database == DatabaseChoices.sqlite.value:
-            return f"sqlite:///{self.working_dir.absolute()}/data.db"
+            return f"sqlite:///{self.working_dir.absolute()}/{self.database_file_name}"
 
         elif self.database == DatabaseChoices.memory.value:
             return f"sqlite:///file:{self.in_memory_db_id}?mode=memory&cache=shared&uri=true"

@@ -85,6 +85,7 @@ class MIPSolver(BaseSolver):
         indices: ArrayLike,
         is_first_t: ArrayLike,
         is_last_t: ArrayLike,
+        is_border: ArrayLike = False,
         nodes_prob: Optional[ArrayLike] = None,
     ) -> None:
         """Add nodes slack variables to gurobi model.
@@ -97,6 +98,9 @@ class MIPSolver(BaseSolver):
             Boolean array indicating if it belongs to first time point and it won't receive appearance penalization.
         is_last_t : ArrayLike
             Boolean array indicating if it belongs to last time point and it won't receive disappearance penalization.
+        is_border : ArrayLike
+            Boolean array indicating if it belongs to the border and it won't receive (dis)apperance penalization.
+            Default: False
         nodes_prob: Optional[ArrayLike]
             If provided assigns a node probability score to the objective function.
         """
@@ -113,8 +117,12 @@ class MIPSolver(BaseSolver):
         LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
         LOG.info("# %s nodes at last `t`.", np.sum(is_last_t))
 
-        appear_weight = np.logical_not(is_first_t) * self._config.appear_weight
-        disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
+        appear_weight = (
+            np.logical_not(is_first_t | is_border) * self._config.appear_weight
+        )
+        disappear_weight = (
+            np.logical_not(is_last_t | is_border) * self._config.disappear_weight
+        )
 
         indices = np.asarray(indices, dtype=int)
         self._backward_map = np.array(indices, copy=True)
