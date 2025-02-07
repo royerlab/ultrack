@@ -103,7 +103,7 @@ def test_config():
     default_config = MainConfig()
     default_config.data_config = None
 
-    assert response.json() == default_config.dict()
+    assert response.json() == default_config.model_dump(by_alias=True)
 
 
 def test_manual_segment(experiment_instance: Experiment):

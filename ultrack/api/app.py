@@ -184,7 +184,7 @@ async def get_default_config() -> Dict:
     """
     config = MainConfig()
     config.data_config = None
-    return config.dict()
+    return config.model_dump(by_alias=True)
 
 
 @app.get("/config/available")
@@ -201,7 +201,7 @@ async def get_available_configs() -> Dict:
 
     experiment = {
         "name": "Unnamed Experiment",
-        "config": default_config.dict(),
+        "config": default_config.model_dump(by_alias=True),
     }
 
     auto_detect_config = {
