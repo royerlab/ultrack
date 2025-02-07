@@ -206,8 +206,20 @@ def tracks_layer_to_trackmate(
             spot_elem.set("name", str(spot_id))
             spot_elem.set("FRAME", str(int(entry["t"])))
             spot_elem.set("RADIUS", "5.0")
+            spot_elem.set("POSITION_T", str(entry["t"]))
             spot_elem.set("POSITION_X", str(entry["x"]))
             spot_elem.set("POSITION_Y", str(entry["y"]))
+            # features with default values
+            spot_elem.set("MANUAL_COLOR", "1"),
+            spot_elem.set("MEAN_INTENSITY", "1.0"),
+            spot_elem.set("MEDIAN_INTENSITY", "1.0"),
+            spot_elem.set("MIN_INTENSITY", "1.0"),
+            spot_elem.set("MAX_INTENSITY", "1.0"),
+            spot_elem.set("TOTAL_INTENSITY", "1.0"),
+            spot_elem.set("STANDARD_DEVIATION", "1.0"),
+            spot_elem.set("ESTIMATED_DIAMETER", "10.0"),
+            spot_elem.set("CONTRAST", "0.0"),
+            spot_elem.set("SNR", "0.0"),
             if has_z:
                 spot_elem.set("POSITION_Z", str(entry["z"]))
             else:
