@@ -3,7 +3,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, Optional
 
 from magicgui.widgets import Container, Label
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 LOG = logging.getLogger(__name__)
 

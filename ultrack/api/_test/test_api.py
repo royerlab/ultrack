@@ -77,7 +77,7 @@ def experiment_instance(
 
     experiment = Experiment(
         name="PyTest",
-        config=config_instance,
+        config=config_instance.model_dump(by_alias=True),
         data_url=ome_zarr_dataset_path,
         image_channel_or_path="image",
         edges_channel_or_path="edges",
@@ -130,7 +130,7 @@ def test_manual_segment(experiment_instance: Experiment):
     with client.websocket_connect("/segment/manual") as websocket:
         json_exp = json.loads(
             json.dumps(
-                experiment.dict(),
+                experiment.model_dump(),
                 default=lambda o: o.isoformat()
                 if isinstance(o, (datetime.date, datetime.datetime))
                 else None,
@@ -139,7 +139,7 @@ def test_manual_segment(experiment_instance: Experiment):
         websocket.send_json({"experiment": json_exp})
         while experiment.status != ExperimentStatus.SUCCESS:
             response = websocket.receive_json()
-            experiment = Experiment.parse_obj(response)
+            experiment = Experiment.model_validate(response)
             assert experiment.status != ExperimentStatus.ERROR
 
     tracks_df_api, graph_api = to_tracks_layer(experiment.get_config())
@@ -179,7 +179,7 @@ def test_auto_detect(
     with client.websocket_connect("/segment/auto_detect") as websocket:
         json_exp = json.loads(
             json.dumps(
-                experiment.dict(),
+                experiment.model_dump(),
                 default=lambda o: o.isoformat()
                 if isinstance(o, (datetime.date, datetime.datetime))
                 else None,
@@ -201,7 +201,7 @@ def test_auto_detect(
         websocket.send_json(json_request)
         while experiment.status != ExperimentStatus.SUCCESS:
             response = websocket.receive_json()
-            experiment = Experiment.parse_obj(response)
+            experiment = Experiment.model_validate(response)
             assert experiment.status != ExperimentStatus.ERROR
 
     detection = np.zeros_like(image_data, dtype=float)
@@ -250,7 +250,7 @@ def test_from_labels(experiment_instance: Experiment, label_to_edges_kwargs: dic
     with client.websocket_connect("/segment/labels") as websocket:
         json_exp = json.loads(
             json.dumps(
-                experiment.dict(),
+                experiment.model_dump(),
                 default=lambda o: o.isoformat()
                 if isinstance(o, (datetime.date, datetime.datetime))
                 else o,
@@ -265,7 +265,7 @@ def test_from_labels(experiment_instance: Experiment, label_to_edges_kwargs: dic
             label_to_edges_kwargs = {}
         while experiment.status != ExperimentStatus.SUCCESS:
             response = websocket.receive_json()
-            experiment = Experiment.parse_obj(response)
+            experiment = Experiment.model_validate(response)
             assert experiment.status != ExperimentStatus.ERROR
 
     # compare the results with the ones obtained from the ultrack module
@@ -293,7 +293,7 @@ def test_output_experiment(experiment_instance: Experiment):
     with client.websocket_connect("/segment/auto_detect") as websocket:
         json_exp = json.loads(
             json.dumps(
-                experiment_instance.dict(),
+                experiment_instance.model_dump(),
                 default=lambda o: o.isoformat()
                 if isinstance(o, (datetime.date, datetime.datetime))
                 else None,
@@ -306,7 +306,7 @@ def test_output_experiment(experiment_instance: Experiment):
 
         while experiment_instance.status != ExperimentStatus.SUCCESS:
             response = websocket.receive_json()
-            experiment_instance = Experiment.parse_obj(response)
+            experiment_instance = Experiment.model_validate(response)
             assert experiment_instance.status != ExperimentStatus.ERROR
 
         assert "robust_invert" in experiment_instance.err_log
@@ -353,7 +353,7 @@ def test_available_configs(experiment_instance: Experiment):
 
             while experiment.status != ExperimentStatus.SUCCESS:
                 response = websocket.receive_json()
-                experiment = Experiment.parse_obj(response)
+                experiment = Experiment.model_validate(response)
                 assert experiment.status != ExperimentStatus.ERROR
 
 
@@ -377,7 +377,7 @@ def test_available_configs(experiment_instance: Experiment):
 #
 #         while experiment_instance.status != ExperimentStatus.ERROR:
 #             response = websocket.receive_json()
-#             experiment_instance = Experiment.parse_obj(response)
+#             experiment_instance = Experiment.model_validate(response)
 #
 #         assert "Exception" in experiment_instance.err_log
 #         assert "Traceback" in experiment_instance.err_log
@@ -399,9 +399,9 @@ def test_available_configs(experiment_instance: Experiment):
 #         )
 #         websocket.send_json({"experiment": json_exp})
 #         response = websocket.receive_json()
-#         experiment_instance = Experiment.parse_obj(response)
+#         experiment_instance = Experiment.model_validate(response)
 #         response = client.post(f"/stop/{experiment_instance.id}")
 #         assert response.status_code == 200
 #         response = websocket.receive_json()
-#         experiment_instance = Experiment.parse_obj(response)
+#         experiment_instance = Experiment.model_validate(response)
 #         assert experiment_instance.status == ExperimentStatus.ERROR

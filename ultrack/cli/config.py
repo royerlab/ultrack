@@ -16,4 +16,4 @@ def config_cli(output_path: Path) -> None:
         raise ValueError(f"{output_path} already exists.")
 
     with open(output_path, mode="w") as f:
-        toml.dump(config.dict(by_alias=True), f)
+        toml.dump(config.model_dump(by_alias=True), f)
