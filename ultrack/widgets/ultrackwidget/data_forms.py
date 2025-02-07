@@ -114,7 +114,7 @@ class DataForms:
         config : MainConfig
             The main configuration to load.
         """
-        self._config = config.dict(by_alias=True)
+        self._config = config.model_dump(by_alias=True)
         for id_form, id_field, widget, getter, setter in self._bindings:
             value = self._config[id_form][id_field]
             getattr(widget, setter)(value)

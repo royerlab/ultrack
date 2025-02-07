@@ -1,7 +1,13 @@
-from typing import Any, Callable, Dict, Literal
+from typing import Callable, Literal
 
 import higra as hg
-from pydantic.v1 import BaseModel, Extra, root_validator, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 NAME_TO_WS_HIER = {
     "area": hg.watershed_hierarchy_by_area,
@@ -53,11 +59,12 @@ class SegmentationConfig(BaseModel):
     the xy-plane first, negative will do the opposite
     """
 
-    class Config:
-        use_enum_values = True
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        use_enum_values=True,
+        extra="forbid",
+    )
 
-    @validator("ws_hierarchy", pre=True)
+    @field_validator("ws_hierarchy", mode="before")
     def ws_name_to_function(cls, value: str) -> Callable:
         """Converts string to watershed hierarchy function."""
         if not isinstance(value, str):
@@ -72,20 +79,21 @@ class SegmentationConfig(BaseModel):
 
         return NAME_TO_WS_HIER[value]
 
-    @root_validator
-    def area_validator(cls, values: Dict) -> Dict:
+    @field_serializer("ws_hierarchy")
+    def serialize_ws_hierarchy(self, value: Callable) -> str:
+        for name, func in NAME_TO_WS_HIER.items():
+            if func == value:
+                return name
+        raise ValueError(
+            f"ws_hierarchy function {value} not found in {NAME_TO_WS_HIER.keys()}"
+        )
+
+    @model_validator(mode="after")
+    def area_validator(self) -> "SegmentationConfig":
         """Checks if min and max area are compatible."""
-        if values["min_area"] > values["max_area"]:
+        if self.min_area > self.max_area:
             raise ValueError(
                 "`min_area` must be lower than `max_area`."
-                f"Found min_area={values['min_area']}, max_area={values['max_area']}"
+                f"Found min_area={self.min_area}, max_area={self.max_area}"
             )
-        return values
-
-    def dict(self, *args, **kwargs) -> Dict[str, Any]:
-        d = super().dict(*args, **kwargs)
-        for name, func in NAME_TO_WS_HIER.items():
-            if func == d["ws_hierarchy"]:
-                d["ws_hierarchy"] = name
-                break
-        return d
+        return self

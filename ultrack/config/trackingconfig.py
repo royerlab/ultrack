@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Callable, Literal, Optional, Tuple
 
 import numpy as np
-from pydantic.v1 import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict
 
 
 class LinkFunctionChoices(Enum):
@@ -75,9 +75,10 @@ class TrackingConfig(BaseModel):
     dismiss_weight_guess: Optional[float] = None
     include_weight_guess: Optional[float] = None
 
-    class Config:
-        use_enum_values = True
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        use_enum_values=True,
+        extra="forbid",
+    )
 
     @property
     def apply_link_function(self) -> Callable[[np.ndarray], np.ndarray]:

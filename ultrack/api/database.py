@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sqla
-from pydantic.v1 import BaseModel, Json, validator
+from pydantic import BaseModel, Json, ValidationInfo, field_validator
 from sqlalchemy import JSON, Column, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -22,7 +22,7 @@ Base = declarative_base()
 def _clean_db_on_exit():
     try:
         Session._temp_dir.cleanup()
-    except:
+    except Exception:
         pass
 
 
@@ -104,9 +104,9 @@ class Experiment(BaseModel):
         The experiment status. Defaults to ExperimentStatus.NOT_PERSISTED.
     name : str
         The experiment name. Defaults to "Untitled Experiment".
-    start_time : Optional[datetime]
+    start_time : Optional[str]
         The experiment start time. Defaults to the datetime where it was created.
-    end_time : Optional[datetime]
+    end_time : Optional[str]
         The experiment end time. Defaults to None and is set when the experiment
         finishes.
     std_log : str
@@ -153,34 +153,37 @@ class Experiment(BaseModel):
     tracks: Optional[Json] = None
 
     def get_config(self) -> MainConfig:
-        config = MainConfig.parse_obj(self.config)
+        config = MainConfig.model_validate(self.config)
         config.data_config = settings.ultrack_data_config
         return config
 
-    @validator("status", pre=True, always=True)
-    def check_if_id_is_valid(cls, v, values, **kwargs):
-        if (
-            v == ExperimentStatus.NOT_PERSISTED
-            and "id" in values
-            and values["id"] is not None
-        ):
+    @field_validator("status", mode="before")
+    @classmethod
+    def check_if_id_is_valid(cls, v, info: ValidationInfo) -> ExperimentStatus:
+        exp_id = info.data.get("id")
+        if v == ExperimentStatus.NOT_PERSISTED and exp_id is not None:
             raise ValueError(
                 "The id cannot be set if the experiment was never "
                 "persisted in the database."
             )
-        elif v != ExperimentStatus.NOT_PERSISTED and "id" not in values:
+        elif v != ExperimentStatus.NOT_PERSISTED and exp_id is None:
             raise ValueError(
                 "The id must be set if the experiment was persisted in the database."
             )
         return v
 
-    @validator("start_time", pre=True, always=True)
-    def set_start_time(cls, v):
+    @field_validator("start_time", mode="before")
+    @classmethod
+    def set_start_time(cls, v) -> str:
         return v or datetime.now().isoformat()
 
-    @validator("end_time", always=True)
-    def set_end_time(cls, v, values):
-        if values["status"] in [ExperimentStatus.SUCCESS, ExperimentStatus.FAILED]:
+    @field_validator("end_time")
+    @classmethod
+    def set_end_time(cls, v, info: ValidationInfo) -> Optional[str]:
+        if info.data.get("status") in [
+            ExperimentStatus.SUCCESS,
+            ExperimentStatus.FAILED,
+        ]:
             return v or datetime.now().isoformat()
         return None
 
@@ -262,7 +265,7 @@ def update_experiment(experiment: Experiment) -> None:
     experiment_db = session.query(ExperimentDB).filter_by(id=experiment.id).first()
     if experiment_db is None:
         raise ValueError(f"Experiment {experiment.id} not found.")
-    for key, value in experiment.dict().items():
+    for key, value in experiment.model_dump().items():
         if key != "id":
             setattr(experiment_db, key, value)
     session.commit()

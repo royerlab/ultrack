@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from pydantic.v1 import BaseSettings
+from pydantic_settings import BaseSettings
 
 from ultrack.config import DataConfig
 

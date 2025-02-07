@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import toml
-from pydantic.v1 import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ultrack.config.dataconfig import DataConfig
 from ultrack.config.segmentationconfig import SegmentationConfig
@@ -38,13 +38,13 @@ class LinkingConfig(BaseModel):
     the segmentation masks of neighboring segments
     """
 
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(extra="forbid")
 
 
 class MainConfig(BaseModel):
     data_config: Optional[DataConfig] = Field(
-        default_factory=DataConfig, alias="data", nullable=True
+        default_factory=DataConfig,
+        alias="data",
     )
     """
     Configuration for intermediate data storage and retrieval.
@@ -71,4 +71,4 @@ def load_config(path: Union[str, Path]) -> MainConfig:
     with open(path) as f:
         data = toml.load(f)
         LOG.info(data)
-        return MainConfig.parse_obj(data)
+        return MainConfig.model_validate(data)

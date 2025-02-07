@@ -545,7 +545,7 @@ class UltrackWidget(QWidget):
         )
         if file_name:
             with open(file_name, "w") as f:
-                data = self._data_forms.get_config().dict(by_alias=True)
+                data = self._data_forms.get_config().model_dump(by_alias=True)
                 toml.dump(data, f)
             print(f"Data saved to {file_name}")
 
