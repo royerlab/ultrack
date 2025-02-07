@@ -3,6 +3,7 @@ import logging
 import math
 from typing import Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
 from sqlalchemy.orm import Session
@@ -229,18 +230,44 @@ class SQLTracking:
         start_time, end_time = self._window_limits(index, True)
 
         engine = sqla.create_engine(self._data_config.database_path)
-        with Session(engine) as session:
-            query = session.query(NodeDB.id, NodeDB.t, NodeDB.node_prob).where(
-                NodeDB.t.between(start_time, end_time)
-            )
-            df = pd.read_sql(query.statement, session.bind)
+        border_distance = self._tracking_config.image_border_size
+        shape = self._data_config.metadata["shape"]
+        data_dim = len(shape)
 
-        start_time = max(start_time, 0)
-        end_time = min(end_time, self._max_t)
+        if border_distance is None or np.all(border_distance == 0):
+            with Session(engine) as session:
+                query = session.query(
+                    NodeDB.id,
+                    NodeDB.t,
+                    NodeDB.node_prob,
+                ).where(NodeDB.t.between(start_time, end_time))
+                df = pd.read_sql(query.statement, session.bind)
+            is_border = False
+        else:
+            # Handle border distance
+            # Ensure border_distance and shape have the same dimension
+            if len(border_distance) < 3:
+                border_distance = (0,) * (3 - len(border_distance)) + border_distance
 
-        LOG.info(f"Batch {index}, nodes with t between {start_time} and {end_time}")
+            if data_dim == 3:
+                # TYX -> TZYX
+                shape = (shape[-3], 1, shape[-2], shape[-1])
+
+            with Session(engine) as session:
+                query = session.query(
+                    NodeDB.id,
+                    NodeDB.t,
+                    NodeDB.z,
+                    NodeDB.y,
+                    NodeDB.x,
+                    NodeDB.node_prob,
+                ).where(NodeDB.t.between(start_time, end_time))
+                df = pd.read_sql(query.statement, session.bind)
+
+            is_border = _check_inside_border(df, border_distance, shape)
 
         n_invalid_prob = (df["node_prob"] < 0).sum()
+
         if n_invalid_prob == df.shape[0]:
             nodes_prob = None
         elif n_invalid_prob == 0:
@@ -251,10 +278,16 @@ class SQLTracking:
                 f"Found {df.shape[0] - n_invalid_prob} / {df.shape[0]} valid probs."
             )
 
+        start_time = max(start_time, 0)
+        end_time = min(end_time, self._max_t)
+
+        LOG.info(f"Batch {index}, nodes with t between {start_time} and {end_time}")
+
         solver.add_nodes(
             df["id"],
             df["t"] == start_time,
             df["t"] == end_time,
+            is_border=is_border,
             nodes_prob=nodes_prob,
         )
 
@@ -392,3 +425,44 @@ class SQLTracking:
             statement = sqla.update(NodeDB).values(parent_id=NO_PARENT, selected=False)
             session.execute(statement)
             session.commit()
+
+
+def _check_inside_border(
+    df: pd.DataFrame,
+    border_distance: Tuple[int, int, int],
+    shape: Tuple[int, int, int, int],
+) -> np.ndarray:
+    """
+    Check if nodes are inside the border.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Nodes dataframe.
+    border_distance : Tuple[int, int, int]
+        Border distance in pixels (Z, Y, X).
+    shape : Tuple[int, int, int, int]
+        Image shape (T, Z, Y, X).
+
+    Returns
+    -------
+    np.ndarray
+        Boolean array indicating if nodes are inside the border.
+    """
+    inside_border = np.logical_and.reduce(
+        [
+            (border_distance[i] <= df[c]) & (df[c] <= shape[i] - border_distance[i])
+            for i, c in zip([-3, -2, -1], ["z", "y", "x"])
+        ]
+    )
+    is_border = ~inside_border
+    # Log the coordinates of nodes inside the border if logging level is debug
+    if LOG.isEnabledFor(logging.DEBUG):
+        for row in df[is_border].itertuples(index=False):
+            LOG.debug(
+                "Node with coords (z,y,x) at: (%s, %s, %s) is inside border.",
+                row.z,
+                row.y,
+                row.x,
+            )
+    return is_border
