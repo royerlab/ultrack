@@ -169,4 +169,4 @@ only-include = [
 allow-direct-references = true
 
 # TODO:
-# - add `test` and `docs` feature to `pixi` config
+# - add `docs` feature to `pixi` config
