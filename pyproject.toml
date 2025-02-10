@@ -146,7 +146,6 @@ filterwarnings = [
 
 [tool.pixi.pypi-dependencies]
 ultrack = { path = ".", editable = true }
-mip = ">=1.16.0rc0"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
