@@ -98,8 +98,8 @@ If you're still having trouble, with the installation we recommend reaching out 
 
 .. _pixi_install:
 
-Conda installation with pixi
-----------------------------
+Ultrack environment with pixi
+-----------------------------
 
 This is an alternative to the conda installation for environment management, using the `pixi <https://pixi-docs.com/>`_ package manager.
 
