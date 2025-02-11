@@ -40,6 +40,8 @@ conda activate ultrack
 pip install ultrack
 ```
 
+The installation should take a few minutes, depending on your internet speed and conda.
+
 NOTE: `gurobi` and `-c gurobi` are optional but recommended; they can be installed later, as shown below.
 
 Optionally, we provide multiple Docker images. For instructions, see the [docker folder](https://github.com/royerlab/ultrack/tree/main/docker).
