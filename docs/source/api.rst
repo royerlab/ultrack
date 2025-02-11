@@ -1,13 +1,18 @@
 API
----
+===
+
+First, we provide a summary of the main functionalities of the package.
+Then we provide detailed documentation of every public function of ultrack.
 
 Object Oriented API
+^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
     ultrack.Tracker
 
 Core functionalities
+^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
@@ -21,15 +26,24 @@ Core functionalities
 .. could not make it work for ultrack.utils.array
 
 Image processing utilities
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
 
-    ultrack.imgproc.segmentation.Cellpose
-    ultrack.imgproc.plantseg.PlantSeg
-    ultrack.imgproc.sam
-    ultrack.imgproc.flow
+    ultrack.imgproc.PlantSeg
+    ultrack.imgproc.detect_foreground
+    ultrack.imgproc.inverted_edt
+    ultrack.imgproc.normalize
+    ultrack.imgproc.robust_invert
+    ultrack.imgproc.tracks_properties
+    ultrack.imgproc.Cellpose
+    ultrack.imgproc.sam.MicroSAM
+    ultrack.imgproc.register_timelapse
+    ultrack.imgproc.flow.timelapse_flow
+    ultrack.utils.labels_to_contours
 
 Exporting
+^^^^^^^^^
 
 .. autosummary::
 
@@ -53,22 +67,22 @@ Array utilities
 .. automodule:: ultrack.utils.array
     :members:
 
+.. _api_imgproc:
+
 ==========================
 Image processing utilities
 ==========================
 
--------------------
-DL models interface
--------------------
-
-.. autoclass:: ultrack.imgproc.segmentation.Cellpose
+.. automodule:: ultrack.imgproc
     :members:
+    :imported-members:
 
-.. autoclass:: ultrack.imgproc.plantseg.PlantSeg
-    :members:
+.. autofunction:: ultrack.utils.labels_to_contours
 
 .. automodule:: ultrack.imgproc.sam
     :members:
+
+.. _api_flow:
 
 ----
 Flow
@@ -77,6 +91,8 @@ Flow
 .. automodule:: ultrack.imgproc.flow
     :members:
 
+.. _api_tracks:
+
 ================
 Tracks utilities
 ================
@@ -84,6 +100,8 @@ Tracks utilities
 .. automodule:: ultrack.tracks
     :imported-members:
     :members:
+
+.. _api_export:
 
 =========
 Exporting

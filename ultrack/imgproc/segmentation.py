@@ -4,10 +4,11 @@ from typing import Optional
 import edt
 import numpy as np
 from numpy.typing import ArrayLike
+from skimage.morphology import reconstruction
 
 from ultrack.imgproc.utils import _channel_iterator, _parse_voxel_size
 from ultrack.utils.constants import ULTRACK_DEBUG
-from ultrack.utils.cuda import import_module, to_cpu
+from ultrack.utils.cuda import import_module, is_cupy_array, to_cpu
 
 LOG = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def reconstruction_by_dilation(
     -------
         Image reconstructed by dilation.
     """
-    ndi = import_module("scipy", "ndimage")
+    ndi = import_module("scipy", "ndimage", arr=mask)
 
     seed = np.minimum(seed, mask, out=seed)  # just making sure
 
@@ -110,7 +111,15 @@ def detect_foreground(
         _image = xp.asarray(_image)
 
         seed = ndi.gaussian_filter(_image, sigma=sigmas)
-        background = reconstruction_by_dilation(seed, _image, 100)
+        if is_cupy_array(_image):
+            background = reconstruction_by_dilation(seed, _image, 100)
+        else:
+            if seed.ndim > 2:
+                LOG.warning(
+                    "Using CPU background reconstruction, this could take a while, consider using GPU for 3D images."
+                )
+            np.minimum(seed, _image, out=seed)  # required condition for reconstruction
+            background = reconstruction(seed, _image, method="dilation")
         del seed
 
         foreground = _image - background
@@ -195,6 +204,7 @@ def inverted_edt(
     ArrayLike
         Inverted and normalized EDT.
     """
+    mask = np.asarray(mask)
     if axis is None:
         dist = edt.edt(mask, anisotropy=voxel_size)
     else:
@@ -207,7 +217,7 @@ def inverted_edt(
         )
     dist = dist / dist.max()
     dist = 1.0 - dist
-    dist[~mask] = 1
+    dist[mask == 0] = 1
     return dist
 
 

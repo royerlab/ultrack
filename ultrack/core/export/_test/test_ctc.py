@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export.ctc import ctc_compress_forest, stitch_tracks_df
 from ultrack.tracks.graph import add_track_ids_to_tracks_df
+from ultrack.utils.constants import NO_PARENT
 
 
 @pytest.fixture

@@ -6,8 +6,8 @@ from typing import Optional, Union
 import pandas as pd
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export.tracks_layer import to_tracks_layer
+from ultrack.utils.constants import NO_PARENT
 
 
 def _set_filter_elem(elem: ET.Element) -> None:
@@ -83,7 +83,7 @@ def tracks_layer_to_trackmate(
             <ImageData filename="None" folder="None" width="0" height="0" depth="0" nslices="1" nframes="2" pixelwidth="1.0" pixelheight="1.0" voxeldepth="1.0" timeinterval="1.0"/>
         </Settings>
     </TrackMate>
-    """
+    """  # noqa: E501
     tracks_df["id"] = tracks_df["id"].astype(int)
     if not tracks_df["id"].is_unique:
         raise ValueError("The 'id' column must be unique.")

@@ -126,17 +126,13 @@ class Hierarchy:
     def _filter_contour_strength(
         tree: hg.Tree,
         alt: ArrayLike,
-        graph: hg.UndirectedGraph,
-        weights: ArrayLike,
+        frontier: ArrayLike,
         threshold: float,
         max_area: float,
     ) -> Tuple[hg.Tree, ArrayLike]:
 
         LOG.info("Filtering hierarchy by contour strength.")
-
-        hg.set_attribute(graph, "no_border_vertex_out_degree", None)
-        irrelevant_nodes = hg.attribute_contour_strength(tree, weights) < threshold
-        hg.set_attribute(graph, "no_border_vertex_out_degree", 6)
+        irrelevant_nodes = frontier < threshold
 
         if max_area is not None:
             # Avoid filtering nodes where merge leads to a node with maximum area above threshold
@@ -144,9 +140,9 @@ class Hierarchy:
             irrelevant_nodes[parent_area > max_area] = False
 
         tree, node_map = hg.simplify_tree(tree, irrelevant_nodes)
-        return tree, alt[node_map]
+        return tree, alt[node_map], frontier[node_map]
 
-    def watershed_hierarchy(self) -> Tuple[hg.Tree, ArrayLike]:
+    def watershed_hierarchy(self) -> Tuple[hg.Tree, ArrayLike, ArrayLike]:
         """
         Creates and filters the watershed hierarchy.
 
@@ -175,12 +171,15 @@ class Hierarchy:
         LOG.info("Filtering small nodes of hierarchy.")
         tree, alt = hg.filter_small_nodes_from_tree(tree, alt, self._min_area)
 
+        hg.set_attribute(graph, "no_border_vertex_out_degree", None)
+        frontier = hg.attribute_contour_strength(tree, weights)
+        hg.set_attribute(graph, "no_border_vertex_out_degree", 2 * mask.ndim)
+
         if self._min_frontier > 0.0:
-            tree, alt = self._filter_contour_strength(
+            tree, alt, frontier = self._filter_contour_strength(
                 tree,
                 alt,
-                graph,
-                weights,
+                frontier,
                 self._min_frontier,
                 self._max_area,
             )
@@ -190,8 +189,9 @@ class Hierarchy:
             tree, hg.attribute_area(tree) > self._max_area
         )
         alt = alt[node_map]
+        frontier = frontier[node_map]
 
-        return tree, alt
+        return tree, alt, frontier
 
     @property
     @_cached
@@ -211,19 +211,41 @@ class Hierarchy:
 
     @property
     @_cached
-    def tree(self) -> hg.Tree:
-        tree, alt = self.watershed_hierarchy()
+    def height(self) -> ArrayLike:
+        height = hg.attribute_height(self.tree, self.alt)
         if self.cache:
-            self._cache["tree"], self._cache["alt"] = tree, alt
+            self._cache["height"] = height
+        return height
+
+    @property
+    @_cached
+    def tree(self) -> hg.Tree:
+        tree, alt, frontier = self.watershed_hierarchy()
+        if self.cache:
+            self._cache["tree"] = tree
+            self._cache["alt"] = alt
+            self._cache["frontier"] = frontier
         return tree
 
     @property
     @_cached
     def alt(self) -> ArrayLike:
-        tree, alt = self.watershed_hierarchy()
+        tree, alt, frontier = self.watershed_hierarchy()
         if self.cache:
-            self._cache["tree"], self._cache["alt"] = tree, alt
+            self._cache["tree"] = tree
+            self._cache["alt"] = alt
+            self._cache["frontier"] = frontier
         return alt
+
+    @property
+    @_cached
+    def frontier(self) -> hg.Tree:
+        tree, alt, frontier = self.watershed_hierarchy()
+        if self.cache:
+            self._cache["tree"] = tree
+            self._cache["alt"] = alt
+            self._cache["frontier"] = frontier
+        return frontier
 
     @property
     @_cached
@@ -255,17 +277,18 @@ class Hierarchy:
         """
         tree = self.tree
         area = self.area
-        num_leaves = tree.num_leaves()
+        frontier = self.frontier
+        height = self.height
 
-        for i, node_idx in enumerate(
-            tree.leaves_to_root_iterator(include_leaves=False)
-        ):
-            if area[num_leaves + i] > self._max_area:
+        for node_idx in tree.leaves_to_root_iterator(include_leaves=False):
+            if area[node_idx] > self._max_area:
                 continue
             self._nodes[node_idx] = self.create_node(
                 node_idx,
                 self,
-                area=area[num_leaves + i].item(),
+                area=area[node_idx].item(),
+                frontier=frontier[node_idx].item(),
+                height=height[node_idx].item(),
             )
 
     def _fix_empty_nodes(self) -> None:
@@ -281,6 +304,8 @@ class Hierarchy:
             root_index,
             self,
             area=self.props.area,
+            frontier=-1.0,
+            height=-1.0,
         )
 
     @property

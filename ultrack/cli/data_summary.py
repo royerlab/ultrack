@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 
 from ultrack.cli.utils import config_option
 from ultrack.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.database import LinkDB, NodeDB
 from ultrack.core.export.utils import solution_dataframe_from_sql
 from ultrack.tracks.graph import add_track_ids_to_tracks_df
+from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.printing import pretty_print_df
 
 
@@ -57,7 +58,12 @@ def _link_stats_over_time(database_path: str, out_dir: Path) -> None:
     sns.set_theme(style="whitegrid")
 
     fig_path = out_dir / "link_weight_plot.png"
-    plot = sns.lineplot(data=groups.agg({"weight": [q1, q2, q3]}), legend=False)
+    df = pd.melt(
+        groups.agg({"weight": [q1, q2, q3]}),
+        var_name="quantile",
+        value_name="link_weight",
+    )
+    plot = sns.lineplot(data=df, legend=False)
     plot.set_ylabel("link weight")
     plot.get_figure().savefig(fig_path)
     plt.close()

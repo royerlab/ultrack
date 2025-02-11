@@ -1,7 +1,7 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 import mip
 import numpy as np
@@ -10,17 +10,23 @@ from numpy.typing import ArrayLike
 from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.solve.solver.base_solver import BaseSolver
+from ultrack.utils.array import assert_same_length
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
+
+_KEY_TO_SOLVER_NAME = {
+    "CBC": "Coin-OR Branch and Cut",
+    "GRB": "Gurobi",
+    "GUROBI": "Gurobi",
+}
 
 
 class MIPSolver(BaseSolver):
     def __init__(
         self,
         config: TrackingConfig,
-        solver: Literal["CBC", "GUROBI", ""] = "",
     ) -> None:
         """Generic mixed-integer programming (MIP) solver for cell-tracking ILP.
 
@@ -28,21 +34,21 @@ class MIPSolver(BaseSolver):
         ----------
         config : TrackingConfig
             Tracking configuration parameters.
-        solver : str
-            MIP solver name.
         """
-
         self._config = config
-        self._solver_name = solver
         self.reset()
 
     def reset(self) -> None:
         """Sets model to an empty state."""
         try:
-            self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=self._solver_name)
+            self._model = mip.Model(
+                sense=mip.MAXIMIZE, solver_name=self._config.solver_name
+            )
         except mip.exceptions.InterfacingError as e:
             LOG.warning(e)
             self._model = mip.Model(sense=mip.MAXIMIZE, solver_name=mip.CBC)
+
+        print(f"Using {_KEY_TO_SOLVER_NAME[self._model.solver_name]} solver")
 
         if self._model.solver_name == mip.CBC:
             LOG.warning(
@@ -75,7 +81,12 @@ class MIPSolver(BaseSolver):
         self._model.max_mip_gap = self._config.solution_gap
 
     def add_nodes(
-        self, indices: ArrayLike, is_first_t: ArrayLike, is_last_t: ArrayLike
+        self,
+        indices: ArrayLike,
+        is_first_t: ArrayLike,
+        is_last_t: ArrayLike,
+        is_border: ArrayLike = False,
+        nodes_prob: Optional[ArrayLike] = None,
     ) -> None:
         """Add nodes slack variables to gurobi model.
 
@@ -87,19 +98,31 @@ class MIPSolver(BaseSolver):
             Boolean array indicating if it belongs to first time point and it won't receive appearance penalization.
         is_last_t : ArrayLike
             Boolean array indicating if it belongs to last time point and it won't receive disappearance penalization.
+        is_border : ArrayLike
+            Boolean array indicating if it belongs to the border and it won't receive (dis)apperance penalization.
+            Default: False
+        nodes_prob: Optional[ArrayLike]
+            If provided assigns a node probability score to the objective function.
         """
         if self._nodes is not None:
             raise ValueError("Nodes have already been added.")
 
-        self._assert_same_length(
-            indices=indices, is_first_t=is_first_t, is_last_t=is_last_t
+        assert_same_length(
+            indices=indices,
+            is_first_t=is_first_t,
+            is_last_t=is_last_t,
+            nodes_prob=nodes_prob,
         )
 
-        LOG.info(f"# {np.sum(is_first_t)} nodes at starting `t`.")
-        LOG.info(f"# {np.sum(is_last_t)} nodes at last `t`.")
+        LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
+        LOG.info("# %s nodes at last `t`.", np.sum(is_last_t))
 
-        appear_weight = np.logical_not(is_first_t) * self._config.appear_weight
-        disappear_weight = np.logical_not(is_last_t) * self._config.disappear_weight
+        appear_weight = (
+            np.logical_not(is_first_t | is_border) * self._config.appear_weight
+        )
+        disappear_weight = (
+            np.logical_not(is_last_t | is_border) * self._config.disappear_weight
+        )
 
         indices = np.asarray(indices, dtype=int)
         self._backward_map = np.array(indices, copy=True)
@@ -119,10 +142,17 @@ class MIPSolver(BaseSolver):
             size, name="division", var_type=mip.BINARY
         )
 
+        if nodes_prob is None:
+            node_weights = 0
+        else:
+            nodes_prob = self._config.apply_link_function(np.asarray(nodes_prob))
+            node_weights = mip.xsum(nodes_prob * self._nodes)
+
         self._model.objective = (
             mip.xsum(self._divisions * self._config.division_weight)
             + mip.xsum(self._appearances * appear_weight)
             + mip.xsum(self._disappearances * disappear_weight)
+            + node_weights
         )
 
     def add_edges(
@@ -142,11 +172,11 @@ class MIPSolver(BaseSolver):
         if self._edges is not None:
             raise ValueError("Edges have already been added.")
 
-        self._assert_same_length(sources=sources, targets=targets, weights=weights)
+        assert_same_length(sources=sources, targets=targets, weights=weights)
 
         weights = self._config.apply_link_function(weights.astype(float))
 
-        LOG.info(f"transformed edge weights {weights}")
+        LOG.info("transformed edge weights %s", weights)
 
         sources = self._forward_map[np.asarray(sources, dtype=int)]
         targets = self._forward_map[np.asarray(targets, dtype=int)]
@@ -344,7 +374,7 @@ class MIPSolver(BaseSolver):
             [i for i, node in enumerate(self._nodes) if node.x > 0.5], dtype=int
         )
         nodes = self._backward_map[nodes]
-        LOG.info(f"Solution nodes\n{nodes}")
+        LOG.info("Solution nodes\n%s", nodes)
 
         if len(nodes) == 0:
             raise ValueError("Something went wrong, nodes solution is empty.")
@@ -360,7 +390,7 @@ class MIPSolver(BaseSolver):
         )
         edges = self._backward_map[self._edges_df.loc[edges_solution].values]
 
-        LOG.info(f"Solution edges\n{edges}")
+        LOG.info("Solution edges\n%s", edges)
 
         if len(edges) == 0:
             raise ValueError("Something went wrong, edges solution is empty")

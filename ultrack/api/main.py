@@ -5,8 +5,8 @@ from typing import Union
 
 import uvicorn
 
+from ultrack import MainConfig
 from ultrack.api import app
-from ultrack.config import DataConfig
 
 
 def _in_notebook():
@@ -24,7 +24,7 @@ def _in_notebook():
 
 def start_server(
     api_results_path: Union[Path, str, None] = None,
-    ultrack_data_config: Union[DataConfig, None] = None,
+    ultrack_data_config: Union[MainConfig, None] = None,
     host: str = "0.0.0.0",
     port: int = 8000,
 ):

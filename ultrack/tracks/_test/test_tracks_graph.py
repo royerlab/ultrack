@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks import (
     filter_short_sibling_tracks,
     get_paths_to_roots,
     get_subgraph,
     split_trees,
 )
+from ultrack.utils.constants import NO_PARENT
 
 
 @pytest.fixture

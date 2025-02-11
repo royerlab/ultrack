@@ -174,6 +174,7 @@ class UltrackWorkflow:
         self.inputs_used = inputs
         self.config = config
         self.additional_options = additional_options
+        self.last_reached_stage = WorkflowStage.PREPROCESSING
         try:
             if stage == WorkflowStage.PREPROCESSING:
                 if workflow_choice != WorkflowChoice.MANUAL:
@@ -256,8 +257,11 @@ class UltrackWorkflow:
                     scale=detection.scale,
                 )
 
+                is_3d = segments.ndim == 4
+                dims = ["z", "y", "x"] if is_3d else ["y", "x"]
+
                 yield Tracks(
-                    data=tracks_df[["track_id", "t", "y", "x"]].values,
+                    data=tracks_df[["track_id", "t", *dims]].values,
                     graph=graph,
                     name="Tracks",
                     scale=detection.scale[1:],

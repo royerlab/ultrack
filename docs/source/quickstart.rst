@@ -1,80 +1,75 @@
 Quickstart
 ==========
 
-Welcome to the quickstart guide for `ultrack`.
-
-This guide will walk you through the initial steps to get you started with the package.
+This quickstart guide is recommended for users who are already familiar with Python and image analysis.
+Otherwise, we recommend you read the :doc:`install` and :doc:`getting_started` sections.
 
 Installation
 ------------
 
-To install `ultrack`, you can use pip:
+If already have a working Python environment, you can install ``ultrack`` using pip.
+We recommend you use a conda environment to avoid any conflicts with your existing packages.
+If you're using OSX or for additional information on how to create a conda environment and install packages, see :doc:`install`.
 
 .. code-block:: bash
 
    pip install ultrack
 
-Basic Usage
+Basic usage
 -----------
+
+The following example demonstrates how to use ``ultrack`` to track cells using its canonical input, a binary image of the foreground and a cells' contours image.
 
 .. code-block:: python
 
    import napari
-   from ultrack import MainConfig, track, to_tracks_layer
+   from ultrack import MainConfig, Tracker
 
-   # Load your data
-   foreground = ...
-   boundaries = ...
+   # import to avoid multi-processing issues
+   if __name__ == "__main__":
 
-   # Create a config
-   config = MainConfig()
+      # Load your data
+      foreground = ...
+      contours = ...
 
-   # Run the tracking
-   track(
-      foreground=foreground,
-      edges=boundaries,
-      config=config,
-   )
+      # Create a config
+      config = MainConfig()
 
-   # Visualize the results
-   tracks, graph = to_tracks_layer(config)
-   napari.view_tracks(
-      tracks[["track_id", "t", "y", "x"]],
-      graph=graph,
-   )
+      # Run the tracking
+      tracker = Tracker(config=config)
+      tracker.track(foreground=foreground, contours=contours)
 
-Advanced Features
------------------
+      # Visualize the results
+      tracks, graph = tracker.to_tracks_layer()
+      napari.view_tracks(tracks[["track_id", "t", "y", "x"]], graph=graph)
+      napari.run()
 
-See `examples <https://github.com/royerlab/ultrack/tree/main/examples>`_ for advanced features.
 
-Contribute
-----------
+If you already have segmentation labels, you can provide them directly to the tracker.
 
-`ultrack` is an open-source project. We welcome and appreciate any contributions. For more details, check out our GitHub repository:
+.. code-block:: python
 
-- `ultrack on GitHub <https://github.com/royerlab/ultrack>`_
+   import napari
+   from ultrack import MainConfig, Tracker
 
-Support and Feedback
---------------------
+   # import to avoid multi-processing issues
+   if __name__ == "__main__":
 
-For support, issues, or feedback, please `open an issue <https://github.com/royerlab/ultrack/issues/new>`_ in the GitHub repository.
+      # Load your data
+      labels = ...
 
-Citing
--------
+      # Create a config
+      config = MainConfig()
 
-If you use `ultrack` in your research, please cite the following paper:
+      # this removes irrelevant segments from the image
+      # see the configuration section for more details
+      config.segmentation_config.min_frontier = 0.5
 
-.. code-block:: bibtex
+      # Run the tracking
+      tracker = Tracker(config=config)
+      tracker.track(labels=labels)
 
-   @article{bragantini2023ultrack,
-      title={Large-Scale Multi-Hypotheses Cell Tracking Using Ultrametric Contours Maps},
-      author={Bragantini, Jord{\~a}o and Lange, Merlin and Royer, Lo{\"\i}c},
-      journal={arXiv preprint arXiv:2308.04526},
-      year={2023}
-   }
-
-License
--------
-
-BSD 3-Clause License
+      # Visualize the results
+      tracks, graph = tracker.to_tracks_layer()
+      napari.view_tracks(tracks[["track_id", "t", "y", "x"]], graph=graph)
+      napari.run()

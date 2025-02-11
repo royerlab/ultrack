@@ -7,8 +7,8 @@ import pytest
 from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 
-from ultrack.core.database import NO_PARENT
 from ultrack.reader.napari_reader import napari_get_reader
+from ultrack.utils.constants import NO_PARENT
 
 
 @pytest.fixture

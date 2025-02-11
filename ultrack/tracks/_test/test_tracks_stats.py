@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks.stats import (
     estimate_drift,
     tracks_df_movement,
     tracks_length,
     tracks_profile_matrix,
 )
+from ultrack.utils.constants import NO_PARENT
 
 
 def spatial_df(group_drift: Sequence[int], length_per_group: int = 10) -> pd.DataFrame:
@@ -71,6 +71,32 @@ def test_tracks_df_movement():
     expected = pd.DataFrame(
         {
             "z": [0.0, 1.0, 0.0, 2.0],
+            "y": [0.0, 1.0, 0.0, 1.0],
+            "x": [0.0, 1.0, 0.0, 0.0],
+        }
+    )
+
+    # Assert that the result matches the expected dataframe
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_tracks_df_movement_2d():
+    # Sample test data
+    df = pd.DataFrame(
+        {
+            "track_id": [1, 1, 2, 2],
+            "t": [1, 2, 1, 2],
+            "y": [1, 2, 1, 2],
+            "x": [2, 3, 2, 2],
+        }
+    )
+
+    # Call the function
+    result = tracks_df_movement(df)
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
             "y": [0.0, 1.0, 0.0, 1.0],
             "x": [0.0, 1.0, 0.0, 0.0],
         }

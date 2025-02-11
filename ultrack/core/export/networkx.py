@@ -4,9 +4,9 @@ import networkx as nx
 import pandas as pd
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export.tracks_layer import to_tracks_layer
 from ultrack.tracks.graph import _create_tracks_forest
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ def tracks_layer_to_networkx(
     else:
         tracks_df = tracks_df.set_index("id")
 
-    for index, row in tracks_df.iterrows():
-        graph.add_node(index, **row.to_dict())
+    for index, row in tracks_df.to_dict(orient="index").items():
+        graph.add_node(index, **row)
 
     if "parent_id" not in tracks_df.columns:
         LOG.warning(
@@ -91,5 +91,5 @@ def to_networkx(
     nx.DiGraph
         Networkx graph.
     """
-    df = to_tracks_layer(config)
+    df, _ = to_tracks_layer(config)
     return tracks_layer_to_networkx(df, children_to_parent)

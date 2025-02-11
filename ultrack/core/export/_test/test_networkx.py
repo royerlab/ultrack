@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-from ultrack.core.database import NO_PARENT
 from ultrack.core.export import tracks_layer_to_networkx
+from ultrack.utils.constants import NO_PARENT
 
 
 @pytest.mark.parametrize("children_to_parent", [True, False])

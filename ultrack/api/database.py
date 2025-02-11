@@ -6,8 +6,8 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy as sqla
-from pydantic import BaseModel, Json, validator
-from sqlalchemy import Column, Enum, Integer, JSON, String, Text
+from pydantic.v1 import BaseModel, Json, validator
+from sqlalchemy import JSON, Column, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from ultrack import MainConfig
@@ -17,6 +17,13 @@ from ultrack.core.database import clear_all_data
 LOG = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+
+def _clean_db_on_exit():
+    try:
+        Session._temp_dir.cleanup()
+    except:
+        pass
 
 
 class Session:
@@ -37,7 +44,7 @@ class Session:
         if cls._instance is None:
             cls._temp_dir = tempfile.TemporaryDirectory()
             settings.ultrack_data_config.working_dir = cls._temp_dir.name
-            atexit.register(cls._temp_dir.cleanup)
+            atexit.register(_clean_db_on_exit)
             engine = sqla.create_engine(
                 settings.ultrack_data_config.database_path, hide_parameters=False
             )
@@ -51,25 +58,25 @@ class ExperimentStatus(str, enum.Enum):
 
     Attributes
     ----------
-    NOT_PERSISTED : str
+    NOT_PERSISTED: str = "not_persisted"
         The experiment is not persisted in the database.
-    QUEUED : str
+    QUEUED: str = "queued"
         The experiment is queued for execution.
-    INITIALIZING : str
+    INITIALIZING: str = "initializing"
         The experiment is now initializing and preprocessing data.
-    DATA_LOADED : str
+    DATA_LOADED: str = "data_loaded"
         The data is loaded and ready for tracking.
-    SEGMENTING : str
+    SEGMENTING: str = "segmenting"
         Ultrack is segmenting the data.
-    LINKING : str
+    LINKING: str = "linking"
         Ultrack is linking the segments.
-    SOLVING : str
+    SOLVING: str = "solving"
         Ultrack is optimizing the tracks.
-    EXPORTING : str
+    EXPORTING: str = "exporting"
         Ultrack is exporting the results.
-    SUCCESS : str
+    SUCCESS: str = "success"
         The experiment was successfully executed until the EXPORTING phase.
-    FAILED : str
+    FAILED: str = "failed"
         The experiment failed at some point.
     """
 

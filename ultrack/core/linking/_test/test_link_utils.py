@@ -3,8 +3,9 @@ import sqlalchemy as sqla
 from sqlalchemy.orm import Session
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.database import LinkDB, NodeDB
 from ultrack.core.linking.utils import clear_linking_data
+from ultrack.utils.constants import NO_PARENT
 
 
 @pytest.mark.parametrize(

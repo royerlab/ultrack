@@ -56,7 +56,7 @@ def test_multiprocess_link(
     source_pos = nodes.loc[edges["source_id"], ["z", "y", "x"]].values
     target_pos = nodes.loc[edges["target_id"], ["z", "y", "x"]].values
 
-    distances = np.linalg.norm(target_pos - source_pos)
+    distances = np.linalg.norm(target_pos - source_pos, axis=1)
     assert np.all(distances < config.linking_config.max_distance)
 
     # assert every node is present in edges --- not necessary in the real case, but here we know it's true.

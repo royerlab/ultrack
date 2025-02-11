@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import toml
-from pydantic import BaseModel, Extra, root_validator, validator
+from pydantic.v1 import BaseModel, Extra, root_validator, validator
 
 LOG = logging.getLogger(__name__)
 
@@ -13,13 +13,34 @@ LOG = logging.getLogger(__name__)
 class DatabaseChoices(Enum):
     sqlite = "sqlite"
     postgresql = "postgresql"
+    memory = "memory"
 
 
 class DataConfig(BaseModel):
-    working_dir: Path = Path(".")
-    database: DatabaseChoices = "sqlite"
-    address: Optional[str] = None
+    """
+    Configuration for intermediate data storage and retrieval.
+    """
+
     n_workers: int = 1
+    """Number of workers for parallel processing"""
+
+    working_dir: Path = Path(".")
+    """Working directory for auxiliary files (e.g. sqlite database, metadata)"""
+
+    database_file_name: str = "data.db"
+    """Database name, used for sqlite databases, by default: `data.db`"""
+
+    database: DatabaseChoices = "sqlite"
+    """``SPECIAL``: Database type ``sqlite`` and ``postgresql`` supported"""
+
+    address: Optional[str] = None
+    """``SPECIAL``: Postgresql database path, for example, ``postgres@localhost:12345/example``"""
+
+    in_memory_db_id: int = 0
+    """
+    ``SPECIAL``: Memory database id used to identify the database in memory,
+    must be altered manually if multiple instances are used
+    """
 
     class Config:
         validate_assignment = True
@@ -60,7 +81,10 @@ class DataConfig(BaseModel):
     def database_path(self) -> str:
         """Returns database path given working directory and database type."""
         if self.database == DatabaseChoices.sqlite.value:
-            return f"sqlite:///{self.working_dir.absolute()}/data.db"
+            return f"sqlite:///{self.working_dir.absolute()}/{self.database_file_name}"
+
+        elif self.database == DatabaseChoices.memory.value:
+            return f"sqlite:///file:{self.in_memory_db_id}?mode=memory&cache=shared&uri=true"
 
         elif self.database == DatabaseChoices.postgresql.value:
             return f"postgresql://{self.address}"
@@ -86,6 +110,7 @@ class DataConfig(BaseModel):
 
     @property
     def metadata(self) -> Dict[str, Any]:
+        """Returns metadata as dictionary."""
         if not self.metadata_path.exists():
             return {}
 

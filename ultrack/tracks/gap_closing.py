@@ -7,7 +7,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
 from zarr.storage import Store
 
-from ultrack.core.database import NO_PARENT
+from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.segmentation import SegmentationPainter, copy_segments
 
 

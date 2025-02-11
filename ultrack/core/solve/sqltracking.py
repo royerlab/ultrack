@@ -3,9 +3,9 @@ import logging
 import math
 from typing import Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
-from mip.exceptions import InterfacingError
 from sqlalchemy.orm import Session
 
 from ultrack.config.config import MainConfig
@@ -24,11 +24,6 @@ logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
-
-_KEY_TO_SOLVER_NAME = {
-    "CBC": "Coin-OR Branch and Cut",
-    "GRB": "Gurobi",
-}
 
 
 class SQLTracking:
@@ -74,13 +69,8 @@ class SQLTracking:
                 f"Invalid index {index}, expected between [0, {self.num_batches})."
             )
 
-        try:
-            solver = MIPSolver(self._tracking_config)
-        except InterfacingError as e:
-            LOG.warning(e)
-            solver = MIPSolver(self._tracking_config, "CBC")
+        solver = MIPSolver(self._tracking_config)
 
-        print(f"Using {_KEY_TO_SOLVER_NAME[solver._model.solver_name]} solver")
         print(f"Solving ILP batch {index}")
         print("Constructing ILP ...")
 
@@ -240,11 +230,53 @@ class SQLTracking:
         start_time, end_time = self._window_limits(index, True)
 
         engine = sqla.create_engine(self._data_config.database_path)
-        with Session(engine) as session:
-            query = session.query(NodeDB.id, NodeDB.t).where(
-                NodeDB.t.between(start_time, end_time)
+        border_distance = self._tracking_config.image_border_size
+        shape = self._data_config.metadata["shape"]
+        data_dim = len(shape)
+
+        if border_distance is None or np.all(border_distance == 0):
+            with Session(engine) as session:
+                query = session.query(
+                    NodeDB.id,
+                    NodeDB.t,
+                    NodeDB.node_prob,
+                ).where(NodeDB.t.between(start_time, end_time))
+                df = pd.read_sql(query.statement, session.bind)
+            is_border = False
+        else:
+            # Handle border distance
+            # Ensure border_distance and shape have the same dimension
+            if len(border_distance) < 3:
+                border_distance = (0,) * (3 - len(border_distance)) + border_distance
+
+            if data_dim == 3:
+                # TYX -> TZYX
+                shape = (shape[-3], 1, shape[-2], shape[-1])
+
+            with Session(engine) as session:
+                query = session.query(
+                    NodeDB.id,
+                    NodeDB.t,
+                    NodeDB.z,
+                    NodeDB.y,
+                    NodeDB.x,
+                    NodeDB.node_prob,
+                ).where(NodeDB.t.between(start_time, end_time))
+                df = pd.read_sql(query.statement, session.bind)
+
+            is_border = _check_inside_border(df, border_distance, shape)
+
+        n_invalid_prob = (df["node_prob"] < 0).sum()
+
+        if n_invalid_prob == df.shape[0]:
+            nodes_prob = None
+        elif n_invalid_prob == 0:
+            nodes_prob = df["node_prob"]
+        else:
+            raise ValueError(
+                "None or all nodes' probabilities must be provided found "
+                f"Found {df.shape[0] - n_invalid_prob} / {df.shape[0]} valid probs."
             )
-            df = pd.read_sql(query.statement, session.bind)
 
         start_time = max(start_time, 0)
         end_time = min(end_time, self._max_t)
@@ -255,6 +287,8 @@ class SQLTracking:
             df["id"],
             df["t"] == start_time,
             df["t"] == end_time,
+            is_border=is_border,
+            nodes_prob=nodes_prob,
         )
 
     def _add_edges(self, solver: BaseSolver, index: int) -> None:
@@ -354,7 +388,7 @@ class SQLTracking:
                 )
                 .values(parent_id=sqla.bindparam("parent_id"), selected=True)
             )
-            session.execute(
+            session.connection().execute(
                 general_stmt,
                 solution[["node_id", "parent_id"]].to_dict("records"),
                 execution_options={"synchronize_session": False},
@@ -371,7 +405,7 @@ class SQLTracking:
                     )
                     .values(selected=True)
                 )
-                session.execute(
+                session.connection().execute(
                     start_stmt,
                     solution[["node_id"]].to_dict("records"),
                     execution_options={"syncronize_session": False},
@@ -391,3 +425,44 @@ class SQLTracking:
             statement = sqla.update(NodeDB).values(parent_id=NO_PARENT, selected=False)
             session.execute(statement)
             session.commit()
+
+
+def _check_inside_border(
+    df: pd.DataFrame,
+    border_distance: Tuple[int, int, int],
+    shape: Tuple[int, int, int, int],
+) -> np.ndarray:
+    """
+    Check if nodes are inside the border.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Nodes dataframe.
+    border_distance : Tuple[int, int, int]
+        Border distance in pixels (Z, Y, X).
+    shape : Tuple[int, int, int, int]
+        Image shape (T, Z, Y, X).
+
+    Returns
+    -------
+    np.ndarray
+        Boolean array indicating if nodes are inside the border.
+    """
+    inside_border = np.logical_and.reduce(
+        [
+            (border_distance[i] <= df[c]) & (df[c] <= shape[i] - border_distance[i])
+            for i, c in zip([-3, -2, -1], ["z", "y", "x"])
+        ]
+    )
+    is_border = ~inside_border
+    # Log the coordinates of nodes inside the border if logging level is debug
+    if LOG.isEnabledFor(logging.DEBUG):
+        for row in df[is_border].itertuples(index=False):
+            LOG.debug(
+                "Node with coords (z,y,x) at: (%s, %s, %s) is inside border.",
+                row.z,
+                row.y,
+                row.x,
+            )
+    return is_border

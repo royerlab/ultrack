@@ -7,13 +7,13 @@ from numpy.typing import ArrayLike
 from scipy.spatial.distance import pdist
 from tqdm import tqdm
 
-from ultrack.core.database import NO_PARENT
 from ultrack.tracks.graph import (
     inv_tracks_df_forest,
     left_first_search,
     split_trees,
     tracks_df_forest,
 )
+from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
 

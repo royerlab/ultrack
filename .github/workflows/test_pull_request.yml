@@ -3,40 +3,38 @@ name: test PR
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
     branches:
       - main
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   test:
     name: ${{ matrix.platform }} ${{ matrix.python }} ${{ matrix.toxenv || matrix.backend }}
+    if: github.event.pull_request.draft == false
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python: ["3.9", "3.10"]
+        python: ["3.10", "3.12"]
         backend: [pyqt5]
         include:
-          - python: 3.9
-            platform: windows-latest
-            backend: pyqt5
-          - python: 3.9
-            platform: macos-latest
-            backend: pyside2
-          - python: 3.9
-            platform: ubuntu-latest
-            backend: pyqt6
-          - python: 3.9
-            platform: ubuntu-latest
-            backend: pyside2
-          - python: 3.9  # only this run execute coverage
+          # - python: 3.11
+          #   platform: windows-latest
+          #   backend: pyqt5
+          # - python: 3.11
+          #   platform: macos-13  # latest not-arm version
+          #   backend: pyside2
+          - python: 3.11 # only this run execute coverage
             platform: ubuntu-latest
             backend: pyside6
             coverage: true
 
     steps:
       - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
+        uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
@@ -51,9 +49,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
 
       - uses: tlambert03/setup-qt-libs@v1
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       # strategy borrowed from vispy for installing opengl libs on windows
       - name: Install Windows OpenGL
@@ -67,9 +70,8 @@ jobs:
       # of python dependendencies into a virtualenv.  see tox.ini for more
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install setuptools tox tox-gh-actions
-          pip install ".[api]"
+          uv pip install setuptools tox tox-gh-actions
+          uv pip install ".[test]"
 
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
@@ -88,4 +90,4 @@ jobs:
 
       - name: Coverage
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5

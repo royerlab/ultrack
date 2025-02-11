@@ -9,6 +9,7 @@ import toml
 from magicgui.widgets import create_widget
 from napari.layers import Image, Layer
 from napari.qt.threading import thread_worker
+from pydantic import ValidationError
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QCursor, QFont
 from qtpy.QtWidgets import (
@@ -18,6 +19,7 @@ from qtpy.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -27,14 +29,18 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ultrack import MainConfig
+from ultrack import MainConfig, export_tracks_by_extension
 from ultrack.widgets.ultrackwidget.components.button_workflow_config import (
     ButtonWorkflowConfig,
 )
 from ultrack.widgets.ultrackwidget.components.emitting_stream import EmittingStream
 from ultrack.widgets.ultrackwidget.data_forms import DataForms
 from ultrack.widgets.ultrackwidget.utils import UltrackInput
-from ultrack.widgets.ultrackwidget.workflows import UltrackWorkflow, WorkflowChoice
+from ultrack.widgets.ultrackwidget.workflows import (
+    UltrackWorkflow,
+    WorkflowChoice,
+    WorkflowStage,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -81,6 +87,9 @@ class UltrackWidget(QWidget):
         self._cb_images = {}
         self._data_forms = DataForms(self._on_change_config)
 
+        self._config_valid = True
+        self._all_images_are_valid = False
+
         self._init_ui()
         self._setup_signals()
 
@@ -89,6 +98,7 @@ class UltrackWidget(QWidget):
         self._cb_workflow.currentIndexChanged.emit(0)
 
         self._on_image_changed(-1)
+        self._on_layers_change(None)
 
         self._current_worker = None
 
@@ -103,11 +113,76 @@ class UltrackWidget(QWidget):
         self._add_link_buttons(layout)
         self._add_spacer(layout, 10)
         self._add_configuration_group(layout)
+        self._add_validation_messages_group(layout)
         self._add_run_button(layout)
         self._add_output_area(layout)
         self._add_cancel_button(layout)
+        self._add_bt_export_tracks(layout)
 
         layout.addStretch()
+
+    def _add_validation_messages_group(self, layout: QVBoxLayout) -> None:
+        """
+        Add the validation messages group to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the validation messages group will be added.
+        """
+        self._validation = QGroupBox("Validation messages")
+        self._validation.setStyleSheet("QGroupBox { font-weight: bold; color: red;}")
+        self._validation_messages = QLabel()
+        self._validation_messages.setWordWrap(True)
+        self._validation.hide()
+        self._validation_messages.setStyleSheet("font-weight: normal; color: red")
+        self._validation.setLayout(QVBoxLayout())
+        self._validation.layout().addWidget(self._validation_messages)
+        layout.addWidget(self._validation)
+
+    def _add_bt_export_tracks(self, layout: QVBoxLayout) -> None:
+        """
+        Add the export tracks button to the layout.
+
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            The layout to which the export tracks button will be added.
+        """
+        self._add_spacer(layout, 10)
+        self._bt_export = QPushButton("Export tracks")
+        self._bt_export.setEnabled(False)
+        layout.addWidget(self._bt_export)
+
+    def export_tracks(self):
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.AnyFile)
+        file_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        file_dialog.setNameFilter(
+            "Napari Tracks (*.csv);;"
+            "Trackmate (*.xml);;"
+            "Zarr segments (*.zarr);;"
+            "NetworkX (*.dot);;"
+            "NetworkX (*.json)"
+        )
+
+        if file_dialog.exec_():
+            file_name = file_dialog.selectedFiles()[0]
+            ext = file_dialog.selectedNameFilter().split("*.")[-1][:-1]
+
+            # add the extension if not present
+            if not file_name.endswith(ext):
+                file_name += f".{ext}"
+
+            config = self._data_forms.get_config()
+            export_tracks_by_extension(config, file_name, overwrite=True)
+
+            QMessageBox.information(
+                self,
+                "Export tracks",
+                f"Tracks exported to {file_name}",
+                QMessageBox.Ok,
+            )
 
     def _add_title(self, layout: QVBoxLayout) -> None:
         """
@@ -346,6 +421,7 @@ class UltrackWidget(QWidget):
         self._bt_toggle_settings.clicked.connect(self._on_toggle_settings)
         self._bt_save_settings.clicked.connect(self._on_save_settings)
         self._bt_load_settings.clicked.connect(self._on_load_settings)
+        self._bt_export.clicked.connect(self.export_tracks)
         self._bt_run.clicked.connect(self._on_run)
         self._bt_cancel.clicked.connect(self._cancel)
         self._cb_workflow.currentIndexChanged.connect(self._on_workflow_changed)
@@ -358,13 +434,26 @@ class UltrackWidget(QWidget):
     def _on_change_config(self):
         """Handle the change of the configuration."""
         if hasattr(self, "_bt_run"):
-            new_config = self._data_forms.get_config()
-            additional_config = self._data_forms.get_additional_options()
-            inputs = {k: w.value for k, w in self._cb_images.items()}
-            workflow = self.workflow.get_stage(
-                new_config, additional_options=additional_config, inputs=inputs
-            )
-            self._bt_run_config.set_workflow_stage(workflow)
+            try:
+                new_config = self._data_forms.get_config()
+                additional_config = self._data_forms.get_additional_options()
+                inputs = {k: w.value for k, w in self._cb_images.items()}
+                workflow = self.workflow.get_stage(
+                    new_config, additional_options=additional_config, inputs=inputs
+                )
+                self._bt_run_config.set_workflow_stage(workflow)
+                self._bt_run.setEnabled(self._all_images_are_valid)
+                self._validation.hide()
+                self._config_valid = True
+            except ValidationError as e:
+                msg = "<ul>"
+                for err in e.errors():
+                    msg += f"<li>{err['msg']}.</li>"
+                msg += "</ul>"
+                self._validation_messages.setText(msg)
+                self._validation.show()
+                self._bt_run.setEnabled(False)
+                self._config_valid = False
 
     def _on_run(self):
         """Handle the run button click event.
@@ -396,7 +485,9 @@ class UltrackWidget(QWidget):
 
     def _on_run_started(self):
         """Handle the start of the run worker."""
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         self._bt_run.setEnabled(False)
+        self._bt_export.setEnabled(False)
         self._bt_run.setText("Running...")
         self._bt_run.repaint()
         self.ctx_stdout_switcher.__enter__()
@@ -410,6 +501,9 @@ class UltrackWidget(QWidget):
         """Handle the finish of the run worker."""
         self._bt_run.setEnabled(True)
         self._bt_run.setText("Run")
+        self._bt_export.setEnabled(
+            self.workflow.last_reached_stage == WorkflowStage.DONE
+        )
         self._bt_run.repaint()
         self.ctx_stdout_switcher.__exit__(None, None, None)
         self.ctx_stderr_switcher.__exit__(None, None, None)
@@ -417,6 +511,7 @@ class UltrackWidget(QWidget):
         self._bt_cancel.hide()
         self.main_group.setEnabled(True)
         self._current_worker = None
+        QApplication.restoreOverrideCursor()
 
     @thread_worker
     def _make_run_worker(
@@ -434,11 +529,9 @@ class UltrackWidget(QWidget):
         Worker
             The worker to run the selected workflow.
         """
-        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         yield from self.workflow.run(
             config, workflow_choice, inputs, additional_options
         )
-        QApplication.restoreOverrideCursor()
 
     def _on_save_settings(self) -> None:
         """Handle the save settings button click event."""
@@ -447,7 +540,7 @@ class UltrackWidget(QWidget):
             None,
             "Save TOML",
             "ultrack_settings.toml",
-            "JSON Files (*.toml);;All Files (*)",
+            "TOML Files (*.toml);;All Files (*)",
             options=options,
         )
         if file_name:
@@ -501,16 +594,16 @@ class UltrackWidget(QWidget):
         _ : int
             Ignored.
         """
-        all_images_are_valid = True
+        self._all_images_are_valid = True
 
         for ultrack_input, widget in self._cb_images.items():
             if widget.enabled:
                 if widget.value is None:
-                    all_images_are_valid = False
+                    self._all_images_are_valid = False
                 if ultrack_input == UltrackInput.IMAGE:
                     self._data_forms.notify_image_update(widget.value)
 
-        self._bt_run.setEnabled(all_images_are_valid)
+        self._bt_run.setEnabled(self._all_images_are_valid and self._config_valid)
 
     def _on_workflow_changed(self, index: int) -> None:
         """
