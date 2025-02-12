@@ -119,7 +119,7 @@ def fit_nodes_prob(
     classifier : ProbabilisticClassifier
         Probabilistic classifier object.
         Classifier is fit in-place.
-        If not provided, it will use `xgboost.XGBClassifier`.
+        If not provided, it will use `catboost.CatBoostClassifier`.
     remove_no_overlap : bool, optional
         Whether to remove **NO_OVERLAP** nodes (-1) from the ground-truth.
         Classification will compare **matched** (>0) vs **unmatched** nodes (0).
