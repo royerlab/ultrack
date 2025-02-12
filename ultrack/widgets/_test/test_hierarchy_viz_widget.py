@@ -82,14 +82,5 @@ def test_hierarchy_viz_widget(
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert tuple(config.data_config.metadata["shape"]) == viewer2.layers['hierarchy'].data.shape     #metadata["shape"] is a list, data.shape in layer is a tuple
 
-    ####################################################################################
-    #TO DO: 
-    #   - test other datatypes than labels (contours, detection, image, etc.), but shouldn't make a difference
-    #   - how to test that the 'hierarchy' layer actually shows data? (apart from the layer having a .data property)
-    ####################################################################################
-
-
     if request.config.getoption("--show-napari-viewer"):
         napari.run()
-
- 

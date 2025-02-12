@@ -3,6 +3,7 @@ from typing import Tuple, Union
 from ultrack.core.database import NodeDB
 from ultrack.config import MainConfig
 import sqlalchemy as sqla
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 class UltrackArray:
@@ -140,25 +141,6 @@ class UltrackArray:
                 num_pix_list.append(int(np.array(num_pix)))
         return num_pix_list
 
-    def get_tp_num_pixels_minmax(
-        self,
-        time: int,
-    ) -> np.ndarray:
-        """Find minimum and maximum segment volume for single time point
-
-        Parameters
-        ----------
-        time : int
-
-        Returns
-        -------
-        num_pix_list : list
-            array with two elements: [min_volume, max_volume]
-        """
-        num_pix_list = self.get_tp_num_pixels(time,time)
-        return (min(num_pix_list), max(num_pix_list))
-
-
     def find_min_max_volume_entire_dataset(self):
         """Find minimum and maximum segment volume for ALL time point
 
@@ -167,13 +149,15 @@ class UltrackArray:
         np.array : np.array
             array with two elements: [min_volume, max_volume]
         """
-        min_vol = np.inf
-        max_vol = 0
-        for t in range(self.t_max): #range(self.shape[0]):
-            minmax = self.get_tp_num_pixels_minmax(t)
-            if minmax[0] < min_vol:
-                min_vol = minmax[0]
-            if minmax[1] > max_vol:
-                max_vol = minmax[1]
+        engine = sqla.create_engine(self.database_path)
+        with Session(engine) as session:
+            max_vol = (
+                session.query(func.max(NodeDB.area))
+                .where(NodeDB.t.between(0, self.t_max))
+                .scalar())
+            min_vol = (
+                session.query(func.min(NodeDB.area))
+                .where(NodeDB.t.between(0, self.t_max))
+                .scalar())
 
         return np.array([min_vol, max_vol], dtype=int)
