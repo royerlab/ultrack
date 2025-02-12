@@ -145,6 +145,10 @@ pytest-qt = ">=4.4.0,<5"
 pyqt = ">=5.15.9,<6"
 pytest-cov = ">=6.0.0,<7"
 
+[tool.pixi.feature.ml.dependencies]
+catboost = ">=1.2.7,<1.3"
+scikit-learn = ">=1.6.0,<1.7"
+
 [tool.pytest.ini_options]
 filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources.*:",
@@ -157,7 +161,8 @@ ultrack = { path = ".", editable = true }
 default = { solve-group = "default" }
 cuda = { features = ["cuda"] }
 # docs = { features = ["docs"]}  # Current dependencies aren't compatible with pixi
-test = { features = ["test"], solve-group = "default" }
+ml = { features = ["ml"], solve-group = "default" }
+test = { features = ["test", "ml"], solve-group = "default" }
 
 [tool.pixi.feature.test.tasks]
 test = "pytest -v --color=yes --cov=ultrack --cov-report=html --durations=15 ."
