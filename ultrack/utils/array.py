@@ -348,7 +348,7 @@ class UltrackArray:
         engine = sqla.create_engine(self.database_path)
         num_pix_list = []
         with Session(engine) as session:
-            query = list(session.query(NodeDB.area).where(NodeDB.t >= timeStart).where(NodeDB.t <= timeStop))
+            query = list(session.query(NodeDB.area).where(NodeDB.t.between(timeStart, timeStop))
             for num_pix in query:
                 num_pix_list.append(int(np.array(num_pix)))
         return num_pix_list
