@@ -25,14 +25,18 @@ def tracks_df(n_nodes: int = 10) -> pd.DataFrame:
     return pd.DataFrame(tracks_data, columns=["track_id", "t", "z", "y", "x"])
 
 
-def test_reader(tracks_df: pd.DataFrame, tmp_path: Path):
-    reader = napari_get_reader("tracks.csv")
+@pytest.mark.parametrize("file_ext", ["csv", "parquet"])
+def test_reader(tracks_df: pd.DataFrame, tmp_path: Path, file_ext: str):
+    reader = napari_get_reader(f"tracks.{file_ext}")
     assert reader is None
 
-    path = tmp_path / "good_tracks.csv"
+    path = tmp_path / f"good_tracks.{file_ext}"
     tracks_df["node_id"] = np.arange(len(tracks_df)) + 1
     tracks_df["labels"] = np.random.randint(2, size=len(tracks_df))
-    tracks_df.to_csv(path, index=False)
+    if file_ext == "csv":
+        tracks_df.to_csv(path, index=False)
+    else:
+        tracks_df.to_parquet(path)
 
     reader = napari_get_reader(path)
     assert callable(reader)
@@ -47,13 +51,17 @@ def test_reader(tracks_df: pd.DataFrame, tmp_path: Path):
     assert np.allclose(data, tracks_df[["track_id", "t", "z", "y", "x"]])
 
 
-def test_reader_2d(tracks_df: pd.DataFrame, tmp_path: Path):
-    reader = napari_get_reader("tracks.csv")
+@pytest.mark.parametrize("file_ext", ["csv", "parquet"])
+def test_reader_2d(tracks_df: pd.DataFrame, tmp_path: Path, file_ext: str):
+    reader = napari_get_reader(f"tracks.{file_ext}")
     assert reader is None
 
-    path = tmp_path / "good_tracks.csv"
+    path = tmp_path / f"good_tracks.{file_ext}"
     tracks_df = tracks_df.drop(columns=["z"])
-    tracks_df.to_csv(path, index=False)
+    if file_ext == "csv":
+        tracks_df.to_csv(path, index=False)
+    else:
+        tracks_df.to_parquet(path)
 
     reader = napari_get_reader(path)
     assert callable(reader)
@@ -64,7 +72,8 @@ def test_reader_2d(tracks_df: pd.DataFrame, tmp_path: Path):
     assert np.allclose(data, tracks_df[["track_id", "t", "y", "x"]])
 
 
-def test_reader_with_lineage(tmp_path: Path):
+@pytest.mark.parametrize("file_ext", ["csv", "parquet"])
+def test_reader_with_lineage(tmp_path: Path, file_ext: str):
     tracks_df = pd.DataFrame(
         {
             "track_id": [1, 1, 2, 3],
@@ -76,8 +85,11 @@ def test_reader_with_lineage(tmp_path: Path):
         }
     )
 
-    path = tmp_path / "tracks.csv"
-    tracks_df.to_csv(path, index=False)
+    path = tmp_path / f"tracks.{file_ext}"
+    if file_ext == "csv":
+        tracks_df.to_csv(path, index=False)
+    else:
+        tracks_df.to_parquet(path)
 
     reader = napari_get_reader(path)
     assert callable(reader)
@@ -95,26 +107,37 @@ def test_non_existing_track():
     assert reader is None
 
 
-def test_wrong_columns_track(tracks_df: pd.DataFrame, tmp_path: Path):
-    reader = napari_get_reader("tracks.csv")
+@pytest.mark.parametrize("file_ext", ["csv", "parquet"])
+def test_wrong_columns_track(tracks_df: pd.DataFrame, tmp_path: Path, file_ext: str):
+    reader = napari_get_reader(f"tracks.{file_ext}")
     assert reader is None
 
-    path = tmp_path / "bad_tracks.csv"
+    path = tmp_path / f"bad_tracks.{file_ext}"
     tracks_df = tracks_df.rename(columns={"track_id": "id"})
-    tracks_df.to_csv(path, index=False)
+    if file_ext == "csv":
+        tracks_df.to_csv(path, index=False)
+    else:
+        tracks_df.to_parquet(path)
+
     reader = napari_get_reader(path)
     assert reader is None
 
 
+@pytest.mark.parametrize("file_ext", ["csv", "parquet"])
 def test_napari_viewer_open_tracks(
     make_napari_viewer: Callable[[], ViewerModel],
     tracks_df: pd.DataFrame,
     tmp_path: Path,
+    file_ext: str,
 ) -> None:
 
     _initialize_plugins()
 
-    tracks_df.to_csv(tmp_path / "tracks.csv", index=False)
+    path = tmp_path / f"tracks.{file_ext}"
+    if file_ext == "csv":
+        tracks_df.to_csv(path, index=False)
+    else:
+        tracks_df.to_parquet(path)
 
     viewer = make_napari_viewer()
-    viewer.open(tmp_path / "tracks.csv", plugin="ultrack")
+    viewer.open(path, plugin="ultrack")
