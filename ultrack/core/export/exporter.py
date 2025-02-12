@@ -22,6 +22,7 @@ def export_tracks_by_extension(
     Supported file extensions are .xml, .csv, .zarr, .dot, and .json.
     - `.xml` exports to a TrackMate compatible XML file.
     - `.csv` exports to a CSV file.
+    - `.parquet` exports to a Parquet file.
     - `.zarr` exports the tracks to dense segments in a `zarr` array format.
     - `.dot` exports to a Graphviz DOT file.
     - `.json` exports to a networkx JSON file.
@@ -60,6 +61,9 @@ def export_tracks_by_extension(
     elif file_ext.lower() == ".zarr":
         df, _ = to_tracks_layer(config)
         tracks_to_zarr(config, df, filename, overwrite=True)
+    elif file_ext.lower() == ".parquet":
+        df, _ = to_tracks_layer(config)
+        df.to_parquet(filename)
     elif file_ext.lower() == ".dot":
         G = to_networkx(config)
         nx.drawing.nx_pydot.write_dot(G, filename)
@@ -70,5 +74,6 @@ def export_tracks_by_extension(
             json.dump(json_data, f)
     else:
         raise ValueError(
-            f"Unknown file extension: {file_ext}. Supported extensions are .xml, .csv, .zarr, .dot, and .json."
+            f"Unknown file extension: {file_ext}. "
+            "Supported extensions are .xml, .csv, .zarr, .parquet, .dot, and .json."
         )
