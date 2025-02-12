@@ -1,10 +1,12 @@
+from typing import Tuple
+
 import numpy as np
 import pytest
 
-from typing import Tuple
-from ultrack.utils.array import array_apply
 from ultrack.config import MainConfig
+from ultrack.utils.array import array_apply
 from ultrack.utils.ultrack_array import UltrackArray
+
 
 @pytest.mark.parametrize("axis", [0, 1])
 def test_array_apply_parametrized(axis):
@@ -20,30 +22,33 @@ def test_array_apply_parametrized(axis):
     other_axes_length = in_data.shape[1 - axis]
     assert np.array_equal(out_data, 2 * in_data + other_axes_length)
 
+
 @pytest.mark.parametrize(
     "key,timelapse_mock_data",
     [
-        (1,{'n_dim':3}),
-        (1,{'n_dim':2}),
-        ((slice(None), 1),{'n_dim':3}),
-        ((slice(None), 1),{'n_dim':2}),
-        ((0, [1, 2]),{'n_dim':3}),
-        ((0, [1, 2]),{'n_dim':2}),
+        (1, {"n_dim": 3}),
+        (1, {"n_dim": 2}),
+        ((slice(None), 1), {"n_dim": 3}),
+        ((slice(None), 1), {"n_dim": 2}),
+        ((0, [1, 2]), {"n_dim": 3}),
+        ((0, [1, 2]), {"n_dim": 2}),
         # ((-1, np.asarray([0, 3])),{'n_dim':3}),       #does testing negative time make sense?
         # ((-1, np.asarray([0, 3])),{'n_dim':2}),
-        ((slice(1), -2),{'n_dim':3}),
-        ((slice(1), -2),{'n_dim':2}),
-        ((np.asarray(0),),{'n_dim':3}),
-        ((np.asarray(0),),{'n_dim':2}),
-        ((0, 0, slice(32)),{'n_dim':3}),
-        ((0, 0, slice(32)),{'n_dim':2}),
+        ((slice(1), -2), {"n_dim": 3}),
+        ((slice(1), -2), {"n_dim": 2}),
+        ((np.asarray(0),), {"n_dim": 3}),
+        ((np.asarray(0),), {"n_dim": 2}),
+        ((0, 0, slice(32)), {"n_dim": 3}),
+        ((0, 0, slice(32)), {"n_dim": 2}),
     ],
-    indirect=["timelapse_mock_data",],
+    indirect=[
+        "timelapse_mock_data",
+    ],
 )
 def test_ultrack_array(
-        segmentation_database_mock_data: MainConfig,
-        key: Tuple,
-    ):
+    segmentation_database_mock_data: MainConfig,
+    key: Tuple,
+):
     ua = UltrackArray(segmentation_database_mock_data)
     ua_numpy = ua[slice(None)]
     np.testing.assert_equal(ua_numpy[key], ua[key])

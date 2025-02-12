@@ -1,10 +1,13 @@
-import numpy as np
 from typing import Tuple, Union
-from ultrack.core.database import NodeDB
-from ultrack.config import MainConfig
+
+import numpy as np
 import sqlalchemy as sqla
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
+from ultrack.config import MainConfig
+from ultrack.core.database import NodeDB
+
 
 class UltrackArray:
     def __init__(
@@ -21,7 +24,7 @@ class UltrackArray:
         dtype : np.dtype
             Data type of the array.
         """
-            
+
         self.config = config
         self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
         self.dtype = dtype
@@ -32,10 +35,11 @@ class UltrackArray:
         self.database_path = config.data_config.database_path
         self.minmax = self.find_min_max_volume_entire_dataset()
         self.volume = self.minmax.mean().astype(int)
-        
-    def __getitem__(self, 
-                    indexing: Union[Tuple[Union[int, slice]], int, slice],
-        ) -> np.ndarray:
+
+    def __getitem__(
+        self,
+        indexing: Union[Tuple[Union[int, slice]], int, slice],
+    ) -> np.ndarray:
         """Indexing the ultrack-array
 
         Parameters
@@ -51,15 +55,17 @@ class UltrackArray:
 
         if isinstance(indexing, tuple):
             time, volume_slicing = indexing[0], indexing[1:]
-        else:       #if only 1 (time) is provided
+        else:  # if only 1 (time) is provided
             time = indexing
             volume_slicing = tuple()
 
-        if isinstance(time, slice): #if all time points are requested
-            return np.stack([
-                self.__getitem__((t,) + volume_slicing)
-                for t in range(*time.indices(self.shape[0]))
-            ])
+        if isinstance(time, slice):  # if all time points are requested
+            return np.stack(
+                [
+                    self.__getitem__((t,) + volume_slicing)
+                    for t in range(*time.indices(self.shape[0]))
+                ]
+            )
         else:
             try:
                 time = time.item()  # convert from numpy.int to int
@@ -82,7 +88,7 @@ class UltrackArray:
         time : int
             time point to paint the segments
         """
-                
+
         engine = sqla.create_engine(self.database_path)
         self.array.fill(0)
 
@@ -119,9 +125,9 @@ class UltrackArray:
                 )
 
     def get_tp_num_pixels(
-            self, 
-            timeStart:int,
-            timeStop:int,
+        self,
+        timeStart: int,
+        timeStop: int,
     ) -> list:
         """Gets a list of number of pixels of all segments range of time points (timeStart to timeStop)
         Parameters
@@ -136,7 +142,9 @@ class UltrackArray:
         engine = sqla.create_engine(self.database_path)
         num_pix_list = []
         with Session(engine) as session:
-            query = list(session.query(NodeDB.area).where(NodeDB.t.between(timeStart, timeStop)))
+            query = list(
+                session.query(NodeDB.area).where(NodeDB.t.between(timeStart, timeStop))
+            )
             for num_pix in query:
                 num_pix_list.append(int(np.array(num_pix)))
         return num_pix_list
@@ -154,10 +162,12 @@ class UltrackArray:
             max_vol = (
                 session.query(func.max(NodeDB.area))
                 .where(NodeDB.t.between(0, self.t_max))
-                .scalar())
+                .scalar()
+            )
             min_vol = (
                 session.query(func.min(NodeDB.area))
                 .where(NodeDB.t.between(0, self.t_max))
-                .scalar())
+                .scalar()
+            )
 
         return np.array([min_vol, max_vol], dtype=int)
