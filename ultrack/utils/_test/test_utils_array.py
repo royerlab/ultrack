@@ -4,7 +4,7 @@ import pytest
 from typing import Tuple
 from ultrack.utils.array import array_apply
 from ultrack.config import MainConfig
-from ultrack.utils.array import UltrackArray
+from ultrack.utils.ultrack_array import UltrackArray
 
 @pytest.mark.parametrize("axis", [0, 1])
 def test_array_apply_parametrized(axis):
