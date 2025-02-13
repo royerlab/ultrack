@@ -40,6 +40,8 @@ conda activate ultrack
 pip install ultrack
 ```
 
+The installation should take a few minutes, depending on your internet speed and conda.
+
 NOTE: `gurobi` and `-c gurobi` are optional but recommended; they can be installed later, as shown below.
 
 Optionally, we provide multiple Docker images. For instructions, see the [docker folder](https://github.com/royerlab/ultrack/tree/main/docker).
@@ -121,10 +123,7 @@ Depending on the operating system, the gurobi library might be missing and you n
 
 ## Who is using Ultrack?
 
-Here is a list of projects and papers that are and have used ultrack:
-- DaXi Project: Ultrack was used for tracking zebrafish embryos using high-resolution light-sheet microscopy as part of the DaXi project, demonstrating its capability to handle large-scale datasets efficiently. See paper [here](https://www.nature.com/articles/s41592-022-01417-2).
-- [Zebrahub.org](zebrahub.org) project: Ultrack is employed in projects hosted on ZebraHub.org to track and analyze zebrafish embryonic development. See preprint [here](https://www.biorxiv.org/content/10.1101/2023.03.06.531398v2).
-- Single-cell transcriptional dynamics in a living vertebrate: Ultrack was used for segmenting and tracking nuclei in light-sheet microscopy datasets of developing zebrafish embryos. See preprint [here](https://www.biorxiv.org/content/10.1101/2024.01.03.574108v1).
+You can find a list of projects and papers that are and have used ultrack at [this page](https://royerlab.github.io/ultrack/appearances.html).
 
 ## Contributing
 

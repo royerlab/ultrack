@@ -121,7 +121,7 @@ class DataForms:
             "tracking": "tracking_config",
             "data": "data_config",
         }
-        
+
         self._config = config
         for id_form, id_field, widget, getter, setter in self._bindings:
             # Get the actual config field name from the alias mapping
@@ -390,7 +390,7 @@ class DataForms:
             "tracking": "tracking_config",
             "data": "data_config",
         }
-        
+
         for id_form, id_field, widget, getter, setter in self._bindings:
             value = getattr(widget, getter)()
             # Get the actual config field name from the alias mapping

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Callable, List, Union
 
 import pandas as pd
+import pyarrow.parquet as pq
 from napari.types import LayerDataTuple
 
 from ultrack.tracks.graph import inv_tracks_df_forest
@@ -46,15 +47,21 @@ def napari_get_reader(
 
     LOG.info(f"Reading tracks from {path}")
 
-    if not path.name.endswith(".csv"):
-        LOG.info(f"{path} must end with `.csv`.")
+    file_name = path.name.lower()
+
+    if not file_name.endswith(".csv") and not file_name.endswith(".parquet"):
+        LOG.info(f"{path} must end with `.csv` or `.parquet`.")
         return None
 
     if not path.exists():
         LOG.info(f"{path} does not exist.")
         return None
 
-    header = pd.read_csv(path, nrows=0).columns.tolist()
+    if file_name.endswith(".csv"):
+        header = pd.read_csv(path, nrows=0).columns.tolist()
+    else:
+        header = pq.read_table(path).schema.names
+
     LOG.info(f"Tracks file header: {header}")
 
     for colname in TRACKS_HEADER:
@@ -68,14 +75,14 @@ def napari_get_reader(
     return reader_function
 
 
-def read_csv(path: Union[Path, str]) -> LayerDataTuple:
+def read_dataframe(path: Union[Path, str]) -> LayerDataTuple:
     """
-    Read track data from a CSV file.
+    Read track data from a CSV or Parquet file.
 
     Parameters
     ----------
     path : Union[Path, str]
-        Path to the CSV file.
+        Path to the CSV or Parquet file.
 
     Returns
     -------
@@ -90,10 +97,12 @@ def read_csv(path: Union[Path, str]) -> LayerDataTuple:
     If the CSV file contains a 'parent_track_id' column, a track lineage graph
     is constructed.
     """
-    if isinstance(path, str):
-        path = Path(path)
-
-    df = pd.read_csv(path)
+    path = Path(path)
+    file_name = path.name.lower()
+    if file_name.endswith(".csv"):
+        df = pd.read_csv(path)
+    elif file_name.endswith(".parquet"):
+        df = pd.read_parquet(path)
 
     LOG.info(f"Read {len(df)} tracks from {path}")
     LOG.info(df.head())
@@ -132,4 +141,4 @@ def reader_function(path: Union[List[str], str]) -> List:
         List of track data tuples.
     """
     paths = [path] if isinstance(path, (str, Path)) else path
-    return [read_csv(p) for p in paths]
+    return [read_dataframe(p) for p in paths]
