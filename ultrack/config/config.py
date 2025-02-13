@@ -12,6 +12,14 @@ from ultrack.config.trackingconfig import TrackingConfig
 LOG = logging.getLogger(__name__)
 
 
+CFG_ALIAS_TO_ATTR = {
+    "segmentation": "segmentation_config",
+    "linking": "linking_config",
+    "tracking": "tracking_config",
+    "data": "data_config",
+}
+
+
 class LinkingConfig(BaseModel):
     """
     Candidate cell hypotheses linking configuration

@@ -13,7 +13,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ultrack import MainConfig
+from ultrack.config import CFG_ALIAS_TO_ATTR, MainConfig
 from ultrack.widgets.ultrackwidget.components.blankable_number_edit import (
     BlankableNumberEdit,
 )
@@ -114,18 +114,10 @@ class DataForms:
         config : MainConfig
             The main configuration to load.
         """
-        # Map between form IDs and actual MainConfig attribute names
-        alias_to_field = {
-            "segmentation": "segmentation_config",
-            "linking": "linking_config",
-            "tracking": "tracking_config",
-            "data": "data_config",
-        }
-
         self._config = config
-        for id_form, id_field, widget, getter, setter in self._bindings:
+        for id_form, id_field, widget, _, setter in self._bindings:
             # Get the actual config field name from the alias mapping
-            field_name = alias_to_field.get(id_form, id_form)
+            field_name = CFG_ALIAS_TO_ATTR.get(id_form, id_form)
             # In Pydantic v2, we can still use getattr for nested access
             value = getattr(getattr(self._config, field_name), id_field)
             getattr(widget, setter)(value)
@@ -383,18 +375,10 @@ class DataForms:
         MainConfig
             The main configuration object.
         """
-        # Map between form IDs and actual MainConfig attribute names
-        alias_to_field = {
-            "segmentation": "segmentation_config",
-            "linking": "linking_config",
-            "tracking": "tracking_config",
-            "data": "data_config",
-        }
-
-        for id_form, id_field, widget, getter, setter in self._bindings:
+        for id_form, id_field, widget, getter, _ in self._bindings:
             value = getattr(widget, getter)()
             # Get the actual config field name from the alias mapping
-            field_name = alias_to_field.get(id_form, id_form)
+            field_name = CFG_ALIAS_TO_ATTR.get(id_form, id_form)
             sub_config = getattr(self._config, field_name)
             # In Pydantic v2, we can still use setattr for direct updates
             setattr(sub_config, id_field, value)
