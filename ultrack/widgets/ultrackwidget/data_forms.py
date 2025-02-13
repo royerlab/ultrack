@@ -122,10 +122,12 @@ class DataForms:
             "data": "data_config",
         }
         
-        # Convert config to dictionary using Pydantic v2's model_dump
-        self._config = config.model_dump(by_alias=True)
+        self._config = config
         for id_form, id_field, widget, getter, setter in self._bindings:
-            value = self._config[id_form][id_field]
+            # Get the actual config field name from the alias mapping
+            field_name = alias_to_field.get(id_form, id_form)
+            # In Pydantic v2, we can still use getattr for nested access
+            value = getattr(getattr(self._config, field_name), id_field)
             getattr(widget, setter)(value)
 
     def _create_form(self, id_form: str, metadata: Dict[str, Any]) -> None:
@@ -381,10 +383,22 @@ class DataForms:
         MainConfig
             The main configuration object.
         """
+        # Map between form IDs and actual MainConfig attribute names
+        alias_to_field = {
+            "segmentation": "segmentation_config",
+            "linking": "linking_config",
+            "tracking": "tracking_config",
+            "data": "data_config",
+        }
+        
         for id_form, id_field, widget, getter, setter in self._bindings:
             value = getattr(widget, getter)()
-            self._config[id_form][id_field] = value
-        return MainConfig.model_validate(self._config)
+            # Get the actual config field name from the alias mapping
+            field_name = alias_to_field.get(id_form, id_form)
+            sub_config = getattr(self._config, field_name)
+            # In Pydantic v2, we can still use setattr for direct updates
+            setattr(sub_config, id_field, value)
+        return self._config
 
     def setup_additional_options(self, workflow_choice: WorkflowChoice) -> None:
         """
