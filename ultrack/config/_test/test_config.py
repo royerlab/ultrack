@@ -3,7 +3,6 @@ from typing import Any, Dict
 
 import pytest
 import toml
-from pydantic.v1 import ValidationError
 
 from ultrack.config import load_config
 
@@ -14,7 +13,7 @@ def _assert_input_in_target(input: Dict, target: Dict) -> None:
         if isinstance(input[k], dict):
             _assert_input_in_target(input[k], target[k])
         else:
-            assert target[k] == input[k]
+            assert target[k] == input[k], f"Key {k} not equal"
 
 
 def _format_config(config: Dict) -> None:
@@ -29,7 +28,7 @@ def test_config_content(config_path: Path, config_content: Dict[str, Any]) -> No
     """Tests if content is loaded correctly"""
     config = load_config(config_path)
     _format_config(config_content)
-    _assert_input_in_target(config_content, config.dict())
+    _assert_input_in_target(config_content, config.model_dump())
 
 
 def test_invalid_config_content(tmp_path: Path, config_content: Dict[str, Any]) -> None:
@@ -40,5 +39,5 @@ def test_invalid_config_content(tmp_path: Path, config_content: Dict[str, Any]) 
     with open(path, mode="w") as f:
         toml.dump(config_content, f)
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError):
         load_config(path)

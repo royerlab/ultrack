@@ -151,7 +151,7 @@ async def finish_experiment(ws: WebSocket, exp: Experiment) -> Experiment:
         The experiment instance to be finished.
 
     """
-    exp.end_time = datetime.now()
+    exp.end_time = datetime.now().isoformat()
     exp.status = ExperimentStatus.SUCCESS
     update_experiment(exp)
     app.state.queue.task_done()
@@ -184,7 +184,7 @@ async def get_default_config() -> Dict:
     """
     config = MainConfig()
     config.data_config = None
-    return config.dict()
+    return config.model_dump(by_alias=True)
 
 
 @app.get("/config/available")
@@ -201,7 +201,7 @@ async def get_available_configs() -> Dict:
 
     experiment = {
         "name": "Unnamed Experiment",
-        "config": default_config.dict(),
+        "config": default_config.model_dump(by_alias=True),
     }
 
     auto_detect_config = {
@@ -316,7 +316,7 @@ async def auto_detect(websocket: WebSocket) -> None:
         )
         return
 
-    experiment = Experiment.parse_obj(data["experiment"])
+    experiment = Experiment.model_validate(data["experiment"])
 
     try:
         detect_foreground_kwargs = data["detect_foreground_kwargs"]
@@ -432,7 +432,7 @@ async def manual_segment(websocket: WebSocket) -> None:
         experiment = json.loads(data["experiment"])
     else:
         experiment = data["experiment"]
-    experiment = Experiment.parse_obj(experiment)
+    experiment = Experiment.model_validate(experiment)
 
     async with UltrackWebsocketLogger(websocket, experiment):
         await start_experiment(websocket, experiment)
@@ -495,7 +495,7 @@ async def auto_from_labels(websocket: WebSocket) -> None:
         )
         return
 
-    experiment = Experiment.parse_obj(data["experiment"])
+    experiment = Experiment.model_validate(data["experiment"])
 
     try:
         label_to_edges_kwargs = data["label_to_edges_kwargs"]
