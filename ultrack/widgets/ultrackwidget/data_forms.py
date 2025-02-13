@@ -114,6 +114,15 @@ class DataForms:
         config : MainConfig
             The main configuration to load.
         """
+        # Map between form IDs and actual MainConfig attribute names
+        alias_to_field = {
+            "segmentation": "segmentation_config",
+            "linking": "linking_config",
+            "tracking": "tracking_config",
+            "data": "data_config",
+        }
+        
+        # Convert config to dictionary using Pydantic v2's model_dump
         self._config = config.model_dump(by_alias=True)
         for id_form, id_field, widget, getter, setter in self._bindings:
             value = self._config[id_form][id_field]
@@ -375,7 +384,7 @@ class DataForms:
         for id_form, id_field, widget, getter, setter in self._bindings:
             value = getattr(widget, getter)()
             self._config[id_form][id_field] = value
-        return MainConfig.parse_obj(self._config)
+        return MainConfig.model_validate(self._config)
 
     def setup_additional_options(self, workflow_choice: WorkflowChoice) -> None:
         """
