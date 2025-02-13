@@ -20,7 +20,7 @@ from ultrack.cli.utils import (
 )
 from ultrack.config import MainConfig
 from ultrack.core.match_gt import match_to_ground_truth
-from ultrack.ml.classification import fit_nodes_prob
+from ultrack.ml.classification import fit_links_prob, fit_nodes_prob
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -62,6 +62,13 @@ LOG.addHandler(RichHandler())
     "When activated different costs are used for insertions and deletions.",
 )
 @click.option(
+    "--is-tracking",
+    is_flag=True,
+    type=bool,
+    default=False,
+    help="Indicates ground-truth are tracking instances results.",
+)
+@click.option(
     "--insert-prob",
     is_flag=True,
     type=bool,
@@ -79,6 +86,7 @@ def match_gt_cli(
     output_model: Optional[Path],
     output_config: Optional[Path],
     is_segmentation: bool,
+    is_tracking: bool,
     insert_prob: bool,
     batch_index: Optional[int],
     overwrite: bool,
@@ -143,6 +151,15 @@ def match_gt_cli(
             persistence_features=persistence,
             insert_prob=insert_prob,
         )
+
+        if is_tracking:
+            link_model = fit_links_prob(
+                config,
+                gt_df["gt_track_id"],
+                persistence_features=persistence,
+                insert_prob=insert_prob,
+            )
+            model = {"nodes": model, "links": link_model}
 
         if output_model is not None:
             LOG.info("Saving model to %s", output_model)

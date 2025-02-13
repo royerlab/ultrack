@@ -114,6 +114,7 @@ class TestCommandLine:
                 "-oc",
                 str(new_cfg_path),
                 "--is-segmentation",
+                "--is-tracking",
                 "--persistence",
             ]
             + zarr_dataset_paths
@@ -122,15 +123,18 @@ class TestCommandLine:
         # testing loading new config
         load_config(new_cfg_path)
 
-        _run_command(
-            [
-                "add_probs",
-                str(model_path),
-                "-cfg",
-                instance_config_path,
-                "--persistence",
-            ]
-        )
+        for var in ["nodes", "links"]:
+            _run_command(
+                [
+                    "add_probs",
+                    str(model_path),
+                    "-cfg",
+                    instance_config_path,
+                    "--persistence",
+                    "--var",
+                    var,
+                ]
+            )
 
     def test_solve(self, instance_config_path: str) -> None:
         with pytest.warns(UserWarning):

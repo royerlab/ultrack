@@ -102,12 +102,15 @@ def add_links_prob(
     indices = np.asarray(indices, dtype=int)
     engine = sqla.create_engine(config.data_config.database_path)
 
+    if probs.ndim == 2:
+        probs = probs[:, -1]
+
     with Session(engine) as session:
         stmt = (
             sqla.update(LinkDB)
             .where(
-                LinkDB.target_id == sqla.bindparam("target_id"),
-                LinkDB.source_id == sqla.bindparam("source_id"),
+                LinkDB.target_id == sqla.bindparam("target"),
+                LinkDB.source_id == sqla.bindparam("source"),
             )
             .values(
                 weight=sqla.bindparam("weight"),
@@ -116,8 +119,8 @@ def add_links_prob(
         session.connection().execute(
             stmt,
             [
-                {"target_id": t, "source_id": s, "weight": p}
-                for t, s, p in zip(*indices, probs)
+                {"target": t, "source": s, "weight": p}
+                for t, s, p in zip(*indices.T, probs)
             ],
             execution_options={"synchronize_session": False},
         )
@@ -248,7 +251,9 @@ def fit_nodes_prob(
     classifier.fit(features.loc[ground_truth.index], ground_truth)
 
     if insert_prob:
-        LOG.info("Adding nodes probabilities to the database")
+        LOG.info(
+            "Predicting nodes probabilities with features: %s", str(features.columns)
+        )
 
         probs = classifier.predict_proba(features)
         add_nodes_prob(config, features.index, probs)
@@ -272,9 +277,9 @@ def select_competing_links(
     pd.DataFrame:
         Links dataframe with the selected competing links.
     """
-    links_df = links_df.set_index(["target_id", "source_id"], drop=False)
+    target_ids = links_df.index.get_level_values(0)
 
-    has_competing_links = links_df.groupby("target_id")["gt_link"].transform(
+    has_competing_links = links_df.groupby(target_ids)["gt_link"].transform(
         lambda x: x.any()
     )
 
@@ -304,12 +309,67 @@ def add_links_gt(
     """
     ground_truth = ground_truth > UnmatchedNode.BLOCKED
 
+    target_ids = links_df.index.get_level_values(0)
+    source_ids = links_df.index.get_level_values(1)
+
     return pd.Series(
-        ground_truth.loc[links_df["source_id"]]
-        == ground_truth.loc[links_df["target_id"]],
+        ground_truth.loc[source_ids].to_numpy()
+        == ground_truth.loc[target_ids].to_numpy(),
         index=links_df.index,
         name="gt_link",
     )
+
+
+def predict_links_prob(
+    config: MainConfig,
+    classifier: ProbabilisticClassifier,
+    *,
+    insert_prob: bool = True,
+    persistence_features: bool = False,
+    **kwargs,
+) -> pd.Series:
+    """
+    Predicts the probabilities of the links' features.
+
+    Parameters
+    ----------
+    config : MainConfig
+        Main configuration parameters.
+    classifier : ProbabilisticClassifier
+        Probabilistic classifier object.
+    insert_prob : bool, optional
+        Whether to insert the probabilities to the database, by default True.
+    persistence_features : bool, optional
+        Whether to include persistence features, by default False.
+    **kwargs : dict
+        Keyword arguments passed to `get_nodes_features` to compute the features.
+        The links' features are the difference between the source and target nodes' features.
+    """
+    features = get_links_features(
+        config,
+        include_persistence=persistence_features,
+        **kwargs,
+    )
+
+    for col in ["target_id", "source_id"]:
+        if col in features.columns:
+            raise ValueError(f"Features cannot contain '{col}' column")
+
+    LOG.info("Predicting links probabilities with features: %s", str(features.columns))
+
+    probs = classifier.predict_proba(features)
+
+    if probs.ndim == 2:
+        probs = probs[:, -1]
+
+    if insert_prob:
+        add_links_prob(
+            config,
+            np.asarray(features.index.to_list()),
+            probs,
+        )
+
+    return pd.Series(probs, index=features.index, name="link_prob")
 
 
 def fit_links_prob(
@@ -318,6 +378,7 @@ def fit_links_prob(
     classifier: Optional[ProbabilisticClassifier] = None,
     remove_no_overlap: bool = True,
     insert_prob: bool = True,
+    persistence_features: bool = False,
     **kwargs,
 ) -> ProbabilisticClassifier:
     """
@@ -340,34 +401,46 @@ def fit_links_prob(
         with an existing positive-labeled link.
     insert_prob : bool, optional
         Whether to insert the probabilities to the database, by default True.
+    persistence_features : bool, optional
+        Whether to include persistence features, by default False.
     **kwargs : dict
         Keyword arguments passed to `get_nodes_features` to compute the features.
         The links' features are the difference between the source and target nodes' features.
     """
-    features = get_links_features(config, **kwargs)
+    features = get_links_features(
+        config,
+        include_persistence=persistence_features,
+        **kwargs,
+    )
 
-    if "id" in features.columns:
-        raise ValueError("Features cannot contain 'id' column")
+    for col in ["target_id", "source_id"]:
+        if col in features.columns:
+            raise ValueError(f"Features cannot contain '{col}' column")
 
     if not isinstance(ground_truth, (pd.Series, pd.DataFrame)):
         ground_truth = match_to_ground_truth(config, ground_truth)["gt_track_id"]
 
-    links_df = add_links_gt(features, ground_truth)
+    gt_link = add_links_gt(features, ground_truth)
 
     if remove_no_overlap:
-        links_df = select_competing_links(links_df)
+        features["gt_link"] = gt_link
+        features = select_competing_links(features)
+        features = features.drop(columns=["gt_link"])
 
     classifier = _validate_classifier(classifier)
 
-    classifier.fit(links_df.drop(columns=["gt_link"]), links_df["gt_link"])
+    classifier.fit(features, gt_link)
 
     if insert_prob:
-        LOG.info("Adding links probabilities to the database")
+        LOG.info(
+            "Predicting links probabilities with features: %s", str(features.columns)
+        )
 
-        probs = classifier.predict_proba(links_df.drop(columns=["gt_link"]))
+        probs = classifier.predict_proba(features)
+
         add_links_prob(
             config,
-            links_df[["target_id", "source_id"]].to_numpy(),
+            np.asarray(features.index.to_list()),
             probs,
         )
 
