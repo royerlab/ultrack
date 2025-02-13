@@ -20,3 +20,6 @@ Feel free to `open an issue <https://github.com/royerlab/ultrack/issues/new>`_ t
 
 - Huijben, Teun APM, et al. "inTRACKtive-A Web-Based Tool for Interactive Cell Tracking Visualization." *bioRxiv* (2024).
   `DOI: 10.1101/2024.10.18.618998 <https://doi.org/10.1101/2024.10.18.618998>`_
+
+- Adhinarta, Jason, et al. "WormID-Benchmark: Extracting Whole-Brain Neural Dynamics of C. elegans At the Neuron Resolution." *bioRxiv* (2025).
+  `DOI: 10.1101/2025.01.06.631621 <https://doi.org/10.1101/2025.01.06.631621>`_

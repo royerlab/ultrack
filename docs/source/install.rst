@@ -1,7 +1,10 @@
 Installation
 ============
 
-The easiest way to install the package is to use the conda (or mamba) package manager.
+The recommended way to install the package is to use the conda (or mamba) package manager.
+
+We also provide a `pixi <https://pixi-docs.com/>`_ configuration for the package, which allows you to setup an environment with all the dependencies in a single command. See the section :ref:`pixi_install` for more details.
+
 If you do not have conda installed, we recommend to install mamba first, which is a faster alternative to conda.
 You can find mamba installation instructions `here <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_.
 
@@ -92,3 +95,53 @@ Troubleshooting
 Depending on the operating system, the gurobi library might be missing and you need to install it from `here <https://www.gurobi.com/downloads/gurobi-software>`_.
 
 If you're still having trouble, with the installation we recommend reaching out to us or using the docker image, see  :doc:`Docker instructions <docker/README>`.
+
+.. _pixi_install:
+
+Ultrack environment with pixi
+-----------------------------
+
+This is an alternative to the conda installation for environment management, using the `pixi <https://pixi-docs.com/>`_ package manager.
+
+First, install ``pixi`` following the instructions for your operating system:
+
+For Linux and OSX:
+
+.. code-block:: bash
+
+    curl -fsSL https://pixi.sh/install.sh | bash
+
+For Windows, using PowerShell:
+
+.. code-block:: powershell
+
+    powershell -ExecutionPolicy ByPass -c "irm -useb https://pixi.sh/install.ps1 | iex"
+
+Clone the repository and navigate to it:
+
+.. code-block:: bash
+
+    git clone https://github.com/ultrack/ultrack.git
+    cd ultrack
+
+Install dependencies and create the environment:
+
+.. code-block:: bash
+
+    pixi install
+
+There are two ways to work with the pixi environment:
+
+1. Activate the environment (equivalent to ``conda activate``):
+
+.. code-block:: bash
+
+    pixi shell
+
+2. Run a single command within the environment:
+
+.. code-block:: bash
+
+    pixi run python your_script.py
+
+The environment will automatically detect and use CUDA if it's available on your system.
