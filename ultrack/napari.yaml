@@ -45,7 +45,7 @@ contributions:
   readers:
     - command: ultrack.get_reader
       accepts_directories: false
-      filename_patterns: ['*.csv']
+      filename_patterns: ['*.csv', '*.parquet']
 
 #   writers:
 #     - command: ultrack.write_multiple

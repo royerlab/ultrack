@@ -28,4 +28,4 @@ class MainConfigWidget(BaseConfigWidget):
 
     def _on_save_config(self) -> None:
         with open(self._config_loader_w.value, mode="w") as f:
-            toml.dump(self.config.dict(by_alias=True), f)
+            toml.dump(self.config.model_dump(by_alias=True), f)
