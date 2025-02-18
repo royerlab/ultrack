@@ -282,6 +282,11 @@ def select_competing_links(
     has_competing_links = links_df.groupby(target_ids)["gt_link"].transform(
         lambda x: x.any()
     )
+    LOG.info(
+        "Found %d competing links out of %d candidates",
+        has_competing_links.sum(),
+        len(target_ids),
+    )
 
     links_df = links_df[has_competing_links]
 
@@ -425,6 +430,8 @@ def fit_links_prob(
     if remove_no_overlap:
         features["gt_link"] = gt_link
         features = select_competing_links(features)
+        if features.empty:
+            raise ValueError("Dataset is empty after removing no overlap links")
         features = features.drop(columns=["gt_link"])
 
     classifier = _validate_classifier(classifier)
