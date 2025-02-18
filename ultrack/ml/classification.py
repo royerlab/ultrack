@@ -312,17 +312,33 @@ def add_links_gt(
     pd.Series:
         Series with the ground-truth label.
     """
-    ground_truth = ground_truth > UnmatchedNode.BLOCKED
-
     target_ids = links_df.index.get_level_values(0)
     source_ids = links_df.index.get_level_values(1)
 
-    return pd.Series(
+    matched_nodes = ground_truth > UnmatchedNode.BLOCKED
+    matched_nodes = (
+        matched_nodes.loc[source_ids].to_numpy()
+        & matched_nodes.loc[target_ids].to_numpy()
+    )
+
+    correct_links = (
         ground_truth.loc[source_ids].to_numpy()
-        == ground_truth.loc[target_ids].to_numpy(),
-        index=links_df.index,
+        == ground_truth.loc[target_ids].to_numpy()
+    )
+
+    gt_links = pd.Series(
+        correct_links & matched_nodes,
+        index=(target_ids, source_ids),
         name="gt_link",
     )
+
+    LOG.info(
+        "Found %d ground-truth links out of %d candidates",
+        gt_links.sum(),
+        len(gt_links),
+    )
+
+    return gt_links
 
 
 def predict_links_prob(
@@ -424,6 +440,9 @@ def fit_links_prob(
 
     if not isinstance(ground_truth, (pd.Series, pd.DataFrame)):
         ground_truth = match_to_ground_truth(config, ground_truth)["gt_track_id"]
+
+    LOG.info("Ground-truth labels %s: %s", ground_truth.shape, ground_truth)
+    LOG.info("Features %s: %s", features.shape, features.columns)
 
     gt_link = add_links_gt(features, ground_truth)
 
