@@ -20,7 +20,7 @@ def test_hierarchy_viz_widget_from_config(
     widget = HierarchyVizWidget(viewer, config)
     viewer.window.add_dock_widget(widget)
 
-    assert "hierarchy" in viewer.layers
+    assert HierarchyVizWidget.HIER_LAYER_NAME in viewer.layers
 
     # test moving sliders:
     widget._slider_update(0.75)
@@ -29,8 +29,11 @@ def test_hierarchy_viz_widget_from_config(
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert (
         tuple(config.data_config.metadata["shape"])
-        == viewer.layers["hierarchy"].data.shape
+        == viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data.shape
     )  # metadata["shape"] is a list, data.shape is a tuple
+
+    # checking that there are some labels painted
+    assert viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data[0].max() > 0
 
 
 def test_hierarchy_viz_widget_from_ultrack_widget(
@@ -70,7 +73,7 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
     hier_viz_widget = HierarchyVizWidget(viewer)
     viewer.window.add_dock_widget(hier_viz_widget)
 
-    assert "hierarchy" in viewer.layers
+    assert HierarchyVizWidget.HIER_LAYER_NAME in viewer.layers
 
     # test moving sliders:
     hier_viz_widget._slider_update(0.75)
@@ -79,8 +82,11 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert (
         tuple(ultrack_widget._data_forms.get_config().data_config.metadata["shape"])
-        == viewer.layers["hierarchy"].data.shape
+        == viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data.shape
     )  # metadata["shape"] is a list, data.shape in layer is a tuple
 
     if request.config.getoption("--show-napari-viewer"):
         napari.run()
+
+    # checking that there are some labels painted
+    assert viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data[0].max() > 0

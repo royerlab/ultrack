@@ -17,6 +17,8 @@ LOG = logging.getLogger(__name__)
 
 
 class HierarchyVizWidget(Container):
+    HIER_LAYER_NAME = "Ultrack Hierarchy"
+
     def __init__(
         self,
         viewer: napari.Viewer,
@@ -60,8 +62,8 @@ class HierarchyVizWidget(Container):
         self.append(self.slider_label)
 
         # THERE SHOULD BE CHECK HERE IF THERE EXISTS A LAYER WITH THE NAME 'HIERARCHY'
-        self._viewer.add_labels(self.ultrack_array, name="hierarchy")
-        self._viewer.layers["hierarchy"].refresh()
+        self._viewer.add_labels(self.ultrack_array, name=self.HIER_LAYER_NAME)
+        self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _on_config_changed(self) -> None:
         self._ndim = len(self._shape)
@@ -73,7 +75,7 @@ class HierarchyVizWidget(Container):
     def _slider_update(self, value: float) -> None:
         self.ultrack_array.volume = self.mapping(value)
         self.slider_label.label = str(int(self.mapping(value)))
-        self._viewer.layers["hierarchy"].refresh()
+        self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _create_mapping(self):
         """
