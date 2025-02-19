@@ -100,27 +100,47 @@ def add_links_prob(
         raise ValueError(f"Indices must have 2 columns, got {indices.shape[1]}")
 
     indices = np.asarray(indices, dtype=int)
-    engine = sqla.create_engine(config.data_config.database_path)
 
     if probs.ndim == 2:
         probs = probs[:, -1]
 
+    probs_df = pd.DataFrame(
+        probs,
+        index=pd.MultiIndex.from_arrays(
+            [indices[:, 0], indices[:, 1]],
+            names=["target_id", "source_id"],
+        ),
+        columns=["weight"],
+    )
+
+    LOG.info(
+        "Adding %d links probabilities to the database",
+        len(indices),
+    )
+
+    engine = sqla.create_engine(config.data_config.database_path)
+
     with Session(engine) as session:
-        stmt = (
-            sqla.update(LinkDB)
-            .where(
-                LinkDB.target_id == sqla.bindparam("target"),
-                LinkDB.source_id == sqla.bindparam("source"),
-            )
-            .values(
-                weight=sqla.bindparam("weight"),
-            )
+        query_stmt = session.query(LinkDB.id, LinkDB.target_id, LinkDB.source_id)
+        link_df = pd.read_sql(
+            query_stmt, bind=session.bind, index_col=["target_id", "source_id"]
         )
+
+        update_stmt = (
+            sqla.update(LinkDB.weight)
+            .where(LinkDB.id == sqla.bindparam("id"))
+            .values(weight=sqla.bindparam("weight"))
+        )
+        probs_df = probs_df.join(link_df, how="left")
+        print("SHAPE", probs_df.shape)
+
+        assert not probs_df.isna().any().any()
+
         session.connection().execute(
-            stmt,
+            update_stmt,
             [
-                {"target": t, "source": s, "weight": p}
-                for t, s, p in zip(*indices.T, probs)
+                {"id": id, "weight": weight}
+                for id, weight in zip(probs_df["id"], probs_df["weight"])
             ],
             execution_options={"synchronize_session": False},
         )
@@ -467,6 +487,8 @@ def fit_links_prob(
         )
 
         probs = classifier.predict_proba(features)
+
+        LOG.info("Predicted probabilities %s: %s", probs.shape, probs)
 
         add_links_prob(
             config,
