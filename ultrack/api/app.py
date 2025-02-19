@@ -130,7 +130,7 @@ async def start_experiment(ws: WebSocket, exp: Experiment) -> None:
     update_experiment(exp)
     await app.state.queue.join()
     await app.state.queue.put(exp)
-    await ws.send_json(json.loads(exp.json()))
+    await ws.send_json(json.loads(exp.model_dump_json()))
     UltrackWebsocketLogger.register_interruption_handler(exp.id)
     exp.status = ExperimentStatus.INITIALIZING
     update_experiment(exp)
@@ -157,7 +157,7 @@ async def finish_experiment(ws: WebSocket, exp: Experiment) -> Experiment:
     app.state.queue.task_done()
     if ws.client_state == WebSocketState.CONNECTED:
         # send the final state
-        await ws.send_json(json.loads(exp.json()))
+        await ws.send_json(json.loads(exp.model_dump_json()))
     return exp
 
 

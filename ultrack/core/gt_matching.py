@@ -291,7 +291,7 @@ def match_to_ground_truth(
         return df_nodes
 
     # optimize configuration
-    opt_config = config.copy(deep=True)
+    opt_config = config.model_copy(deep=True)
     gt_df = df_nodes[df_nodes["gt_track_id"] > 0]
 
     if len(gt_df) == 0:
