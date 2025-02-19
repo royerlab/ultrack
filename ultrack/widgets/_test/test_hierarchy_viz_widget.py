@@ -1,3 +1,4 @@
+import time
 from typing import Callable, Tuple
 
 import napari
@@ -60,9 +61,11 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
     ultrack_widget._cb_images[UltrackInput.LABELS].choices = layers
     # # selecting layers
     ultrack_widget._cb_images[UltrackInput.LABELS].value = layers["segments"]
+    ultrack_widget._bt_run.click()
 
-    # load config
-    ultrack_widget._data_forms.load_config(config_instance)
+    while not ultrack_widget._bt_run.isEnabled():
+        # wait for run to finish before loading config
+        time.sleep(0.2)
 
     hier_viz_widget = HierarchyVizWidget(viewer)
     viewer.window.add_dock_widget(hier_viz_widget)
@@ -75,7 +78,7 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
 
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert (
-        tuple(config_instance.data_config.metadata["shape"])
+        tuple(ultrack_widget._data_forms.get_config().data_config.metadata["shape"])
         == viewer.layers["hierarchy"].data.shape
     )  # metadata["shape"] is a list, data.shape in layer is a tuple
 
