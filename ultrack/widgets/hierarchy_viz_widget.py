@@ -23,6 +23,7 @@ class HierarchyVizWidget(Container):
         self,
         viewer: napari.Viewer,
         config=None,
+        **kwargs,
     ) -> None:
         """
         Initialize the HierarchyVizWidget.
@@ -33,6 +34,8 @@ class HierarchyVizWidget(Container):
             The napari viewer instance.
         config : MainConfig of Ultrack
             if not provided, config will be taken from UltrackWidget
+        **kwargs : dict
+            Additional keyword arguments to pass to the UltrackArray constructor.
         """
 
         super().__init__(layout="horizontal")
@@ -44,7 +47,7 @@ class HierarchyVizWidget(Container):
         else:
             self.config = config
 
-        self.ultrack_array = UltrackArray(self.config)
+        self.ultrack_array = UltrackArray(self.config, **kwargs)
 
         self.mapping = self._create_mapping()
 
@@ -62,7 +65,11 @@ class HierarchyVizWidget(Container):
         self.append(self.slider_label)
 
         # THERE SHOULD BE CHECK HERE IF THERE EXISTS A LAYER WITH THE NAME 'HIERARCHY'
-        self._viewer.add_labels(self.ultrack_array, name=self.HIER_LAYER_NAME)
+        try:
+            self._viewer.add_labels(self.ultrack_array, name=self.HIER_LAYER_NAME)
+        except TypeError:
+            self._viewer.add_image(self.ultrack_array, name=self.HIER_LAYER_NAME)
+
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _on_config_changed(self) -> None:

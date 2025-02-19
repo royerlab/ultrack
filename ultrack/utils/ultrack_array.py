@@ -80,7 +80,17 @@ class UltrackArray:
     @property
     def dtype(self) -> np.dtype:
         # NOTE: I don't know how this will behave with BigInteger and Enum columns
-        return self.node_attribute.type.python_type
+        sqla_dtype = self.node_attribute.type.python_type
+        if np.issubdtype(sqla_dtype, np.integer):
+            dtype = np.int32
+        elif np.issubdtype(sqla_dtype, np.floating):
+            dtype = np.float32
+        elif sqla_dtype == bool:
+            dtype = np.int8  # because of napari
+        else:
+            raise ValueError(f"Unsupported dtype: {sqla_dtype}")
+        LOG.info("sqla_dtype: %s, dtype: %s", sqla_dtype, dtype)
+        return dtype
 
     def __getitem__(
         self,
@@ -177,8 +187,9 @@ class UltrackArray:
 
             count = 0
             for i in range(len(nodes)):
+                # only paint top-most level of hierarchy
                 if parent_ids[i] not in node_ids:
-                    print(nodes[i].area)
+                    LOG.info("Painting segment %d", attrs[i])
                     nodes[i].paint_buffer(buffer, value=attrs[i], include_time=False)
                     count += 1
 
