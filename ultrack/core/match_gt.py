@@ -74,7 +74,7 @@ def _match_ground_truth_frame(
 
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
-        return
+        return 0.0
 
     LOG.info(f"Found {len(gt_props)} objects in time point {time}")
 
