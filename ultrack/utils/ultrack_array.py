@@ -43,7 +43,7 @@ class UltrackArray:
         self.node_attribute = node_attribute
 
         self.database_path = config.data_config.database_path
-        self.minmax = self.find_min_max_volume_entire_dataset()
+        self.minmax = self.min_max_num_pixels_entire_dataset()
         self.num_pix_threshold = self.minmax.mean().astype(int)
 
     @property
@@ -237,7 +237,7 @@ class UltrackArray:
 
         return num_pix_list
 
-    def find_min_max_volume_entire_dataset(self) -> np.ndarray:
+    def min_max_num_pixels_entire_dataset(self) -> np.ndarray:
         """
         Find global minimum and maximum segment number of pixels.
 
@@ -251,17 +251,17 @@ class UltrackArray:
         """
         engine = sqla.create_engine(self.database_path)
         with Session(engine) as session:
-            max_vol = (
+            max_num_pix = (
                 session.query(func.max(NodeDB.area))
                 .where(NodeDB.t.between(0, self.t_max))
                 .scalar()
             )
-            min_vol = (
+            min_num_pix = (
                 session.query(func.min(NodeDB.area))
                 .where(NodeDB.t.between(0, self.t_max))
                 .scalar()
             )
 
-        LOG.info(f"min_vol: {min_vol}, max_vol: {max_vol}")
+        LOG.info(f"min_num_pix: {min_num_pix}, max_num_pix: {max_num_pix}")
 
-        return np.asarray([min_vol, max_vol], dtype=int)
+        return np.asarray([min_num_pix, max_num_pix], dtype=int)
