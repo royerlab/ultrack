@@ -13,7 +13,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ultrack.config import CFG_ALIAS_TO_ATTR, MainConfig
+from ultrack.config.config import CFG_ALIAS_TO_ATTR, MainConfig
 from ultrack.widgets.ultrackwidget.components.blankable_number_edit import (
     BlankableNumberEdit,
 )

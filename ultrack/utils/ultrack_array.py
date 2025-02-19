@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import sqlalchemy as sqla
@@ -15,14 +15,21 @@ class UltrackArray:
         config: MainConfig,
         dtype: np.dtype = np.int32,
     ):
-        """Create an array that directly visualizes the segments in the ultrack database.
+        """Initialize an array for visualizing segments in the ultrack database.
+
+        The array provides direct visualization of segments stored in the database,
+        allowing efficient access and transversing the hierarchy of segments.
 
         Parameters
         ----------
         config : MainConfig
-            Configuration file of Ultrack.
-        dtype : np.dtype
-            Data type of the array.
+            Configuration object containing Ultrack settings and metadata.
+        dtype : numpy.dtype, optional
+            Data type of the array, by default numpy.int32.
+
+        Notes
+        -----
+        The array shape is determined from the configuration metadata.
         """
 
         self.config = config
@@ -40,16 +47,19 @@ class UltrackArray:
         self,
         indexing: Union[Tuple[Union[int, slice]], int, slice],
     ) -> np.ndarray:
-        """Indexing the ultrack-array
+        """Access segments data using array-like indexing.
 
         Parameters
         ----------
-        indexing : Tuple or Array
+        indexing : tuple or int or slice
+            Index specification. Can be:
+            - A single integer or slice for time dimension
+            - A tuple containing time index/slice followed by spatial dimensions
 
         Returns
         -------
-        array : numpy array
-            array with painted segments
+        numpy.ndarray
+            Array containing the requested segment data.
         """
         # print('indexing in getitem:',indexing)
 
@@ -82,11 +92,18 @@ class UltrackArray:
         self,
         time: int,
     ) -> None:
-        """Paint all segments of specific time point which volume is bigger than self.volume
+        """Paint all segments from the specified timepoint whose number of pixels
+        is larger than the number of pixels threshold.
+
         Parameters
         ----------
         time : int
-            time point to paint the segments
+            Timepoint at which to paint the segments.
+
+        Notes
+        -----
+        Only segments without painted parents are included to avoid overlapping
+        representations.
         """
 
         engine = sqla.create_engine(self.database_path)
@@ -128,34 +145,44 @@ class UltrackArray:
         self,
         timeStart: int,
         timeStop: int,
-    ) -> list:
-        """Gets a list of number of pixels of all segments range of time points (timeStart to timeStop)
+    ) -> List[int]:
+        """Get segment pixel counts for a range of timepoints.
+
         Parameters
         ----------
         timeStart : int
+            Starting timepoint (inclusive).
         timeStop : int
+            Ending timepoint (inclusive).
+
         Returns
         -------
-        num_pix_list : list
-            list with all num_pixels for timeStart to timeStop
+        List[int]
+            Number of pixels for each segment within the specified time range.
         """
         engine = sqla.create_engine(self.database_path)
-        num_pix_list = []
+
         with Session(engine) as session:
-            query = list(
-                session.query(NodeDB.area).where(NodeDB.t.between(timeStart, timeStop))
+            query = (
+                session.query(NodeDB.area)
+                .where(NodeDB.t.between(timeStart, timeStop + 1))
+                .all()
             )
-            for num_pix in query:
-                num_pix_list.append(int(np.array(num_pix)))
+            num_pix_list = list(query)
+
         return num_pix_list
 
-    def find_min_max_volume_entire_dataset(self):
-        """Find minimum and maximum segment volume for ALL time point
+    def find_min_max_volume_entire_dataset(self) -> np.ndarray:
+        """
+        Find global minimum and maximum segment number of pixels.
+
+        Queries the database to find the extreme number of pixels across all
+        timepoints in the dataset.
 
         Returns
         -------
-        np.array : np.array
-            array with two elements: [min_volume, max_volume]
+        numpy.ndarray
+            Array with two integer elements: [minimum_number_of_pixels, maximum_number_of_pixels].
         """
         engine = sqla.create_engine(self.database_path)
         with Session(engine) as session:
@@ -170,4 +197,4 @@ class UltrackArray:
                 .scalar()
             )
 
-        return np.array([min_vol, max_vol], dtype=int)
+        return np.asarray([min_vol, max_vol], dtype=int)
