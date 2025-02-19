@@ -209,7 +209,7 @@ class UltrackWebsocketLogger:
                 experiment.err_log = _mimic_carriage_return(self.stderr.getvalue())
             if websocket.state == WebSocketState.DISCONNECTED:
                 return False
-            await websocket.send_json(json.loads(experiment.json()))
+            await websocket.send_json(json.loads(experiment.model_dump_json()))
             return True
 
         def between_callback(stop_logger_event: threading.Event):

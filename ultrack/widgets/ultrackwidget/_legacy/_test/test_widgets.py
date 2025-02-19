@@ -4,9 +4,12 @@ from typing import Callable, List
 
 import higra as hg
 import napari
+import pytest
 
 from ultrack.config import MainConfig
 from ultrack.widgets.ultrackwidget import UltrackWidget
+
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
 
 
 def test_ultrack_widget(
