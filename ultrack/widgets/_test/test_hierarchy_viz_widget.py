@@ -53,7 +53,6 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
 
     # get mock segmentation data + add to viewer
     segments = timelapse_mock_data[2]
-    print("segments shape", segments.shape)
     viewer.add_labels(segments, name="segments")
 
     # open ultrack widget
@@ -72,9 +71,13 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
     ultrack_widget._cb_images[UltrackInput.LABELS].value = layers["segments"]
     ultrack_widget._bt_run.click()
 
-    while not ultrack_widget._bt_run.isEnabled():
-        # wait for run to finish before loading config
-        time.sleep(0.2)
+    time.sleep(1)
+    # wait for run to finish before loading config
+    while (
+        ultrack_widget._current_worker is not None
+        and ultrack_widget._current_worker.is_running
+    ):
+        time.sleep(0.5)
 
     hier_viz_widget = HierarchyVizWidget(viewer)
     viewer.window.add_dock_widget(hier_viz_widget)
@@ -85,14 +88,14 @@ def test_hierarchy_viz_widget_from_ultrack_widget(
     hier_viz_widget._slider_update(0.75)
     hier_viz_widget._slider_update(0.25)
 
+    if request.config.getoption("--show-napari-viewer"):
+        napari.run()
+
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert (
         tuple(ultrack_widget._data_forms.get_config().data_config.metadata["shape"])
         == viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data.shape
     )  # metadata["shape"] is a list, data.shape in layer is a tuple
-
-    if request.config.getoption("--show-napari-viewer"):
-        napari.run()
 
     # checking that there are some labels painted
     assert viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data[0].max() > 0

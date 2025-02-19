@@ -11,7 +11,7 @@ from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
 
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.INFO)
+# LOG.setLevel(logging.INFO)
 
 
 class UltrackArray:

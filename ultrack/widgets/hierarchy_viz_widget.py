@@ -5,6 +5,7 @@ import napari
 import numpy as np
 from magicgui.widgets import ComboBox, Container, FloatSlider, Label
 from scipy import interpolate
+from sqlalchemy import PickleType
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
@@ -15,28 +16,15 @@ logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
+# LOG.setLevel(logging.INFO)
 
 
 class HierarchyVizWidget(Container):
     HIER_LAYER_NAME = "Ultrack Hierarchy"
     NODE_ATTRIBUTES = {
-        "id": NodeDB.id,
-        "z": NodeDB.z,
-        "y": NodeDB.y,
-        "x": NodeDB.x,
-        "z_shift": NodeDB.z_shift,
-        "y_shift": NodeDB.y_shift,
-        "x_shift": NodeDB.x_shift,
-        "area": NodeDB.area,
-        "frontier": NodeDB.frontier,
-        "height": NodeDB.height,
-        "selected": NodeDB.selected,
-        "node_prob": NodeDB.node_prob,
-        "segm_annot": NodeDB.segm_annot,
-        "node_annot": NodeDB.node_annot,
-        "appear_annot": NodeDB.appear_annot,
-        "disappear_annot": NodeDB.disappear_annot,
-        "division_annot": NodeDB.division_annot,
+        column.name: column
+        for column in NodeDB.__table__.columns
+        if not isinstance(column.type, PickleType)
     }
 
     def __init__(
@@ -98,6 +86,7 @@ class HierarchyVizWidget(Container):
         self._node_attribute_w = ComboBox(
             label="Node Attribute",
             choices=list(self.NODE_ATTRIBUTES.keys()),
+            value="id",
         )
         self._node_attribute_w.changed.connect(self._on_node_attribute_changed)
         self.append(self._node_attribute_w)
@@ -130,8 +119,10 @@ class HierarchyVizWidget(Container):
         return self.config.metadata.get("shape", [])
 
     def _slider_update(self, value: float) -> None:
-        self._ultrack_array.num_pix_threshold = self._mapping(value)
-        self._slider_label.label = str(int(self._mapping(value)))
+        mapped_value = self._mapping(value)
+        LOG.info("value %d mapped_value: %d", value, mapped_value)
+        self._ultrack_array.num_pix_threshold = mapped_value
+        self._slider_label.label = str(int(mapped_value))
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _create_mapping(self) -> interpolate.interp1d:
