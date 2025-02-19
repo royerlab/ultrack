@@ -50,7 +50,7 @@ class HierarchyVizWidget(Container):
 
         self._area_threshold_w = FloatSlider(label="Area", min=0, max=1, readout=False)
         self._area_threshold_w.value = 0.5
-        self.ultrack_array.volume = self.mapping(0.5)
+        self.ultrack_array.num_pix_threshold = self.mapping(0.5)
         self._area_threshold_w.changed.connect(self._slider_update)
 
         self.slider_label = Label(
@@ -73,7 +73,7 @@ class HierarchyVizWidget(Container):
         return self.config.metadata.get("shape", [])
 
     def _slider_update(self, value: float) -> None:
-        self.ultrack_array.volume = self.mapping(value)
+        self.ultrack_array.num_pix_threshold = self.mapping(value)
         self.slider_label.label = str(int(self.mapping(value)))
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 

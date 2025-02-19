@@ -1,21 +1,26 @@
+import logging
 from typing import List, Tuple, Union
 
 import numpy as np
 import sqlalchemy as sqla
-from sqlalchemy import func
+from sqlalchemy import Column, func
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 
 class UltrackArray:
     def __init__(
         self,
         config: MainConfig,
-        dtype: np.dtype = np.int32,
+        node_attribute: Column = NodeDB.id,
     ):
-        """Initialize an array for visualizing segments in the ultrack database.
+        """
+        Initialize an array for visualizing segments in the ultrack database.
 
         The array provides direct visualization of segments stored in the database,
         allowing efficient access and transversing the hierarchy of segments.
@@ -24,24 +29,58 @@ class UltrackArray:
         ----------
         config : MainConfig
             Configuration object containing Ultrack settings and metadata.
-        dtype : numpy.dtype, optional
-            Data type of the array, by default numpy.int32.
+        node_attribute : sqlalchemy.Column, optional
+            Node attribute to use for painting the array, by default NodeDB.id.
 
         Notes
         -----
         The array shape is determined from the configuration metadata.
         """
 
+        self._buffer: Union[np.ndarray, None] = None
         self.config = config
-        self.shape = tuple(config.data_config.metadata["shape"])  # (t,(z),y,x)
-        self.dtype = dtype
-        self.t_max = self.shape[0]
-        self.ndim = len(self.shape)
-        self.array = np.zeros(self.shape[1:], dtype=self.dtype)
+        self.node_attribute = node_attribute
 
         self.database_path = config.data_config.database_path
         self.minmax = self.find_min_max_volume_entire_dataset()
-        self.volume = self.minmax.mean().astype(int)
+        self.num_pix_threshold = self.minmax.mean().astype(int)
+
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        """
+        Return the shape of the array.
+        If metadata does not contain shape, returns a dummy dimension (1, 10, 10).
+
+        Returns
+        -------
+        Tuple[int, ...]
+            Shape of the array.
+        """
+        return tuple(self.config.data_config.metadata.get("shape", (1, 10, 10)))
+
+    @property
+    def t_max(self) -> int:
+        return self.shape[0]
+
+    @property
+    def ndim(self) -> int:
+        return len(self.shape)
+
+    @property
+    def buffer(self) -> np.ndarray:
+        new_buffer_shape = self.shape[1:]
+        if (
+            self._buffer is None
+            or new_buffer_shape != self._buffer.shape
+            or self.dtype != self._buffer.dtype
+        ):
+            self._buffer = np.zeros(new_buffer_shape, dtype=self.dtype)
+        return self._buffer
+
+    @property
+    def dtype(self) -> np.dtype:
+        # NOTE: I don't know how this will behave with BigInteger and Enum columns
+        return self.node_attribute.type.python_type
 
     def __getitem__(
         self,
@@ -82,14 +121,19 @@ class UltrackArray:
             except AttributeError:
                 time = time
 
+        # load buffer to avoid recomputing it
+        buffer = self.buffer
+
         self.fill_array(
+            buffer=buffer,
             time=time,
         )
 
-        return self.array[volume_slicing]
+        return buffer[volume_slicing]
 
     def fill_array(
         self,
+        buffer: np.ndarray,
         time: int,
     ) -> None:
         """Paint all segments from the specified timepoint whose number of pixels
@@ -97,6 +141,8 @@ class UltrackArray:
 
         Parameters
         ----------
+        buffer : np.ndarray
+            Buffer to paint the segments in-place.
         time : int
             Timepoint at which to paint the segments.
 
@@ -107,39 +153,36 @@ class UltrackArray:
         """
 
         engine = sqla.create_engine(self.database_path)
-        self.array.fill(0)
+        buffer.fill(0)
+
+        LOG.info("Painting segments at time %d", time)
+        LOG.info("num_pix_threshold: %d", self.num_pix_threshold)
 
         with Session(engine) as session:
             query = list(
-                session.query(NodeDB.id, NodeDB.pickle, NodeDB.hier_parent_id).where(
-                    NodeDB.t == time
+                session.query(
+                    self.node_attribute, NodeDB.pickle, NodeDB.id, NodeDB.hier_parent_id
+                ).where(
+                    NodeDB.t == time,
+                    NodeDB.area <= int(self.num_pix_threshold),
                 )
             )
-
-            idx_to_plot = []
-
-            for idx, q in enumerate(query):
-                if q[1].area <= self.volume:
-                    idx_to_plot.append(idx)
-
-            id_to_plot = [q[0] for idx, q in enumerate(query) if idx in idx_to_plot]
-            label_list = np.arange(1, len(query) + 1, dtype=int)
-
-            to_remove = []
-            for idx in idx_to_plot:
-                if query[idx][2] in id_to_plot:  # if parent is also printed
-                    to_remove.append(idx)
-
-            for idx in to_remove:
-                idx_to_plot.remove(idx)
-
             if len(query) == 0:
-                print("query is empty!")
+                LOG.warning("No segments to paint at time %d", time)
+                return
 
-            for idx in idx_to_plot:
-                query[idx][1].paint_buffer(
-                    self.array, value=label_list[idx], include_time=False
-                )
+            attrs, nodes, node_ids, parent_ids = zip(*query)
+
+            node_ids = set(node_ids)  # faster lookup
+
+            count = 0
+            for i in range(len(nodes)):
+                if parent_ids[i] not in node_ids:
+                    print(nodes[i].area)
+                    nodes[i].paint_buffer(buffer, value=attrs[i], include_time=False)
+                    count += 1
+
+            LOG.info("Painted %d segments", count)
 
     def get_tp_num_pixels(
         self,
@@ -165,10 +208,10 @@ class UltrackArray:
         with Session(engine) as session:
             query = (
                 session.query(NodeDB.area)
-                .where(NodeDB.t.between(timeStart, timeStop + 1))
+                .where(NodeDB.t.between(timeStart, timeStop))
                 .all()
             )
-            num_pix_list = list(query)
+            num_pix_list = [v for v, in query]  # unpacking the query
 
         return num_pix_list
 
@@ -196,5 +239,7 @@ class UltrackArray:
                 .where(NodeDB.t.between(0, self.t_max))
                 .scalar()
             )
+
+        LOG.info(f"min_vol: {min_vol}, max_vol: {max_vol}")
 
         return np.asarray([min_vol, max_vol], dtype=int)
