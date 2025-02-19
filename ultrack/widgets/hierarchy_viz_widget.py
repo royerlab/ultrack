@@ -101,12 +101,20 @@ class HierarchyVizWidget(Container):
     def _add_ultrack_array(self) -> None:
         if self.HIER_LAYER_NAME in self._viewer.layers:
             self._viewer.layers.remove(self.HIER_LAYER_NAME)
+
+        scale = self.config.data_config.metadata.get("scale", [1, 1])
+
         try:
-            self._viewer.add_labels(self._ultrack_array, name=self.HIER_LAYER_NAME)
+            self._viewer.add_labels(
+                self._ultrack_array,
+                name=self.HIER_LAYER_NAME,
+                scale=scale,
+            )
         except TypeError:
             self._viewer.add_image(
                 self._ultrack_array,
                 name=self.HIER_LAYER_NAME,
+                scale=scale,
                 colormap="magma",
             )
 
