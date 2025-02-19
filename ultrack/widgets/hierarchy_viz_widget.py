@@ -3,10 +3,11 @@ from typing import Sequence
 
 import napari
 import numpy as np
-from magicgui.widgets import Container, FloatSlider, Label
+from magicgui.widgets import ComboBox, Container, FloatSlider, Label
 from scipy import interpolate
 
 from ultrack.config import MainConfig
+from ultrack.core.database import NodeDB
 from ultrack.utils.ultrack_array import UltrackArray
 from ultrack.widgets.ultrackwidget import UltrackWidget
 
@@ -18,6 +19,25 @@ LOG = logging.getLogger(__name__)
 
 class HierarchyVizWidget(Container):
     HIER_LAYER_NAME = "Ultrack Hierarchy"
+    NODE_ATTRIBUTES = {
+        "id": NodeDB.id,
+        "z": NodeDB.z,
+        "y": NodeDB.y,
+        "x": NodeDB.x,
+        "z_shift": NodeDB.z_shift,
+        "y_shift": NodeDB.y_shift,
+        "x_shift": NodeDB.x_shift,
+        "area": NodeDB.area,
+        "frontier": NodeDB.frontier,
+        "height": NodeDB.height,
+        "selected": NodeDB.selected,
+        "node_prob": NodeDB.node_prob,
+        "segm_annot": NodeDB.segm_annot,
+        "node_annot": NodeDB.node_annot,
+        "appear_annot": NodeDB.appear_annot,
+        "disappear_annot": NodeDB.disappear_annot,
+        "division_annot": NodeDB.division_annot,
+    }
 
     def __init__(
         self,
@@ -37,51 +57,81 @@ class HierarchyVizWidget(Container):
         **kwargs : dict
             Additional keyword arguments to pass to the UltrackArray constructor.
         """
-
-        super().__init__(layout="horizontal")
+        super().__init__(layout="vertical")
 
         self._viewer = viewer
+        title_label = Label(value="<h2>Hierarchy Viz. Widget</h2>")
+        self.append(title_label)
 
         if config is None:
             self.config = self._get_config()
         else:
             self.config = config
 
-        self.ultrack_array = UltrackArray(self.config, **kwargs)
+        self._ultrack_array = UltrackArray(self.config, **kwargs)
 
-        self.mapping = self._create_mapping()
+        # TODO: might need to be updated when the slider is changed
+        self._mapping = self._create_mapping()
 
-        self._area_threshold_w = FloatSlider(label="Area", min=0, max=1, readout=False)
-        self._area_threshold_w.value = 0.5
-        self.ultrack_array.num_pix_threshold = self.mapping(0.5)
+        # Create area threshold container with fixed width and margins
+        self._area_widget_container = Container(layout="horizontal", label="Area")
+        self.append(self._area_widget_container)
+
+        # Configure slider label
+        self._slider_label = Label(label="0")
+        self._slider_label.native.setFixedWidth(25)
+
+        # Configure area threshold slider
+        self._area_threshold_w = FloatSlider(
+            min=0,
+            max=1,
+            readout=False,
+            value=0.5,
+            tooltip="Scroll to change the threshold and transverse the hierarchy",
+        )
         self._area_threshold_w.changed.connect(self._slider_update)
 
-        self.slider_label = Label(
-            label=str(int(self.mapping(self._area_threshold_w.value)))
+        self._area_widget_container.append(self._area_threshold_w)
+        self._area_widget_container.append(self._slider_label)
+
+        # Configure node attribute combo box
+        self._node_attribute_w = ComboBox(
+            label="Node Attribute",
+            choices=list(self.NODE_ATTRIBUTES.keys()),
         )
-        self.slider_label.native.setFixedWidth(25)
+        self._node_attribute_w.changed.connect(self._on_node_attribute_changed)
+        self.append(self._node_attribute_w)
 
-        self.append(self._area_threshold_w)
-        self.append(self.slider_label)
-
-        # THERE SHOULD BE CHECK HERE IF THERE EXISTS A LAYER WITH THE NAME 'HIERARCHY'
-        try:
-            self._viewer.add_labels(self.ultrack_array, name=self.HIER_LAYER_NAME)
-        except TypeError:
-            self._viewer.add_image(self.ultrack_array, name=self.HIER_LAYER_NAME)
+        self._add_ultrack_array()
 
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _on_config_changed(self) -> None:
         self._ndim = len(self._shape)
 
+    def _add_ultrack_array(self) -> None:
+        if self.HIER_LAYER_NAME in self._viewer.layers:
+            self._viewer.layers.remove(self.HIER_LAYER_NAME)
+        try:
+            self._viewer.add_labels(self._ultrack_array, name=self.HIER_LAYER_NAME)
+        except TypeError:
+            self._viewer.add_image(
+                self._ultrack_array,
+                name=self.HIER_LAYER_NAME,
+                colormap="magma",
+            )
+
+    def _on_node_attribute_changed(self, value: str) -> None:
+        self._ultrack_array.node_attribute = self.NODE_ATTRIBUTES.get(value, NodeDB.id)
+        self._add_ultrack_array()
+
     @property
     def _shape(self) -> Sequence[int]:
         return self.config.metadata.get("shape", [])
 
     def _slider_update(self, value: float) -> None:
-        self.ultrack_array.num_pix_threshold = self.mapping(value)
-        self.slider_label.label = str(int(self.mapping(value)))
+        self._ultrack_array.num_pix_threshold = self._mapping(value)
+        self._slider_label.label = str(int(self._mapping(value)))
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
     def _create_mapping(self) -> interpolate.interp1d:
@@ -92,11 +142,11 @@ class HierarchyVizWidget(Container):
         current_time = int(
             self._viewer.dims.point[0]
         )  # we assume that time is the first dim
-        num_pixels_list = self.ultrack_array.get_tp_num_pixels(
+        num_pixels_list = self._ultrack_array.get_tp_num_pixels(
             timeStart=current_time, timeStop=current_time
         )
-        num_pixels_list.append(self.ultrack_array.minmax[0])
-        num_pixels_list.append(self.ultrack_array.minmax[1])
+        num_pixels_list.append(self._ultrack_array.minmax[0])
+        num_pixels_list.append(self._ultrack_array.minmax[1])
         num_pixels_list.sort()
 
         x_vec = np.linspace(0, 1, len(num_pixels_list))

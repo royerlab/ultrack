@@ -14,7 +14,9 @@ from ultrack.widgets.ultrackwidget.utils import UltrackInput
 from ultrack.widgets.ultrackwidget.workflows import WorkflowChoice
 
 
-@pytest.mark.parametrize("node_attribute", [NodeDB.id, NodeDB.selected, NodeDB.z])
+@pytest.mark.parametrize(
+    "node_attribute", [NodeDB.id, NodeDB.selected, NodeDB.z, NodeDB.node_annot]
+)
 def test_hierarchy_viz_widget_from_config(
     make_napari_viewer: Callable[[], napari.Viewer],
     segmentation_database_mock_data: MainConfig,
@@ -38,9 +40,7 @@ def test_hierarchy_viz_widget_from_config(
     )  # metadata["shape"] is a list, data.shape is a tuple
 
     # checking that there are some labels painted
-    if node_attribute != NodeDB.selected:
-        # we don't check selected because we don't run the ILP
-        assert viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data[0].max() > 0
+    assert viewer.layers[HierarchyVizWidget.HIER_LAYER_NAME].data[0].max() > 0
 
 
 def test_hierarchy_viz_widget_from_ultrack_widget(

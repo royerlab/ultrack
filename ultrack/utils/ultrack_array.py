@@ -1,3 +1,4 @@
+import enum
 import logging
 from typing import List, Tuple, Union
 
@@ -87,6 +88,8 @@ class UltrackArray:
             dtype = np.float32
         elif sqla_dtype == bool:
             dtype = np.int8  # because of napari
+        elif issubclass(sqla_dtype, enum.IntEnum):
+            dtype = np.int8
         else:
             raise ValueError(f"Unsupported dtype: {sqla_dtype}")
         LOG.info("sqla_dtype: %s, dtype: %s", sqla_dtype, dtype)
@@ -163,6 +166,12 @@ class UltrackArray:
         """
 
         engine = sqla.create_engine(self.database_path)
+        if buffer.dtype == np.int8:
+            # we need an offset because we don't want to mix the 0 labels with unpainted regions
+            offset = 1
+        else:
+            offset = 0
+        LOG.info("attribute offset: %d", offset)
         buffer.fill(0)
 
         LOG.info("Painting segments at time %d", time)
@@ -189,8 +198,10 @@ class UltrackArray:
             for i in range(len(nodes)):
                 # only paint top-most level of hierarchy
                 if parent_ids[i] not in node_ids:
-                    LOG.info("Painting segment %d", attrs[i])
-                    nodes[i].paint_buffer(buffer, value=attrs[i], include_time=False)
+                    LOG.info("Painting segment %d", attrs[i] + offset)
+                    nodes[i].paint_buffer(
+                        buffer, value=attrs[i] + offset, include_time=False
+                    )
                     count += 1
 
             LOG.info("Painted %d segments", count)
