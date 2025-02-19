@@ -263,20 +263,24 @@ def fit_nodes_prob(
 
 def select_competing_links(
     links_df: pd.DataFrame,
-) -> pd.DataFrame:
+    gt_link: pd.Series,
+) -> tuple[pd.DataFrame, pd.Series]:
     """
     Selects the competing links from the ground-truth.
 
     Parameters
     ----------
     links_df : pd.DataFrame
-        Links dataframe with `gt_link` column.
+        Links dataframe with features.
+    gt_link : pd.Series
+        Ground-truth (0/1)-links series.
 
     Returns
     -------
-    pd.DataFrame:
-        Links dataframe with the selected competing links.
+    tuple[pd.DataFrame, pd.Series]
+        Links dataframe and ground-truth with the selected competing links.
     """
+    links_df["gt_link"] = gt_link
     target_ids = links_df.index.get_level_values(0)
 
     has_competing_links = links_df.groupby(target_ids)["gt_link"].transform(
@@ -290,7 +294,7 @@ def select_competing_links(
 
     links_df = links_df[has_competing_links]
 
-    return links_df
+    return links_df.drop(columns=["gt_link"]), links_df["gt_link"]
 
 
 def add_links_gt(
@@ -328,7 +332,9 @@ def add_links_gt(
 
     gt_links = pd.Series(
         correct_links & matched_nodes,
-        index=(target_ids, source_ids),
+        index=pd.MultiIndex.from_arrays(
+            [target_ids, source_ids], names=["target_id", "source_id"]
+        ),
         name="gt_link",
     )
 
@@ -447,11 +453,9 @@ def fit_links_prob(
     gt_link = add_links_gt(features, ground_truth)
 
     if remove_no_overlap:
-        features["gt_link"] = gt_link
-        features = select_competing_links(features)
+        features, gt_link = select_competing_links(features, gt_link)
         if features.empty:
             raise ValueError("Dataset is empty after removing no overlap links")
-        features = features.drop(columns=["gt_link"])
 
     classifier = _validate_classifier(classifier)
 
