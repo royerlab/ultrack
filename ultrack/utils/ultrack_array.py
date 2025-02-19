@@ -19,6 +19,7 @@ class UltrackArray:
         self,
         config: MainConfig,
         node_attribute: Column = NodeDB.id,
+        cache_size: int = 1,
     ):
         """
         Initialize an array for visualizing segments in the ultrack database.
@@ -32,6 +33,8 @@ class UltrackArray:
             Configuration object containing Ultrack settings and metadata.
         node_attribute : sqlalchemy.Column, optional
             Node attribute to use for painting the array, by default NodeDB.id.
+        cache_size : int, optional
+            Number of __getitem__ calls to cache in memory, by default 1.
 
         Notes
         -----
@@ -45,6 +48,7 @@ class UltrackArray:
         self.database_path = config.data_config.database_path
         self.minmax = self.min_max_num_pixels_entire_dataset()
         self.num_pix_threshold = self.minmax.mean().astype(int)
+        self.cache_size = cache_size
 
     @property
     def shape(self) -> Tuple[int, ...]:
@@ -95,6 +99,15 @@ class UltrackArray:
         LOG.info("sqla_dtype: %s, dtype: %s", sqla_dtype, dtype)
         return dtype
 
+    @property
+    def cache_size(self) -> int:
+        return self._cache_size
+
+    @cache_size.setter
+    def cache_size(self, value: int) -> None:
+        self._cache_size = value
+        self._cache = {}
+
     def __getitem__(
         self,
         indexing: Union[Tuple[Union[int, slice]], int, slice],
@@ -134,17 +147,38 @@ class UltrackArray:
             except AttributeError:
                 time = time
 
-        # load buffer to avoid recomputing it
-        buffer = self.buffer
-
-        self.fill_array(
-            buffer=buffer,
+        buffer = self._cached_fill_array(
             time=time,
         )
 
         return buffer[volume_slicing]
 
-    def fill_array(
+    def _cached_fill_array(
+        self,
+        time: int,
+    ) -> np.ndarray:
+        """
+        Get item from the array with caching.
+        See `_fill_array` for more details.
+
+        NOTE:
+            - in the future, only the 3D loading should be cached, not any advanced 2D indexing
+            - because data is written in-place on buffer, cache larger than 1 is not possible with this implementation
+        """
+        cache_key = (time, int(self.num_pix_threshold))
+        if cache_key in self._cache:
+            buffer = self._cache[cache_key]
+
+        else:
+            buffer = self.buffer
+            self._fill_array(buffer, time)
+            if len(self._cache) == self._cache_size:
+                oldest_item = next(iter(self._cache))
+                self._cache.pop(oldest_item)
+            self._cache[cache_key] = buffer
+        return buffer
+
+    def _fill_array(
         self,
         buffer: np.ndarray,
         time: int,
@@ -225,6 +259,9 @@ class UltrackArray:
         List[int]
             Number of pixels for each segment within the specified time range.
         """
+        LOG.info(
+            "Getting segment pixel counts for time range %d to %d", timeStart, timeStop
+        )
         engine = sqla.create_engine(self.database_path)
 
         with Session(engine) as session:
@@ -237,28 +274,38 @@ class UltrackArray:
 
         return num_pix_list
 
-    def min_max_num_pixels_entire_dataset(self) -> np.ndarray:
+    def min_max_num_pixels_entire_dataset(self, n_frames: int = 10) -> np.ndarray:
         """
         Find global minimum and maximum segment number of pixels.
 
         Queries the database to find the extreme number of pixels across all
         timepoints in the dataset.
 
+        Parameters
+        ----------
+        n_frames : int
+            Number of frames to query from the database.
+            This is used to avoid querying the entire dataset at once.
+
         Returns
         -------
         numpy.ndarray
             Array with two integer elements: [minimum_number_of_pixels, maximum_number_of_pixels].
         """
+        LOG.info("Computing min and max number of pixels from database")
         engine = sqla.create_engine(self.database_path)
+
+        frames = list(range(0, self.t_max, max(1, self.t_max // n_frames)))
+
         with Session(engine) as session:
             max_num_pix = (
                 session.query(func.max(NodeDB.area))
-                .where(NodeDB.t.between(0, self.t_max))
+                .where(NodeDB.t.in_(frames))
                 .scalar()
             )
             min_num_pix = (
                 session.query(func.min(NodeDB.area))
-                .where(NodeDB.t.between(0, self.t_max))
+                .where(NodeDB.t.in_(frames))
                 .scalar()
             )
 

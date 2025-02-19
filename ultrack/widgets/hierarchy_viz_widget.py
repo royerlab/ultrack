@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence
+from typing import Optional, Sequence
 
 import napari
 import numpy as np
@@ -30,7 +30,7 @@ class HierarchyVizWidget(Container):
     def __init__(
         self,
         viewer: napari.Viewer,
-        config=None,
+        config: Optional[MainConfig] = None,
         **kwargs,
     ) -> None:
         """
@@ -138,6 +138,7 @@ class HierarchyVizWidget(Container):
         Creates a pseudo-linear mapping from U[0,1] to full range of number of pixels
             num_pixels = mapping([0,1])
         """
+        LOG.info("Creating mapping")
         current_time = int(
             self._viewer.dims.point[0]
         )  # we assume that time is the first dim
@@ -151,6 +152,9 @@ class HierarchyVizWidget(Container):
         x_vec = np.linspace(0, 1, len(num_pixels_list))
         y_vec = np.array(num_pixels_list)
         mapping = interpolate.interp1d(x_vec, y_vec)
+
+        LOG.info("Mapping created")
+
         return mapping
 
     def _get_config(self) -> MainConfig:
