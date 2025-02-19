@@ -121,14 +121,14 @@ def add_links_prob(
     engine = sqla.create_engine(config.data_config.database_path)
 
     with Session(engine) as session:
-        query_stmt = session.query(LinkDB.id, LinkDB.target_id, LinkDB.source_id)
+        query = session.query(LinkDB.id, LinkDB.target_id, LinkDB.source_id)
         link_df = pd.read_sql(
-            query_stmt.statement, session.bind, index_col=["target_id", "source_id"]
+            query.statement, session.bind, index_col=["target_id", "source_id"]
         )
 
-        update_stmt = (
+        update = (
             sqla.update(LinkDB)
-            .where(LinkDB.id == sqla.bindparam("id"))
+            .where(LinkDB.id == sqla.bindparam("link_id"))
             .values(weight=sqla.bindparam("weight"))
         )
         probs_df = probs_df.join(link_df, how="left")
@@ -136,10 +136,10 @@ def add_links_prob(
         assert not probs_df.isna().any().any()
 
         session.connection().execute(
-            update_stmt,
+            update,
             [
-                {"id": id, "weight": weight}
-                for id, weight in zip(probs_df["id"], probs_df["weight"])
+                {"link_id": link_id, "weight": weight}
+                for link_id, weight in zip(probs_df["id"], probs_df["weight"])
             ],
             execution_options={"synchronize_session": False},
         )
