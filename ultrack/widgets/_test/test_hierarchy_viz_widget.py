@@ -10,16 +10,10 @@ from ultrack.widgets.ultrackwidget.utils import UltrackInput
 from ultrack.widgets.ultrackwidget.workflows import WorkflowChoice
 
 
-def test_hierarchy_viz_widget(
+def test_hierarchy_viz_widget_from_config(
     make_napari_viewer: Callable[[], napari.Viewer],
     segmentation_database_mock_data: MainConfig,
-    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
-    request,
-):
-
-    ####################################################################################
-    # OPTION 1: run widget using config
-    ####################################################################################
+) -> None:
     config = segmentation_database_mock_data
     viewer = make_napari_viewer()
     widget = HierarchyVizWidget(viewer, config)
@@ -37,48 +31,52 @@ def test_hierarchy_viz_widget(
         == viewer.layers["hierarchy"].data.shape
     )  # metadata["shape"] is a list, data.shape is a tuple
 
-    ####################################################################################
-    # OPTION 2: run widget by taking config from Ultrack-widget
-    ####################################################################################
+
+def test_hierarchy_viz_widget_from_ultrack_widget(
+    config_instance: MainConfig,
+    make_napari_viewer: Callable[[], napari.Viewer],
+    timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
+    request,
+) -> None:
     # make napari viewer
-    viewer2 = make_napari_viewer()
+    viewer = make_napari_viewer()
 
     # get mock segmentation data + add to viewer
     segments = timelapse_mock_data[2]
     print("segments shape", segments.shape)
-    viewer2.add_labels(segments, name="segments")
+    viewer.add_labels(segments, name="segments")
 
     # open ultrack widget
-    widget_ultrack = UltrackWidget(viewer2)
-    viewer2.window.add_dock_widget(widget_ultrack)
+    ultrack_widget = UltrackWidget(viewer)
+    viewer.window.add_dock_widget(ultrack_widget)
 
     # setup ultrack widget for 'Labels' input
-    layers = viewer2.layers
+    layers = viewer.layers
     workflow = WorkflowChoice.AUTO_FROM_LABELS
-    workflow_idx = widget_ultrack._cb_workflow.findData(workflow)
-    widget_ultrack._cb_workflow.setCurrentIndex(workflow_idx)
-    widget_ultrack._cb_workflow.currentIndexChanged.emit(workflow_idx)
+    workflow_idx = ultrack_widget._cb_workflow.findData(workflow)
+    ultrack_widget._cb_workflow.setCurrentIndex(workflow_idx)
+    ultrack_widget._cb_workflow.currentIndexChanged.emit(workflow_idx)
     # setting combobox choices manually, because they were not working automatically
-    widget_ultrack._cb_images[UltrackInput.LABELS].choices = layers
+    ultrack_widget._cb_images[UltrackInput.LABELS].choices = layers
     # # selecting layers
-    widget_ultrack._cb_images[UltrackInput.LABELS].value = layers["segments"]
+    ultrack_widget._cb_images[UltrackInput.LABELS].value = layers["segments"]
 
     # load config
-    widget_ultrack._data_forms.load_config(config)
+    ultrack_widget._data_forms.load_config(config_instance)
 
-    widget_hier = HierarchyVizWidget(viewer2)
-    viewer2.window.add_dock_widget(widget_hier)
+    hier_viz_widget = HierarchyVizWidget(viewer)
+    viewer.window.add_dock_widget(hier_viz_widget)
 
     assert "hierarchy" in viewer.layers
 
     # test moving sliders:
-    widget._slider_update(0.75)
-    widget._slider_update(0.25)
+    hier_viz_widget._slider_update(0.75)
+    hier_viz_widget._slider_update(0.25)
 
     # test is shape of layer.data has same shape as the data shape reported in config:
     assert (
-        tuple(config.data_config.metadata["shape"])
-        == viewer2.layers["hierarchy"].data.shape
+        tuple(config_instance.data_config.metadata["shape"])
+        == viewer.layers["hierarchy"].data.shape
     )  # metadata["shape"] is a list, data.shape in layer is a tuple
 
     if request.config.getoption("--show-napari-viewer"):
