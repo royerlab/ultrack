@@ -77,12 +77,17 @@ class HierarchyVizWidget(Container):
         self.slider_label.label = str(int(self.mapping(value)))
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
-    def _create_mapping(self):
+    def _create_mapping(self) -> interpolate.interp1d:
         """
         Creates a pseudo-linear mapping from U[0,1] to full range of number of pixels
             num_pixels = mapping([0,1])
         """
-        num_pixels_list = self.ultrack_array.get_tp_num_pixels(timeStart=5, timeStop=5)
+        current_time = int(
+            self._viewer.dims.point[0]
+        )  # we assume that time is the first dim
+        num_pixels_list = self.ultrack_array.get_tp_num_pixels(
+            timeStart=current_time, timeStop=current_time
+        )
         num_pixels_list.append(self.ultrack_array.minmax[0])
         num_pixels_list.append(self.ultrack_array.minmax[1])
         num_pixels_list.sort()
