@@ -56,8 +56,11 @@ def get_links_features(
         # compute distance between source and target
         links_df["dist"] = np.sqrt(
             np.sum(
-                np.square(source_df[c].to_numpy() - target_df[c].to_numpy())
-                for c in ["x", "y", "z"]
+                [
+                    np.square(source_df[c].to_numpy() - target_df[c].to_numpy())
+                    for c in ["x", "y", "z"]
+                ],
+                axis=0,
             )
         )
 

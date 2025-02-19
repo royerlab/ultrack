@@ -123,16 +123,15 @@ def add_links_prob(
     with Session(engine) as session:
         query_stmt = session.query(LinkDB.id, LinkDB.target_id, LinkDB.source_id)
         link_df = pd.read_sql(
-            query_stmt, bind=session.bind, index_col=["target_id", "source_id"]
+            query_stmt.statement, session.bind, index_col=["target_id", "source_id"]
         )
 
         update_stmt = (
-            sqla.update(LinkDB.weight)
+            sqla.update(LinkDB)
             .where(LinkDB.id == sqla.bindparam("id"))
             .values(weight=sqla.bindparam("weight"))
         )
         probs_df = probs_df.join(link_df, how="left")
-        print("SHAPE", probs_df.shape)
 
         assert not probs_df.isna().any().any()
 
