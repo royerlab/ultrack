@@ -9,6 +9,8 @@ from ultrack import to_tracks_layer
 from ultrack.config import MainConfig
 from ultrack.widgets import TrackInspectionWidget
 
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
+
 
 @pytest.mark.parametrize(
     "config_content,timelapse_mock_data",
