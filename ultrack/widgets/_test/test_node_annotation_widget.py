@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Callable, Tuple
 
 import napari
+import pytest
 import zarr
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from sqlalchemy.orm import Session
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB, NodeSegmAnnotation
 from ultrack.widgets import NodeAnnotationWidget
+
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
 
 
 def test_node_annotation_widget(

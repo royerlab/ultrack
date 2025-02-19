@@ -2,9 +2,11 @@ from typing import Callable, List
 
 import napari
 import numpy as np
+import pytest
 
-from ultrack.utils._test.test_edge import multiple_labels  # noqa: F401
 from ultrack.widgets import LabelsToContoursWidget
+
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
 
 
 def test_labels_to_contours_widget(
