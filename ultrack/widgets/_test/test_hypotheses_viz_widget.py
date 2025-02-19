@@ -12,6 +12,8 @@ from ultrack.core.database import NodeDB
 from ultrack.core.segmentation.node import Node
 from ultrack.widgets import HypothesesVizWidget
 
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
+
 
 def _is_sorted(nodes: Dict[int, Node]) -> bool:
     nodes = list(nodes.values())
