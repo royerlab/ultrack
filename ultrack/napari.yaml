@@ -17,6 +17,10 @@ contributions:
       python_name: ultrack.widgets:UltrackWidget
       title: Ultrack
 
+    - id: ultrack.hierarchy_viz_widget
+      python_name: ultrack.widgets:HierarchyVizWidget
+      title: Hierarchy visualization
+
 ###### DEPRECATED & WIP WIDGETS  #####
 #     - id: ultrack.labels_to_edges_widget
 #       python_name: ultrack.widgets:LabelsToContoursWidget
@@ -41,7 +45,7 @@ contributions:
   readers:
     - command: ultrack.get_reader
       accepts_directories: false
-      filename_patterns: ['*.csv']
+      filename_patterns: ['*.csv', '*.parquet']
 
 #   writers:
 #     - command: ultrack.write_multiple
@@ -66,6 +70,9 @@ contributions:
 
     # - command: ultrack.division_annotation_widget
     #   display_name: Division annotation
+
+    - command: ultrack.hierarchy_viz_widget
+      display_name: Hierarchy visualization
 
     # - command: ultrack.track_inspection
     #   display_name: Track inspection

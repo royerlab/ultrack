@@ -5,7 +5,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import toml
-from pydantic.v1 import BaseModel, Extra, root_validator, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -42,16 +48,16 @@ class DataConfig(BaseModel):
     must be altered manually if multiple instances are used
     """
 
-    class Config:
-        validate_assignment = True
-        use_enum_values = True
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        validate_assignment=True,
+        use_enum_values=True,
+        extra="forbid",
+    )
 
-    @validator("working_dir")
+    @field_validator("working_dir")
     def validate_working_dir_writeable(cls, value: Path) -> Path:
         """Converts string to watershed hierarchy function."""
-
-        value.mkdir(exist_ok=True)
+        value.mkdir(exist_ok=True, parents=True)
         try:
             tmp_path = value / f".write_test_{uuid.uuid4().hex}"
             file_handle = open(tmp_path, "w")
@@ -62,20 +68,21 @@ class DataConfig(BaseModel):
 
         return value
 
-    @root_validator
-    def validate_postgresql_parameters(cls, values: Dict) -> Dict:
+    @field_serializer("working_dir")
+    def serialize_working_dir(self, value: Path) -> str:
+        return str(value)
+
+    @model_validator(mode="after")
+    def validate_postgresql_parameters(self) -> "DataConfig":
         """Validates postgresql parameters"""
 
-        if (
-            values["database"] == DatabaseChoices.postgresql.value
-            and "address" not in values
-        ):
+        if self.database == DatabaseChoices.postgresql.value and self.address is None:
             raise ValueError(
                 "`data.address` must be defined when `data.database` = `postgresql`."
                 "For example: postgres@localhost:12345/example"
             )
 
-        return values
+        return self
 
     @property
     def database_path(self) -> str:
@@ -118,8 +125,3 @@ class DataConfig(BaseModel):
             metadata = toml.load(f)
 
         return metadata
-
-    def dict(self, *args, **kwargs) -> Dict[str, Any]:
-        d = super().dict(*args, **kwargs)
-        d["working_dir"] = str(d["working_dir"])
-        return d

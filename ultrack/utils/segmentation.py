@@ -266,6 +266,6 @@ def copy_segments(
         )  # not sure why this is necessary in large datasets
     else:
         for t in tqdm(range(segments.shape[0]), "Copying segments"):
-            out_segments[t] = segments[t]
+            out_segments[t] = np.asarray(segments[t])
 
     return out_segments

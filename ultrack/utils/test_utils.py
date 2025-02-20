@@ -34,16 +34,7 @@ def config_content(tmp_path: Path, request) -> Dict[str, Any]:
         # FIXME: not working, falling back to sqlite
         kwargs["data.database"] = DatabaseChoices.sqlite.value
 
-        # if platform.system() == "Windows":
-        #     pytest.skip("Skipping postgresql testing on Windows")
-
-        # postgresql = Postgresql()
-        # kwargs["data.address"] = postgresql.url().split("//")[1]
-
-    yield make_config_content(kwargs)
-
-    # if is_postgresql:
-    #     postgresql.stop()
+    return make_config_content(kwargs)
 
 
 @pytest.fixture

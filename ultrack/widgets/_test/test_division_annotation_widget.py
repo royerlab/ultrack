@@ -11,6 +11,8 @@ from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB, VarAnnotation
 from ultrack.widgets import DivisionAnnotationWidget
 
+pytest.skip(reason="DEPRECATED", allow_module_level=True)
+
 
 @pytest.mark.parametrize(
     "config_content",
