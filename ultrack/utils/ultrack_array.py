@@ -137,7 +137,7 @@ class UltrackArray:
         if isinstance(time, slice):  # if all time points are requested
             return np.stack(
                 [
-                    self.__getitem__((t,) + volume_slicing)
+                    self.__getitem__((t,) + volume_slicing).copy()
                     for t in range(*time.indices(self.shape[0]))
                 ]
             )
