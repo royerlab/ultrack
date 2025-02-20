@@ -8,7 +8,7 @@ from sqlalchemy import Column, func
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
-from ultrack.core.database import NodeDB
+from ultrack.core.database import GTLinkDB, NodeDB
 
 LOG = logging.getLogger(__name__)
 # LOG.setLevel(logging.INFO)
@@ -212,14 +212,26 @@ class UltrackArray:
         LOG.info("num_pix_threshold: %d", self.num_pix_threshold)
 
         with Session(engine) as session:
+            query = session.query(
+                self.node_attribute, NodeDB.pickle, NodeDB.id, NodeDB.hier_parent_id
+            )
+            if self.node_attribute.table == NodeDB.__table__:
+                pass  # default query
+            elif self.node_attribute.table == GTLinkDB.__table__:
+                # select only nodes that are connected to a selected GT node
+                query = query.join(GTLinkDB, NodeDB.id == GTLinkDB.source_id).where(
+                    GTLinkDB.selected
+                )
+            else:
+                raise ValueError(f"Unsupported node attribute: {self.node_attribute}")
+
             query = list(
-                session.query(
-                    self.node_attribute, NodeDB.pickle, NodeDB.id, NodeDB.hier_parent_id
-                ).where(
+                query.where(
                     NodeDB.t == time,
                     NodeDB.area <= int(self.num_pix_threshold),
                 )
             )
+
             if len(query) == 0:
                 LOG.warning("No segments to paint at time %d", time)
                 return

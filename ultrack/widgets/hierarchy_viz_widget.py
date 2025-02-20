@@ -8,7 +8,7 @@ from scipy import interpolate
 from sqlalchemy import PickleType
 
 from ultrack.config import MainConfig
-from ultrack.core.database import NodeDB
+from ultrack.core.database import GTLinkDB, NodeDB
 from ultrack.utils.ultrack_array import UltrackArray
 from ultrack.widgets.ultrackwidget import UltrackWidget
 
@@ -25,6 +25,9 @@ class HierarchyVizWidget(Container):
         column.name: column
         for column in NodeDB.__table__.columns
         if not isinstance(column.type, PickleType)
+    } | {
+        "gt_id": GTLinkDB.target_id,
+        "gt_weight": GTLinkDB.weight,
     }
 
     def __init__(
