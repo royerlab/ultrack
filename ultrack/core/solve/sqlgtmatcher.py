@@ -20,7 +20,7 @@ class SQLGTMatcher:
         self,
         config: MainConfig,
         write_lock: Optional[fasteners.InterProcessLock] = None,
-        eps: float = 1e-3,
+        eps: float = 1e-5,
     ) -> None:
         """
         Ground-truth matching solver from SQL database content.
@@ -150,7 +150,7 @@ class SQLGTMatcher:
                 edges_records.append(
                     {
                         "link_id": idx,
-                        "selected": e_var.x > 0.5,
+                        "selected": True,
                     }
                 )
 

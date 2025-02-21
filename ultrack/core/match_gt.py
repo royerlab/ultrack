@@ -123,7 +123,8 @@ def _match_ground_truth_frame(
     if segmentation_gt:
 
         def _weight_func(tgt, src):
-            return tgt.IoU(src)
+            # return tgt.IoU(src)
+            return tgt.intersection(src)
 
     else:
 
