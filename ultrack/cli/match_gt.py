@@ -69,6 +69,13 @@ LOG.addHandler(RichHandler())
     help="Indicates ground-truth are tracking instances results.",
 )
 @click.option(
+    "--is-dense",
+    is_flag=True,
+    type=bool,
+    default=False,
+    help="Indicates ground-truth are dense annotations (everything is annotated).",
+)
+@click.option(
     "--insert-prob",
     is_flag=True,
     type=bool,
@@ -87,6 +94,7 @@ def match_gt_cli(
     output_config: Optional[Path],
     is_segmentation: bool,
     is_tracking: bool,
+    is_dense: bool,
     insert_prob: bool,
     batch_index: Optional[int],
     overwrite: bool,
@@ -150,6 +158,7 @@ def match_gt_cli(
             gt_df["gt_track_id"],
             persistence_features=persistence,
             insert_prob=insert_prob,
+            remove_no_overlap=not is_dense,
         )
 
         if is_tracking:

@@ -123,7 +123,8 @@ def _match_ground_truth_frame(
     if segmentation_gt:
 
         def _weight_func(tgt, src):
-            return tgt.IoU(src)
+            # return tgt.IoU(src)
+            return tgt.intersection(src)
 
     else:
 
@@ -146,7 +147,10 @@ def _match_ground_truth_frame(
 
     # computing GT matching
     gt_matcher = SQLGTMatcher(config, write_lock=write_lock)
-    total_score = gt_matcher(time=time)
+    total_score = gt_matcher(
+        time=time,
+        match_templates=not segmentation_gt,
+    )
 
     if len(gt_db_rows) > 0:
         mean_score = total_score / len(gt_db_rows)
@@ -390,3 +394,14 @@ def match_to_ground_truth(
     )
 
     return df_nodes, opt_config
+
+
+def clear_ground_truths(database_path: str) -> None:
+    """Clears ground-truth nodes and links from the database."""
+
+    LOG.info("Clearing gro database.")
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        session.query(GTNodeDB).delete()
+        session.query(GTLinkDB).delete()
+        session.commit()
