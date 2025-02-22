@@ -57,7 +57,7 @@ def _find_peaks(
     LOG.info(f"Found {len(peak_areas)} peaks in {resolution} resolution")
     LOG.info(f"Peaks: {peak_areas}")
 
-    return peak_areas.astype(int)
+    return peak_areas.ravel()
 
 
 class SQLGTMatcher:
@@ -149,19 +149,35 @@ class SQLGTMatcher:
             (size, len(peaks)), name="template_edges", var_type=mip.BINARY
         )
 
-        self._templates = self._model.add_var_tensor(
+        self._not_templates = self._model.add_var_tensor(
             (len(peaks),), name="templates", var_type=mip.BINARY
         )
 
-        self._model.add_constr(mip.xsum(self._templates) == len(peaks) - 1)
-
-        for r in range(len(peaks)):
+        # each active node must have one template
+        for n in range(size):
             self._model.add_constr(
-                mip.xsum(1 - self._template_edges[:, r]) >= self._templates[r]
+                mip.xsum(self._template_edges[n, :]) == self._nodes[n]
             )
 
-            self._model.objective -= (
-                np.sum(np.abs(peaks[r] - area)) * self._templates[r]
+        # only one template must be off
+        self._model.add_constr(mip.xsum(self._not_templates) == len(peaks) - 1)
+
+        print("PEAKS", peaks.shape)
+        print("AREA", area.shape)
+
+        for r in range(len(peaks)):
+
+            # not_template is off when all template edges are on
+            self._model.add_constr(
+                mip.xsum(1 - self._template_edges[:, r]) >= self._not_templates[r]
+            )
+
+            # minimize the difference between the template and the area
+            self._model.objective -= mip.xsum(
+                [
+                    abs(peaks[r] - area[s]) * self._template_edges[s, r]
+                    for s in range(size)
+                ]
             )
 
         LOG.info(f"Templates added for time {time}")
