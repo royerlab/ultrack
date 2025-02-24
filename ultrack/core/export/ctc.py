@@ -371,7 +371,7 @@ def to_ctc(
         )
 
     df["track_id"], fw, _ = relabel_sequential(df["track_id"].values)
-    mask = df["parent_track_id"] != -1
+    mask = df["parent_track_id"] != NO_PARENT
     df.loc[mask, "parent_track_id"] = fw[df.loc[mask, "parent_track_id"].values]
 
     # convert to CTC format and write output
