@@ -143,14 +143,14 @@ class SQLGTMatcher:
         area = self._nodes_df["area"].to_numpy()
 
         size = len(self._nodes_df)
-        peaks = _find_peaks(area)
+        self._peaks = _find_peaks(area)
 
         self._template_edges = self._model.add_var_tensor(
-            (size, len(peaks)), name="template_edges", var_type=mip.BINARY
+            (size, len(self._peaks)), name="template_edges", var_type=mip.BINARY
         )
 
         self._not_templates = self._model.add_var_tensor(
-            (len(peaks),), name="templates", var_type=mip.BINARY
+            (len(self._peaks),), name="templates", var_type=mip.BINARY
         )
 
         # each active node must have one template
@@ -160,12 +160,11 @@ class SQLGTMatcher:
             )
 
         # only one template must be off
-        self._model.add_constr(mip.xsum(self._not_templates) == len(peaks) - 1)
+        self._model.add_constr(mip.xsum(self._not_templates) == len(self._peaks) - 1)
 
-        print("PEAKS", peaks.shape)
-        print("AREA", area.shape)
+        max_area = np.max(area)
 
-        for r in range(len(peaks)):
+        for r in range(len(self._peaks)):
 
             # not_template is off when all template edges are on
             self._model.add_constr(
@@ -173,9 +172,11 @@ class SQLGTMatcher:
             )
 
             # minimize the difference between the template and the area
-            self._model.objective -= mip.xsum(
+            self._model.objective += mip.xsum(
                 [
-                    abs(peaks[r] - area[s]) * self._template_edges[s, r]
+                    # (area[s] - abs(self._peaks[r] - area[s])) * self._template_edges[s, r]
+                    (max_area - abs(self._peaks[r] - area[s]))
+                    * self._template_edges[s, r]
                     for s in range(size)
                 ]
             )
@@ -294,5 +295,9 @@ class SQLGTMatcher:
         self.add_solution()
 
         n_selected_vars = sum(e_var.x > 0.5 for e_var in self._edges)
+        if match_templates:
+            for r in range(len(self._not_templates)):
+                if self._not_templates[r].x < 0.5:
+                    LOG.info(f"Template {self._peaks[r]} was selected")
 
         return self._model.objective_value + n_selected_vars * self._eps

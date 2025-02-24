@@ -120,16 +120,8 @@ def _match_ground_truth_frame(
 
         engine.dispose()
 
-    if segmentation_gt:
-
-        def _weight_func(tgt, src):
-            # return tgt.IoU(src)
-            return tgt.intersection(src)
-
-    else:
-
-        def _weight_func(tgt, src):
-            return src.area * tgt.IoU(src)
+    def _weight_func(tgt, src):
+        return tgt.intersection(src)
 
     compute_spatial_neighbors(
         time,
@@ -143,6 +135,7 @@ def _match_ground_truth_frame(
         images=[],
         write_lock=write_lock,
         weight_func=_weight_func,
+        edge_must_be_positive=True,
     )
 
     # computing GT matching
