@@ -109,8 +109,8 @@ def track(
         )
 
     if overwrite in ("all", "links", "none"):
-        link(config, images=images, scale=scale, **link_kwargs)
         if vector_field is not None:
             add_flow(config, vector_field)
+        link(config, images=images, scale=scale)
 
     solve(config, **solve_kwargs)

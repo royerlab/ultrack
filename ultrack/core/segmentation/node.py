@@ -348,7 +348,7 @@ class Node(_Node):
 
         node.bbox = bbox
         node.mask = mask
-        node.area = mask.sum()
+        node.area = int(mask.sum())
         node.centroid = node._centroid()
 
         return node
