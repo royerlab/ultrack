@@ -371,8 +371,8 @@ def to_ctc(
         )
 
     df["track_id"], fw, _ = relabel_sequential(df["track_id"].values)
-    fw[NO_PARENT] = NO_PARENT
-    df["parent_track_id"] = fw[df["parent_track_id"].values]
+    mask = df["parent_track_id"] != -1
+    df.loc[mask, "parent_track_id"] = fw[df.loc[mask, "parent_track_id"].values]
 
     # convert to CTC format and write output
     tracks_df = ctc_compress_forest(df)
