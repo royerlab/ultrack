@@ -12,6 +12,7 @@ from ultrack.cli.link import link_cli
 from ultrack.cli.segment import segmentation_cli
 from ultrack.cli.server import server_cli
 from ultrack.cli.solve import solve_cli
+from ultrack.cli.view import view_cli
 
 
 @click.group()
@@ -31,3 +32,4 @@ main.add_command(link_cli)
 main.add_command(segmentation_cli)
 main.add_command(solve_cli)
 main.add_command(server_cli)
+main.add_command(view_cli)
