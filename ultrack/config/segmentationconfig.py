@@ -21,12 +21,20 @@ class SegmentationConfig(BaseModel):
 
     min_area: int = 100
     """
-    Minimum segment number of pixels, regions smaller than this value are merged
-    or removed when there is no neighboring region
+    Minimum number of pixels for segmentation hypotheses prunning.
+    Regions smaller than this value are merged or removed when there is no neighboring region
+    """
+
+    min_area_factor: float = 4.0
+    """
+    Objects in the foreground below `min_area / min_area_factor` are removed
+    and not considered as hypotheses.
     """
 
     max_area: int = 1_000_000
-    """Maximum segment's number of pixels, regions larger than this value are removed """
+    """Maximum number of pixels for segmentation hypotheses prunning
+    Regions larger than this value are merged or removed when there is no neighboring region
+    """
 
     n_workers: int = 1
     """Number of worker threads """

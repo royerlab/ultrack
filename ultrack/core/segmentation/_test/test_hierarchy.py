@@ -23,6 +23,7 @@ def test_horizontal_cut(
         edge,
         hierarchy_fun=hg.watershed_hierarchy_by_dynamics,
         min_area=0,
+        min_area_factor=1,
         cut_threshold=0.1,
     )
 
