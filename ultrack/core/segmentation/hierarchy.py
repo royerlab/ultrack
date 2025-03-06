@@ -68,7 +68,7 @@ def create_hierarchies(
         #  This is mainly for lonely cells.
         morphology.remove_small_objects(
             labels,
-            min_size=int(kwargs["min_area"] / kwargs["min_area_factor"]),
+            min_size=int(kwargs["min_area"] / kwargs.get("min_area_factor", 4.0)),
             out=labels,
         )
 
@@ -82,6 +82,8 @@ def create_hierarchies(
             kwargs["max_area"],
             kwargs.get("anisotropy_pen", 0.0),
         )
+
+    kwargs.pop("min_area_factor")
 
     LOG.info("Creating hierarchies (lazy).")
     for c in measure.regionprops(labels, edge, cache=True):
