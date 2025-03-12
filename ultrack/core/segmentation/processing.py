@@ -214,6 +214,7 @@ def _process(
         hierarchy_fun=config.ws_hierarchy,
         max_area=config.max_area,
         min_area=config.min_area,
+        min_area_factor=config.min_area_factor,
         min_frontier=config.min_frontier,
     )
 

@@ -1,11 +1,11 @@
 import logging
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence
 
 import napari
 import numpy as np
+import sqlalchemy as sqla
 from magicgui.widgets import ComboBox, Container, FloatSlider, Label
 from scipy import interpolate
-from sqlalchemy import PickleType
 
 from ultrack.config import MainConfig
 from ultrack.core.database import GTLinkDB, NodeDB
@@ -21,14 +21,6 @@ LOG = logging.getLogger(__name__)
 
 class HierarchyVizWidget(Container):
     HIER_LAYER_NAME = "Ultrack Hierarchy"
-    NODE_ATTRIBUTES = {
-        column.name: column
-        for column in NodeDB.__table__.columns
-        if not isinstance(column.type, PickleType)
-    } | {
-        "gt_id": GTLinkDB.target_id,
-        "gt_weight": GTLinkDB.weight,
-    }
 
     def __init__(
         self,
@@ -54,11 +46,7 @@ class HierarchyVizWidget(Container):
         title_label = Label(value="<h2>Hierarchy Viz. Widget</h2>")
         self.append(title_label)
 
-        if config is None:
-            self.config = self._get_config()
-        else:
-            self.config = config
-
+        self.config = config
         self._ultrack_array = UltrackArray(self.config, **kwargs)
 
         # TODO: might need to be updated when the slider is changed
@@ -88,7 +76,7 @@ class HierarchyVizWidget(Container):
         # Configure node attribute combo box
         self._node_attribute_w = ComboBox(
             label="Node Attribute",
-            choices=list(self.NODE_ATTRIBUTES.keys()),
+            choices=list(self._node_attributes.keys()),
             value="id",
         )
         self._node_attribute_w.changed.connect(self._on_node_attribute_changed)
@@ -98,8 +86,38 @@ class HierarchyVizWidget(Container):
 
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 
-    def _on_config_changed(self) -> None:
-        self._ndim = len(self._shape)
+    def _reset_node_attribute_choices(self) -> None:
+        engine = sqla.create_engine(self.config.data_config.database_path)
+        inspector = sqla.inspect(engine)
+
+        self._node_attributes: Dict[str, sqla.engine.interfaces.ReflectedColumn] = {
+            column["name"]: getattr(NodeDB, column["name"])
+            for column in inspector.get_columns(NodeDB.__table__.name)
+            if getattr(NodeDB, column["name"]) != NodeDB.pickle
+        } | {
+            "gt_id": GTLinkDB.target_id,
+            "gt_weight": GTLinkDB.weight,
+        }
+
+        if hasattr(self, "_node_attribute_w"):
+            self._node_attribute_w.choices = list(self._node_attributes.keys())
+
+    @property
+    def config(self) -> MainConfig:
+        return self._config
+
+    @config.setter
+    def config(self, value: Optional[MainConfig]) -> None:
+        if value is None:
+            self._config = self._get_config()
+        else:
+            self._config = value
+
+        # these widgets are created after the config is set for the first time
+        self._reset_node_attribute_choices()
+
+        if hasattr(self, "_ultrack_array"):
+            self._ultrack_array.config = self.config
 
     def _add_ultrack_array(self) -> None:
         if self.HIER_LAYER_NAME in self._viewer.layers:
@@ -114,15 +132,16 @@ class HierarchyVizWidget(Container):
                 scale=scale,
             )
         except TypeError:
-            self._viewer.add_image(
+            layer = self._viewer.add_image(
                 self._ultrack_array,
                 name=self.HIER_LAYER_NAME,
                 scale=scale,
                 colormap="magma",
             )
+            layer.reset_contrast_limits()
 
     def _on_node_attribute_changed(self, value: str) -> None:
-        self._ultrack_array.node_attribute = self.NODE_ATTRIBUTES.get(value, NodeDB.id)
+        self._ultrack_array.node_attribute = self._node_attributes.get(value, NodeDB.id)
         self._add_ultrack_array()
 
     @property
