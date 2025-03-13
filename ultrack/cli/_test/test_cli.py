@@ -114,6 +114,7 @@ class TestCommandLine:
                 "-oc",
                 str(new_cfg_path),
                 "--is-tracking",
+                "--is-segmentation",
                 "--persistence",
             ]
             + zarr_dataset_paths

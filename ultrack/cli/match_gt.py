@@ -150,7 +150,7 @@ def match_gt_cli(
         LOG.info("Estimated new config: %s", new_config)
         LOG.info("Saving new config to %s", output_config)
         with open(output_config, "w") as f:
-            toml.dump(new_config.dict(by_alias=True), f)
+            toml.dump(new_config.model_dump(by_alias=True), f)
 
     if insert_prob or output_model is not None:
         model = fit_nodes_prob(

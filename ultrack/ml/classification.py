@@ -41,7 +41,7 @@ def _validate_classifier(
                 "`catboost` is required if classifier is not provided.\n"
                 "Please install it with `pip install catboost` or `pip install 'ultrack[ml]'`."
             ) from e
-        classifier = CatBoostClassifier(allow_const_label=True)
+        classifier = CatBoostClassifier(allow_const_label=True, silent=True)
 
     return classifier
 

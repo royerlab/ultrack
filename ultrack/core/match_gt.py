@@ -379,8 +379,8 @@ def match_to_ground_truth(
         )
         max_area, min_area = min_area, max_area
 
-    opt_config.segmentation_config.min_area = float(min_area)
-    opt_config.segmentation_config.max_area = float(max_area)
+    opt_config.segmentation_config.min_area = int(round(min_area))
+    opt_config.segmentation_config.max_area = int(round(max_area))
 
     opt_config.segmentation_config.min_frontier = float(
         max(gt_df["parent_frontier"].min() - 0.025, 0.0)
