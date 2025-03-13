@@ -2,16 +2,17 @@ from typing import Tuple
 
 import zarr
 
+from ultrack import solve
 from ultrack.config import MainConfig
-from ultrack.core.gt_matching import match_to_ground_truth
+from ultrack.core.match_gt import match_to_ground_truth
 
 
 def test_match_to_ground_truth(
-    segmentation_database_mock_data: MainConfig,
+    linked_database_mock_data: MainConfig,
     timelapse_mock_data: Tuple[zarr.Array, zarr.Array, zarr.Array],
 ) -> None:
 
-    config = segmentation_database_mock_data
+    config = linked_database_mock_data
 
     _, _, gt = timelapse_mock_data
 
@@ -19,7 +20,7 @@ def test_match_to_ground_truth(
         config,
         gt,
         track_id_graph={},
-        segmentation_gt=True,
+        is_segmentation=True,
         optimize_config=True,
     )
 
@@ -33,3 +34,5 @@ def test_match_to_ground_truth(
         config.segmentation_config.min_frontier
         != opt_cfg.segmentation_config.min_frontier
     )
+
+    solve(config, use_ground_truth_match=True)

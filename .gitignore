@@ -181,3 +181,6 @@ data.db
 # pixi environments
 .pixi
 *.egg-info
+
+# catboost files
+catboost_info

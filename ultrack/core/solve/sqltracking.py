@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ultrack.config.config import MainConfig
 from ultrack.core.database import (
     NO_PARENT,
+    GTLinkDB,
     LinkDB,
     NodeDB,
     OverlapDB,
@@ -90,7 +91,12 @@ class SQLTracking:
             raise ValueError("`construct_model` must be called first.")
         return self._solver
 
-    def __call__(self, index: int, use_annotations: bool = False) -> None:
+    def __call__(
+        self,
+        index: int,
+        use_annotations: bool = False,
+        use_ground_truth_match: bool = False,
+    ) -> None:
         """Queries data from the given index, add it to the solver, run it and push to the database.
 
         Parameters
@@ -99,8 +105,15 @@ class SQLTracking:
             Batch index.
         use_annotations : bool
             Fix ILP variables using annotations, by default False.
+        use_ground_truth_match : bool
+            Fix ILP variables using ground truth matching data, by default False.
         """
         self.construct_model(index)
+
+        if use_annotations and use_ground_truth_match:
+            raise ValueError(
+                "Only one of `use_annotations` and `use_ground_truth_match` can be True."
+            )
 
         if use_annotations:
             print("Fixing annotations ...")
@@ -161,6 +174,29 @@ class SQLTracking:
                     df["target_id"],
                     value,
                 )
+
+    def fix_ground_truth_matches(self, index: int) -> None:
+        """
+        Fix ILP variables using ground truth matching data.
+
+        Parameters
+        ----------
+        index : int
+            Batch index.
+        """
+        engine = sqla.create_engine(self._data_config.database_path)
+
+        start_time, end_time = self._window_limits(index, True)
+
+        with Session(engine) as session:
+            # setting extra slack variables
+            indices = [
+                i
+                for i, in session.query(GTLinkDB.source_id)  # equivalent to NodeDB.id
+                .join(NodeDB, NodeDB.id == GTLinkDB.source_id)
+                .where(NodeDB.t.between(start_time, end_time), GTLinkDB.selected)
+            ]
+            self.solver.enforce_nodes_solution_value(indices, "node", True)
 
     def solve(self) -> None:
         """Tracks by solving optimization model."""

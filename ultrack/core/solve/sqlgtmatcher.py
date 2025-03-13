@@ -5,14 +5,59 @@ from typing import Optional
 import fasteners
 import mip
 import mip.exceptions
+import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
+from scipy.signal import medfilt
+from skimage.feature import peak_local_max
 from sqlalchemy.orm import Session
 
 from ultrack.config.config import MainConfig
 from ultrack.core.database import GTLinkDB, NodeDB, OverlapDB
 
 LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
+
+
+def _find_peaks(
+    area: np.ndarray,
+    resolution: int = 100,
+    num_peaks: int = 5,
+    min_distance_ratio: float = 0.25,
+) -> np.ndarray:
+    """
+    Find peaks in the area distribution in log2 space.
+
+    Parameters
+    ----------
+    area : np.ndarray
+        Area of the nodes.
+    resolution : int, optional
+        Resolution when binning the area.
+
+    Returns
+    -------
+    np.ndarray
+        Areas of the peaks.
+    """
+    log_area = (np.log2(area) * resolution).astype(int)
+
+    area_bins = np.bincount(log_area)
+    area_bins = medfilt(area_bins, kernel_size=5)
+    peaks = peak_local_max(
+        area_bins,
+        min_distance=int(resolution * min_distance_ratio),
+        num_peaks=num_peaks,
+    )
+    if len(peaks) == 0:
+        return np.atleast_1d(np.mean(area).astype(int))
+
+    peak_areas = 2 ** (peaks / resolution)
+
+    LOG.info(f"Found {len(peak_areas)} peaks in {resolution} resolution")
+    LOG.info(f"Peaks: {peak_areas}")
+
+    return peak_areas.ravel()
 
 
 class SQLGTMatcher:
@@ -20,7 +65,7 @@ class SQLGTMatcher:
         self,
         config: MainConfig,
         write_lock: Optional[fasteners.InterProcessLock] = None,
-        eps: float = 1e-3,
+        eps: float = 1e-5,
     ) -> None:
         """
         Ground-truth matching solver from SQL database content.
@@ -61,7 +106,7 @@ class SQLGTMatcher:
         )
 
         with Session(engine) as session:
-            query = session.query(NodeDB.id, NodeDB.t).where(NodeDB.t == time)
+            query = session.query(NodeDB.id, NodeDB.area).where(NodeDB.t == time)
             self._nodes_df = pd.read_sql(query.statement, session.bind, index_col="id")
 
         size = len(self._nodes_df)
@@ -83,6 +128,60 @@ class SQLGTMatcher:
 
         for node_id, anc_id in zip(overlap_df["node_id"], overlap_df["ancestor_id"]):
             self._model.add_constr(self._nodes[node_id] + self._nodes[anc_id] <= 1)
+
+    def _add_templates(self, time: int) -> None:
+        """
+        Add templates to the ILP model.
+
+        Parameters
+        ----------
+        time : int
+            Time point to query and match.
+        """
+        LOG.info(f"Adding templates for time {time}")
+
+        area = self._nodes_df["area"].to_numpy()
+
+        size = len(self._nodes_df)
+        self._peaks = _find_peaks(area)
+
+        self._template_edges = self._model.add_var_tensor(
+            (size, len(self._peaks)), name="template_edges", var_type=mip.BINARY
+        )
+
+        self._not_templates = self._model.add_var_tensor(
+            (len(self._peaks),), name="templates", var_type=mip.BINARY
+        )
+
+        # each active node must have one template
+        for n in range(size):
+            self._model.add_constr(
+                mip.xsum(self._template_edges[n, :]) == self._nodes[n]
+            )
+
+        # only one template must be off
+        self._model.add_constr(mip.xsum(self._not_templates) == len(self._peaks) - 1)
+
+        max_area = np.max(area)
+
+        for r in range(len(self._peaks)):
+
+            # not_template is off when all template edges are on
+            self._model.add_constr(
+                mip.xsum(1 - self._template_edges[:, r]) >= self._not_templates[r]
+            )
+
+            # minimize the difference between the template and the area
+            self._model.objective += mip.xsum(
+                [
+                    # (area[s] - abs(self._peaks[r] - area[s])) * self._template_edges[s, r]
+                    (max_area - abs(self._peaks[r] - area[s]))
+                    * self._template_edges[s, r]
+                    for s in range(size)
+                ]
+            )
+
+        LOG.info(f"Templates added for time {time}")
 
     def _add_edges(self, time: int) -> None:
         """
@@ -150,7 +249,7 @@ class SQLGTMatcher:
                 edges_records.append(
                     {
                         "link_id": idx,
-                        "selected": e_var.x > 0.5,
+                        "selected": True,
                     }
                 )
 
@@ -170,7 +269,7 @@ class SQLGTMatcher:
                 )
                 session.commit()
 
-    def __call__(self, time: int) -> float:
+    def __call__(self, time: int, match_templates: bool) -> float:
         """
         Build the ground-truth matching ILP and solve it.
 
@@ -178,6 +277,8 @@ class SQLGTMatcher:
         ----------
         time : int
             Time point to query and match.
+        match_templates : bool
+            Whether to minimize the difference between the template.
 
         Returns
         -------
@@ -188,9 +289,15 @@ class SQLGTMatcher:
 
         self._add_nodes(time)
         self._add_edges(time)
+        if match_templates:
+            self._add_templates(time)
         self._model.optimize()
         self.add_solution()
 
         n_selected_vars = sum(e_var.x > 0.5 for e_var in self._edges)
+        if match_templates:
+            for r in range(len(self._not_templates)):
+                if self._not_templates[r].x < 0.5:
+                    LOG.info(f"Template {self._peaks[r]} was selected")
 
         return self._model.objective_value + n_selected_vars * self._eps

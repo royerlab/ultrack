@@ -53,7 +53,7 @@ def intersects(bbox1: types.int64[:], bbox2: types.int64[:]) -> bool:
 
 
 @njit
-def iou_with_bbox_2d(
+def intersection_with_bbox_2d(
     bbox1: np.ndarray, bbox2: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
 ) -> float:
     y_min = max(bbox1[0], bbox2[0])
@@ -71,15 +71,11 @@ def iou_with_bbox_2d(
         x_min - bbox2[1] : mask2.shape[1] + x_max - bbox2[3],
     ]
 
-    inter = np.logical_and(aligned_mask1, aligned_mask2).sum()
-    if inter == 0:  # this avoids dividing by zero when the bbox don't intersect
-        return 0
-    union = mask1.sum() + mask2.sum() - inter
-    return (inter / union).item()
+    return np.logical_and(aligned_mask1, aligned_mask2).sum()
 
 
 @njit
-def iou_with_bbox_3d(
+def intersection_with_bbox_3d(
     bbox1: np.ndarray, bbox2: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
 ) -> float:
     z_min = max(bbox1[0], bbox2[0])
@@ -101,9 +97,23 @@ def iou_with_bbox_3d(
         x_min - bbox2[2] : mask2.shape[2] + x_max - bbox2[5],
     ]
 
-    inter = np.logical_and(aligned_mask1, aligned_mask2).sum()
-    if inter == 0:  # this avoids dividing by zero when the bbox don't intersect
-        return 0
+    return np.logical_and(aligned_mask1, aligned_mask2).sum()
+
+
+@njit
+def _fast_iou_with_bbox(
+    bbox1: np.ndarray, bbox2: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
+) -> float:
+    if not intersects(bbox1, bbox2):
+        return 0.0
+    if mask1.ndim == 2:
+        inter = intersection_with_bbox_2d(bbox1, bbox2, mask1, mask2)
+    elif mask1.ndim == 3:
+        inter = intersection_with_bbox_3d(bbox1, bbox2, mask1, mask2)
+    else:
+        raise NotImplementedError("Masks with more than 3 dimensions are not supported")
+    if inter == 0:
+        return 0.0
     union = mask1.sum() + mask2.sum() - inter
     return (inter / union).item()
 
@@ -122,14 +132,24 @@ class Node(_Node):
         LOG.info("Constructed node %s", self)
 
     def IoU(self, other: "Node") -> float:
+        return _fast_iou_with_bbox(self.bbox, other.bbox, self.mask, other.mask)
+
+    def intersection(self, other: "Node") -> float:
+        """Compute the intersection between two nodes."""
         if not intersects(self.bbox, other.bbox):
             return 0.0
         if self.mask.ndim == 2:
-            return iou_with_bbox_2d(self.bbox, other.bbox, self.mask, other.mask)
+            return intersection_with_bbox_2d(
+                self.bbox, other.bbox, self.mask, other.mask
+            )
         elif self.mask.ndim == 3:
-            return iou_with_bbox_3d(self.bbox, other.bbox, self.mask, other.mask)
+            return intersection_with_bbox_3d(
+                self.bbox, other.bbox, self.mask, other.mask
+            )
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                "Masks with more than 3 dimensions are not supported"
+            )
 
     def precompute_dct(
         self,
