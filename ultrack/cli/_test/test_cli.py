@@ -65,6 +65,12 @@ class TestCommandLine:
                 "foreground",
                 "-cl",
                 "contours",
+                "-il",
+                "labels",
+                "-il",
+                "contours",
+                "-p",
+                "intensity_mean",
             ]
             + zarr_dataset_paths
         )
@@ -85,6 +91,50 @@ class TestCommandLine:
         _run_command(
             ["link", "-cfg", str(instance_config_path), "-ow"] + zarr_dataset_paths[:2]
         )
+
+    def test_fit_and_add_probs(
+        self, instance_config_path: str, tmp_path: Path, zarr_dataset_paths: List[str]
+    ) -> None:
+        # required by match gt with model output
+        pytest.importorskip("catboost")
+        pytest.importorskip("sklearn")
+
+        model_path = tmp_path / "model.pkl"
+        new_cfg_path = tmp_path / "new_config.toml"
+
+        _run_command(
+            [
+                "match_gt",
+                "-cfg",
+                instance_config_path,
+                "-gl",
+                "labels",
+                "-om",
+                str(model_path),
+                "-oc",
+                str(new_cfg_path),
+                "--is-tracking",
+                "--is-segmentation",
+                "--persistence",
+            ]
+            + zarr_dataset_paths
+        )
+
+        # testing loading new config
+        load_config(new_cfg_path)
+
+        for var in ["nodes", "links"]:
+            _run_command(
+                [
+                    "add_probs",
+                    str(model_path),
+                    "-cfg",
+                    instance_config_path,
+                    "--persistence",
+                    "--var",
+                    var,
+                ]
+            )
 
     def test_solve(self, instance_config_path: str) -> None:
         with pytest.warns(UserWarning):
@@ -155,7 +205,7 @@ class TestCommandLine:
             ]
         )
 
-    @pytest.mark.parametrize("mode", ["solutions", "links", "all"])
+    @pytest.mark.parametrize("mode", ["gt", "solutions", "links", "all"])
     def test_clear_database(self, instance_config_path: str, mode: str) -> None:
         _run_command(
             [

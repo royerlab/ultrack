@@ -1,5 +1,6 @@
 import logging
 from contextlib import nullcontext
+from enum import IntEnum
 from typing import Dict, Optional, Tuple, Union
 
 import fasteners
@@ -12,17 +13,27 @@ from sqlalchemy.orm import Session
 from toolz import curry
 
 from ultrack.config.config import MainConfig
-from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB
+from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB, OverlapDB
 from ultrack.core.linking.processing import compute_spatial_neighbors
 from ultrack.core.segmentation.node import Node
 from ultrack.core.solve.sqlgtmatcher import SQLGTMatcher
 from ultrack.tracks.stats import estimate_drift
 from ultrack.utils.multiprocessing import (
+    batch_index_range,
     multiprocessing_apply,
     multiprocessing_sqlite_lock,
 )
 
 LOG = logging.getLogger(__name__)
+
+
+class UnmatchedNode(IntEnum):
+    """
+    Kinds of unmatched nodes.
+    """
+
+    NO_OVERLAP = -1
+    BLOCKED = 0
 
 
 @curry
@@ -63,7 +74,7 @@ def _match_ground_truth_frame(
 
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
-        return
+        return 0.0
 
     LOG.info(f"Found {len(gt_props)} objects in time point {time}")
 
@@ -109,15 +120,8 @@ def _match_ground_truth_frame(
 
         engine.dispose()
 
-    if segmentation_gt:
-
-        def _weight_func(tgt, src):
-            return tgt.IoU(src)
-
-    else:
-
-        def _weight_func(tgt, src):
-            return src.area * tgt.IoU(src)
+    def _weight_func(tgt, src):
+        return tgt.intersection(src)
 
     compute_spatial_neighbors(
         time,
@@ -131,11 +135,15 @@ def _match_ground_truth_frame(
         images=[],
         write_lock=write_lock,
         weight_func=_weight_func,
+        edge_must_be_positive=True,
     )
 
     # computing GT matching
     gt_matcher = SQLGTMatcher(config, write_lock=write_lock)
-    total_score = gt_matcher(time=time)
+    total_score = gt_matcher(
+        time=time,
+        match_templates=not segmentation_gt,
+    )
 
     if len(gt_db_rows) > 0:
         mean_score = total_score / len(gt_db_rows)
@@ -203,8 +211,26 @@ def _get_nodes_df_with_matches(
 
         LOG.info(f"Found {len(node_df)} nodes and {len(gt_df)} ground-truth links")
 
+        overlap_query = session.query(
+            OverlapDB.node_id,
+            OverlapDB.ancestor_id,
+        )
+        overlap_df = pd.read_sql(
+            overlap_query.statement,
+            session.bind,
+        )
+
     node_df = node_df.join(gt_df)
-    node_df["gt_track_id"] = node_df["gt_track_id"].fillna(NO_PARENT).astype(int)
+    # nodes that didn't match with ground-truth are assigned to NO_PARENT
+    node_df["gt_track_id"] = (
+        node_df["gt_track_id"].fillna(UnmatchedNode.NO_OVERLAP).astype(int)
+    )
+
+    # nodes that were blocked by overlap are assigned to 0
+    for ref_col, other_col in [("node_id", "ancestor_id"), ("ancestor_id", "node_id")]:
+        ref, other = overlap_df[ref_col].to_numpy(), overlap_df[other_col].to_numpy()
+        selected_nodes = node_df.loc[ref, "gt_track_id"] != UnmatchedNode.NO_OVERLAP
+        node_df.loc[other[selected_nodes], "gt_track_id"] = UnmatchedNode.BLOCKED
 
     if features:
         # similar to persistence, see segmentation.processing.get_nodes_features
@@ -225,11 +251,19 @@ def match_to_ground_truth(
     gt_labels: ArrayLike,
     scale: Optional[ArrayLike] = None,
     track_id_graph: Optional[Dict[int, int]] = None,
-    segmentation_gt: bool = True,
+    is_segmentation: bool = True,
     optimize_config: bool = False,
+    batch_index: Optional[int] = None,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, MainConfig]]:
     """
     Matches nodes to ground-truth labels returning additional features for automatic parameter tuning.
+
+    `gt_track_id` is the ground-truth track ID matched to the node.
+    `gt_parent_track_id` is the parent ground-truth track ID matched to the node.
+    `gt_track_id` can be of:
+    * -1 means no overlap with ground-truth, therefore it could be a potential segmentation without annotation.
+    *  0 means blocked by overlap, so we are sure it is not a cell.
+    * >0 means it is a cell and the value is the ground-truth track ID.
 
     Tolerances for optimal configuration based on ground-truth matches:
     * `max_distance` + 1.0
@@ -247,11 +281,13 @@ def match_to_ground_truth(
         Scale of the data for distance computation, by default None.
     track_id_graph : Optional[Dict[int, int]], optional
         Ground-truth graph of track IDs, by default None.
-    segmentation_gt : bool, optional
+    is_segmentation : bool, optional
         Whether the ground-truth labels are segmentation masks or points, by default True.
     optimize_config : bool, optional
         Whether to find optimal configuration based on the ground-truth matches, by default False.
         If True, it will return the configuration object with updated parameters.
+    batch_index : Optional[int], optional
+        Batch index for processing a subset of frames, by default everything is processed.
 
     Returns
     -------
@@ -259,6 +295,18 @@ def match_to_ground_truth(
         Data frame containing matched ground-truth labels to their respective nodes.
         If `optimize_config` is True, it will return a tuple with the data frame and the updated configuration object.
     """
+    shape = tuple(config.data_config.metadata.get("shape", gt_labels.shape))
+    if shape[1:] != gt_labels.shape[1:]:
+        raise ValueError(
+            "Ground-truth labels shape does not match the data shape. "
+            f"Expected {shape}, got {gt_labels.shape}."
+        )
+
+    time_points = batch_index_range(
+        gt_labels.shape[0],
+        config.segmentation_config.n_workers,
+        batch_index,
+    )
 
     with multiprocessing_sqlite_lock(config.data_config) as lock:
         ious = multiprocessing_apply(
@@ -267,9 +315,9 @@ def match_to_ground_truth(
                 config=config,
                 scale=scale,
                 write_lock=lock,
-                segmentation_gt=segmentation_gt,
+                segmentation_gt=is_segmentation,
             ),
-            range(gt_labels.shape[0]),
+            time_points,
             n_workers=config.segmentation_config.n_workers,
             desc="Matching hierarchy nodes with ground-truth",
         )
@@ -298,7 +346,7 @@ def match_to_ground_truth(
         LOG.warning("No ground-truth matches found. Keeping previous configuration.")
         return df_nodes, opt_config
 
-    if segmentation_gt:
+    if is_segmentation:
         print(f"GT matching mean IoU (per frame): {mean_iou}")
         if mean_iou < 0.5:
             LOG.warning(
@@ -309,6 +357,7 @@ def match_to_ground_truth(
 
     if scale is not None:
         cols = ["z", "y", "x"][-len(scale) :]
+        scale = scale[-len(cols) :]  # in case scale has more dimensions (e.g. time)
         gt_df[cols] *= scale
 
     if "z" not in gt_df.columns:
@@ -316,13 +365,36 @@ def match_to_ground_truth(
 
     max_distance = estimate_drift(gt_df)
     if not np.isnan(max_distance) and max_distance > 0:
-        opt_config.linking_config.max_distance = max_distance + 1.0
+        opt_config.linking_config.max_distance = float(max_distance + 1.0)
 
-    opt_config.segmentation_config.min_area = gt_df["area"].min() * 0.95
-    opt_config.segmentation_config.max_area = gt_df["area"].max() * 1.025
+    min_area = gt_df["area"].min() * 0.95
+    max_area = gt_df["area"].max() * 1.025
 
-    opt_config.segmentation_config.min_frontier = max(
-        gt_df["parent_frontier"].min() - 0.025, 0.0
+    if min_area > max_area:
+        LOG.warning(
+            f"Minimum area is greater than maximum area ({min_area} > {max_area}).\n"
+            "Check the ground-truth matches and adjust the segmentation parameters.\n"
+            "This could mean that all candidate segments have the same size.\n"
+            "Swapping min and max area values."
+        )
+        max_area, min_area = min_area, max_area
+
+    opt_config.segmentation_config.min_area = int(round(min_area))
+    opt_config.segmentation_config.max_area = int(round(max_area))
+
+    opt_config.segmentation_config.min_frontier = float(
+        max(gt_df["parent_frontier"].min() - 0.025, 0.0)
     )
 
     return df_nodes, opt_config
+
+
+def clear_ground_truths(database_path: str) -> None:
+    """Clears ground-truth nodes and links from the database."""
+
+    LOG.info("Clearing gro database.")
+    engine = sqla.create_engine(database_path)
+    with Session(engine) as session:
+        session.query(GTNodeDB).delete()
+        session.query(GTLinkDB).delete()
+        session.commit()

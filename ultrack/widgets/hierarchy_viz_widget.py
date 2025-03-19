@@ -8,7 +8,7 @@ from magicgui.widgets import ComboBox, Container, FloatSlider, Label
 from scipy import interpolate
 
 from ultrack.config import MainConfig
-from ultrack.core.database import NodeDB
+from ultrack.core.database import GTLinkDB, NodeDB
 from ultrack.utils.ultrack_array import UltrackArray
 from ultrack.widgets.ultrackwidget import UltrackWidget
 
@@ -93,7 +93,10 @@ class HierarchyVizWidget(Container):
         self._node_attributes: Dict[str, sqla.engine.interfaces.ReflectedColumn] = {
             column["name"]: getattr(NodeDB, column["name"])
             for column in inspector.get_columns(NodeDB.__table__.name)
-            if getattr(NodeDB,column["name"]) != NodeDB.pickle
+            if getattr(NodeDB, column["name"]) != NodeDB.pickle
+        } | {
+            "gt_id": GTLinkDB.target_id,
+            "gt_weight": GTLinkDB.weight,
         }
 
         if hasattr(self, "_node_attribute_w"):

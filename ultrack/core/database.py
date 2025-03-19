@@ -113,6 +113,7 @@ class OverlapDB(Base):
 class LinkDB(Base):
     __tablename__ = "links"
     id = Column(Integer, primary_key=True, autoincrement=True)
+    # source_id is the node that is before (t-1) the target_id node (t)
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     target_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))
     weight = Column(Float)
@@ -131,6 +132,11 @@ class GTNodeDB(Base):
 
 
 class GTLinkDB(Base):
+    """
+    Ground-truth links database.
+    These links are between GTNodes and (non-GT) Nodes.
+    """
+
     __tablename__ = "gt_links"
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_id = Column(BigInteger, ForeignKey(f"{NodeDB.__tablename__}.id"))

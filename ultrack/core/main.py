@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Sequence, Union
+from typing import Any, Dict, Literal, Optional, Sequence, Union
 
 from numpy.typing import ArrayLike
 
@@ -27,6 +27,9 @@ def track(
     scale: Optional[Sequence[float]] = None,
     vector_field: Optional[Union[ArrayLike, Sequence[ArrayLike]]] = None,
     overwrite: Literal["all", "links", "solutions", "none", True, False] = "none",
+    segment_kwargs: Dict[str, Any] = {},
+    link_kwargs: Dict[str, Any] = {},
+    solve_kwargs: Dict[str, Any] = {},
 ) -> None:
     """
     All-in-one function for cell tracking, it accepts multiple inputs (labels or contours)
@@ -56,6 +59,15 @@ def track(
     overwrite : Literal["all", "links", "solutions", "none"], optional
         Clear the corresponding data from the database, by default nothing is overwritten with "none"
         When not "none", only the cleared and subsequent parts of the pipeline is executed.
+    segment_kwargs : Dict[str, Any]
+        Optional keyword arguments for segmentation.
+        See `ultrack.segment` for more details.
+    link_kwargs : Dict[str, Any]
+        Optional keyword arguments for linking.
+        See `ultrack.link` for more details.
+    solve_kwargs : Dict[str, Any]
+        Optional keyword arguments for ILP solving.
+        See `ultrack.solve` for more details.
     """
     if labels is not None and (foreground is not None or contours is not None):
         raise ValueError(
@@ -93,6 +105,7 @@ def track(
             foreground,
             contours,
             config,
+            **segment_kwargs,
         )
 
     if overwrite in ("all", "links", "none"):
@@ -100,4 +113,4 @@ def track(
             add_flow(config, vector_field)
         link(config, images=images, scale=scale)
 
-    solve(config)
+    solve(config, **solve_kwargs)
