@@ -361,7 +361,11 @@ def _fast_watershed_cut_by_area(
 
 
 def oversegment_components(
-    labels: ArrayLike, boundaries: ArrayLike, max_area: int, anisotropy_pen: float = 0.0
+    labels: ArrayLike,
+    boundaries: ArrayLike,
+    max_area: int,
+    anisotropy_pen: float = 0.0,
+    offset: Optional[int] = None,
 ) -> ArrayLike:
     """
     This function oversegment segments given an maximum area to decrease the overall hierarchy volume (area),
@@ -380,12 +384,13 @@ def oversegment_components(
 
     Returns
     -------
-    ArrayLike
-        Oversgmented labels given max area paremeter.
+    Tuple[ArrayLike, int]
+        Oversgmented labels given max area paremeter and the next offset to be used.
     """
     dtype = np.promote_types(np.float32, boundaries.dtype)
     boundaries = boundaries.astype(dtype)  # required by numba
-    offset = 1
+    if offset is None:
+        offset = 1
     new_labels = np.zeros_like(labels)
     for c in measure.regionprops(labels, boundaries):
         if c.area > max_area:
@@ -398,7 +403,7 @@ def oversegment_components(
         else:
             new_labels[c.slice][c.image] = offset
             offset += 1
-    return new_labels
+    return new_labels, offset
 
 
 def to_labels(

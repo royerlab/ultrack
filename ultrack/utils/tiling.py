@@ -103,7 +103,7 @@ def apply_tiled_and_stitch(
         int(np.ceil(out_array.shape[i] / chunk_size[i])) for i in range(out_array.ndim)
     )
 
-    offset = 0
+    offset = 1
     for start_indices in tqdm(np.ndindex(*num_chunks), desc=f"Applying '{name}'"):
         slicing = tuple(
             slice(

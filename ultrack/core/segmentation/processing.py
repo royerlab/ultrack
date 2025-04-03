@@ -216,6 +216,7 @@ def _process(
         min_area=config.min_area,
         min_area_factor=config.min_area_factor,
         min_frontier=config.min_frontier,
+        chunk_size=config.chunk_size,
     )
 
     LOG.info(f"Computing nodes of time {time}")

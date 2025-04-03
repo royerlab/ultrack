@@ -1,12 +1,11 @@
 import logging
-from typing import Iterator
+from typing import Iterator, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
 from numpy.typing import ArrayLike
 from skimage import measure, morphology
 from skimage.measure._regionprops import RegionProperties
-from toolz import curry
 
 from ultrack.core.segmentation.node import Node
 from ultrack.core.segmentation.vendored.hierarchy import Hierarchy as _Hierarchy
@@ -81,18 +80,27 @@ def create_hierarchies(
     if "max_area" in kwargs:
         LOG.info("Oversegmenting connected components.")
         if chunk_size is None:
-            labels = oversegment_components(
+            labels, _ = oversegment_components(
                 labels,
                 edge,
-                kwargs["max_area"],
-                kwargs.get("anisotropy_pen", 0.0),
-            )
-        else:
-            oversegment_tile = curry(
-                oversegment_components,
                 max_area=kwargs["max_area"],
                 anisotropy_pen=kwargs.get("anisotropy_pen", 0.0),
             )
+        else:
+
+            def oversegment_tile(
+                offset: int, *_args, **_kwargs
+            ) -> Tuple[int, ArrayLike]:
+                """Oversegment tile."""
+                labels, offset = oversegment_components(
+                    *_args,
+                    **_kwargs,
+                    max_area=kwargs["max_area"],
+                    anisotropy_pen=kwargs.get("anisotropy_pen", 0.0),
+                    offset=offset,
+                )
+                return offset, labels
+
             apply_tiled_and_stitch(
                 labels,
                 edge,
