@@ -6,10 +6,12 @@ import scipy.ndimage as ndi
 from numpy.typing import ArrayLike
 from skimage import measure, morphology
 from skimage.measure._regionprops import RegionProperties
+from toolz import curry
 
 from ultrack.core.segmentation.node import Node
 from ultrack.core.segmentation.vendored.hierarchy import Hierarchy as _Hierarchy
 from ultrack.core.segmentation.vendored.hierarchy import oversegment_components
+from ultrack.utils.tiling import apply_tiled_and_stitch
 
 LOG = logging.getLogger(__name__)
 
@@ -33,6 +35,8 @@ class Hierarchy(_Hierarchy):
 def create_hierarchies(
     binary_foreground: ArrayLike,
     edge: ArrayLike,
+    min_area_factor: float = 4.0,
+    chunk_size: tuple[int, ...] = None,
     **kwargs,
 ) -> Iterator[Hierarchy]:
     """Computes a collection of hierarchical watersheds inside `binary_foreground` mask.
@@ -68,7 +72,7 @@ def create_hierarchies(
         #  This is mainly for lonely cells.
         morphology.remove_small_objects(
             labels,
-            min_size=int(kwargs["min_area"] / kwargs.get("min_area_factor", 4.0)),
+            min_size=int(kwargs["min_area"] / min_area_factor),
             out=labels,
         )
 
@@ -76,14 +80,26 @@ def create_hierarchies(
 
     if "max_area" in kwargs:
         LOG.info("Oversegmenting connected components.")
-        labels = oversegment_components(
-            labels,
-            edge,
-            kwargs["max_area"],
-            kwargs.get("anisotropy_pen", 0.0),
-        )
-
-    kwargs.pop("min_area_factor")
+        if chunk_size is None:
+            labels = oversegment_components(
+                labels,
+                edge,
+                kwargs["max_area"],
+                kwargs.get("anisotropy_pen", 0.0),
+            )
+        else:
+            oversegment_tile = curry(
+                oversegment_components,
+                max_area=kwargs["max_area"],
+                anisotropy_pen=kwargs.get("anisotropy_pen", 0.0),
+            )
+            apply_tiled_and_stitch(
+                labels,
+                edge,
+                func=oversegment_tile,
+                chunk_size=chunk_size,
+                out_array=labels,
+            )
 
     LOG.info("Creating hierarchies (lazy).")
     for c in measure.regionprops(labels, edge, cache=True):

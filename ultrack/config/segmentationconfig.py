@@ -1,4 +1,4 @@
-from typing import Callable, Literal
+from typing import Callable, Literal, Optional
 
 import higra as hg
 from pydantic import (
@@ -65,6 +65,11 @@ class SegmentationConfig(BaseModel):
     """
     ``SPECIAL``: Image graph z-axis penalization, positive values will prioritize segmenting
     the xy-plane first, negative will do the opposite
+    """
+    chunk_size: Optional[tuple[int, ...]] = None
+    """
+    ``SPECIAL``: Chunk size for tiled segmentation, if None the whole image is processed at once.
+    Must match the dimension of a frame. For example (256, 512, 512) for 3D data.
     """
 
     model_config = ConfigDict(

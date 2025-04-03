@@ -24,7 +24,11 @@ from ultrack.core.segmentation import get_nodes_features
             {"length": 4, "size": 128, "n_dim": 2},
         ),
         (
-            {"segmentation.n_workers": 1, "segmentation.max_noise": 0.1},
+            {
+                "segmentation.n_workers": 1,
+                "segmentation.max_noise": 0.1,
+                "segmentation.chunk_size": (12, 32, 24),
+            },
             {"length": 4, "size": 64, "n_dim": 3},
         ),
         (
