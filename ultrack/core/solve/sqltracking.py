@@ -118,6 +118,9 @@ class SQLTracking:
         if use_annotations:
             print("Fixing annotations ...")
             self.fix_annotations(index)
+        elif use_ground_truth_match:
+            print("Fixing ground truth matches ...")
+            self.fix_ground_truth_matches(index)
 
         print("Solving ILP ...")
         self.solve()

@@ -27,6 +27,7 @@ dependencies = [
     "mip >=1.16rc0",
     "napari >=0.4.18",
     "numba >=0.57.0",
+    "numcodecs <0.16.0",  # required by zarr<3  https://github.com/zarr-developers/zarr-python/issues/2963
     "ome-zarr >= 0.9.0",
     "pandas >=2.0.1",
     "pillow >=10.0.0",
