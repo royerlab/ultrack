@@ -56,8 +56,12 @@ class MaybePickleType(PickleType):
         def _process(value):
             if not isinstance(value, (bytes, memoryview)):
                 return value
-            return processor(value)
-
+            try:
+                return processor(value)
+            except pickle.UnpicklingError:
+                # for some reason, when converting database it has a few extra bytes
+                return processor(bytes.fromhex(value[3:].decode("utf-8")))
+            
         return _process
 
 
