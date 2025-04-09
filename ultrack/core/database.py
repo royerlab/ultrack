@@ -61,7 +61,7 @@ class MaybePickleType(PickleType):
             except pickle.UnpicklingError:
                 # for some reason, when converting database it has a few extra bytes
                 return processor(bytes.fromhex(value[3:].decode("utf-8")))
-            
+
         return _process
 
 
