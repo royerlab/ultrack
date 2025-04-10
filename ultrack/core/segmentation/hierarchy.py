@@ -79,14 +79,8 @@ def create_hierarchies(
 
     if "max_area" in kwargs:
         LOG.info("Oversegmenting connected components.")
-        if chunk_size is None:
-            labels, _ = oversegment_components(
-                labels,
-                edge,
-                max_area=kwargs["max_area"],
-                anisotropy_pen=kwargs.get("anisotropy_pen", 0.0),
-            )
-        else:
+
+        if chunk_size is not None:
 
             def oversegment_tile(
                 offset: int, *_args, **_kwargs
@@ -108,6 +102,14 @@ def create_hierarchies(
                 chunk_size=chunk_size,
                 out_array=labels,
             )
+
+        # executed twice for chunked processing to process merged regions
+        labels, _ = oversegment_components(
+            labels,
+            edge,
+            max_area=kwargs["max_area"],
+            anisotropy_pen=kwargs.get("anisotropy_pen", 0.0),
+        )
 
     LOG.info("Creating hierarchies (lazy).")
     for c in measure.regionprops(labels, edge, cache=True):

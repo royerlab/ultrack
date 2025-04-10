@@ -104,7 +104,7 @@ def apply_tiled_and_stitch(
     )
 
     offset = 1
-    for start_indices in tqdm(np.ndindex(*num_chunks), desc=f"Applying '{name}'"):
+    for start_indices in tqdm(list(np.ndindex(*num_chunks)), desc=f"Applying '{name}'"):
         slicing = tuple(
             slice(
                 start_indices[i] * chunk_size[i],

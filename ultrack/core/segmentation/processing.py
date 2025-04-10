@@ -10,7 +10,9 @@ import pandas as pd
 import sqlalchemy as sqla
 import zarr
 from numpy.typing import ArrayLike
+from profilehooks import profile
 from skimage.measure._regionprops import RegionProperties, regionprops_table
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from toolz import curry
@@ -79,6 +81,8 @@ def _insert_db(
     """
     LOG.info(f"Pushing some nodes from hier time {time} to database.")
     with Session(engine) as session:
+        session.execute(text("PRAGMA journal_mode=OFF"))
+        session.execute(text("PRAGMA synchronous=NORMAL"))
         session.add_all(nodes)
         session.add_all(overlaps)
         session.commit()
@@ -391,6 +395,7 @@ def _get_properties_names(
 
 @rename_argument("detection", "foreground")
 @rename_argument("edge", "contours")
+@profile(immediate=True, sort="time")
 def segment(
     foreground: ArrayLike,
     contours: ArrayLike,
