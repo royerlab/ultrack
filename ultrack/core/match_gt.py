@@ -1,4 +1,5 @@
 import logging
+import pickle
 from contextlib import nullcontext
 from enum import IntEnum
 from typing import Dict, Optional, Tuple, Union
@@ -70,7 +71,7 @@ def _match_ground_truth_frame(
         Mean score of the matching.
     """
     gt_labels = np.asarray(gt_labels[time])
-    gt_props = regionprops(gt_labels)
+    gt_props = regionprops(gt_labels, cache=False)
 
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
@@ -80,11 +81,13 @@ def _match_ground_truth_frame(
 
     gt_db_rows = []
     gt_nodes = []
+    gt_id_to_props = {}
     # adding ground-truth nodes
     for obj in gt_props:
         node = Node.from_mask(
             node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
         )
+        gt_id_to_props[obj.label] = obj
 
         if len(node.centroid) == 2:
             y, x = node.centroid
@@ -96,12 +99,13 @@ def _match_ground_truth_frame(
             GTNodeDB(
                 t=time,
                 label=obj.label,
-                pickle=node,
+                pickle=pickle.dumps(node),
                 z=z,
                 y=y,
                 x=x,
             )
         )
+        node.mask = None  # freeing mask memory
         gt_nodes.append(node)
 
     with write_lock if write_lock is not None else nullcontext():
@@ -120,8 +124,12 @@ def _match_ground_truth_frame(
 
         engine.dispose()
 
-    def _weight_func(tgt, src):
-        return tgt.intersection(src)
+    def _weight_func(tgt: Node, src: Node) -> float:
+        # lazy loading mask from region props object
+        tgt.mask = gt_id_to_props[tgt.node_id].image
+        weight = tgt.intersection(src)
+        tgt.mask = None
+        return weight
 
     compute_spatial_neighbors(
         time,
