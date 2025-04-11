@@ -59,11 +59,13 @@ def multiprocessing_apply(
 @contextmanager
 def multiprocessing_sqlite_lock(
     data_config: DataConfig,
+    n_workers: Optional[int] = None,
 ) -> Optional[fasteners.InterProcessLock]:
     """Write lock for writing on `sqlite` with multiprocessing. No lock otherwise."""
 
     lock = None
-    if data_config.database == DatabaseChoices.sqlite.value:
+    is_parallel = n_workers is None or n_workers > 1  # unknown or > 1
+    if data_config.database == DatabaseChoices.sqlite.value and is_parallel:
         identifier = uuid.uuid4().hex
         lock = fasteners.InterProcessLock(
             path=data_config.working_dir / f"{identifier}.lock"
