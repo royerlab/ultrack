@@ -1,6 +1,8 @@
 import logging
+import pickle
 from contextlib import nullcontext
 from enum import IntEnum
+from functools import lru_cache
 from typing import Dict, Optional, Tuple, Union
 
 import fasteners
@@ -16,6 +18,7 @@ from ultrack.config.config import MainConfig
 from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB, OverlapDB
 from ultrack.core.linking.processing import compute_spatial_neighbors
 from ultrack.core.segmentation.node import Node
+from ultrack.core.segmentation.processing import _insert_db
 from ultrack.core.solve.sqlgtmatcher import SQLGTMatcher
 from ultrack.tracks.stats import estimate_drift
 from ultrack.utils.multiprocessing import (
@@ -44,6 +47,7 @@ def _match_ground_truth_frame(
     scale: Optional[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock],
     segmentation_gt: bool,
+    insertion_throttle_rate: int = 1000,
 ) -> float:
     """
     Matches candidate hypotheses to ground-truth labels for a given time point.
@@ -63,6 +67,9 @@ def _match_ground_truth_frame(
         Lock for writing to the database.
     segmentation_gt : bool
         Wether the ground-truth labels are segmentation masks or points.
+    insertion_throttle_rate : int
+        THrottle rate for insertion.
+        Only used if `write_lock` is not None, non-sqlite or not multi processing.
 
     Returns
     -------
@@ -70,7 +77,7 @@ def _match_ground_truth_frame(
         Mean score of the matching.
     """
     gt_labels = np.asarray(gt_labels[time])
-    gt_props = regionprops(gt_labels)
+    gt_props = regionprops(gt_labels, cache=False)
 
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
@@ -78,13 +85,21 @@ def _match_ground_truth_frame(
 
     LOG.info(f"Found {len(gt_props)} objects in time point {time}")
 
+    connect_args = {"timeout": 45}
+    engine = sqla.create_engine(
+        config.data_config.database_path, connect_args=connect_args
+    )
+
     gt_db_rows = []
     gt_nodes = []
+    gt_id_to_props = {}
     # adding ground-truth nodes
-    for obj in gt_props:
+    for i, obj in enumerate(gt_props):
         node = Node.from_mask(
             node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
         )
+        gt_id_to_props[obj.label] = obj
+        obj._cache.clear()
 
         if len(node.centroid) == 2:
             y, x = node.centroid
@@ -96,32 +111,46 @@ def _match_ground_truth_frame(
             GTNodeDB(
                 t=time,
                 label=obj.label,
-                pickle=node,
+                pickle=pickle.dumps(node),
                 z=z,
                 y=y,
                 x=x,
             )
         )
+
+        if write_lock is None:
+            if (i + 1) % insertion_throttle_rate == 0:
+                _insert_db(engine, time, gt_db_rows, [])
+
+        elif write_lock.acquire(blocking=False):
+            _insert_db(engine, time, gt_db_rows, [])
+            write_lock.release()
+
+        node.mask = None  # freeing mask memory
         gt_nodes.append(node)
 
     with write_lock if write_lock is not None else nullcontext():
-        connect_args = {"timeout": 45}
-        engine = sqla.create_engine(
-            config.data_config.database_path, connect_args=connect_args
+        _insert_db(
+            engine,
+            time=time,
+            nodes=gt_db_rows,
+            overlaps=[],
         )
-
         with Session(engine) as session:
-            session.add_all(gt_db_rows)
-            session.commit()
-
             source_nodes = [
                 n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
             ]
 
-        engine.dispose()
+    @lru_cache(maxsize=1)
+    def _cached_get_mask(tgt_id: int) -> np.ndarray:
+        return gt_id_to_props[tgt_id].image
 
-    def _weight_func(tgt, src):
-        return tgt.intersection(src)
+    def _weight_func(tgt: Node, src: Node) -> float:
+        # lazy loading mask from region props object
+        tgt.mask = _cached_get_mask(tgt.id)
+        weight = tgt.intersection(src)
+        tgt.mask = None
+        return weight
 
     compute_spatial_neighbors(
         time,
@@ -145,8 +174,8 @@ def _match_ground_truth_frame(
         match_templates=not segmentation_gt,
     )
 
-    if len(gt_db_rows) > 0:
-        mean_score = total_score / len(gt_db_rows)
+    if len(gt_nodes) > 0:
+        mean_score = total_score / len(gt_nodes)
     else:
         mean_score = 0.0
 
@@ -308,7 +337,10 @@ def match_to_ground_truth(
         batch_index,
     )
 
-    with multiprocessing_sqlite_lock(config.data_config) as lock:
+    with multiprocessing_sqlite_lock(
+        config.data_config,
+        config.segmentation_config.n_workers,
+    ) as lock:
         ious = multiprocessing_apply(
             _match_ground_truth_frame(
                 gt_labels=gt_labels,
