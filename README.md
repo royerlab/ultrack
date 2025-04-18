@@ -138,18 +138,18 @@ This project is licensed under the BSD-3 License - see the [LICENSE](LICENSE) fi
 If you use `ultrack` in your research, please cite the following papers, [the algorithm](https://arxiv.org/pdf/2308.04526) and [the biological applications and software](https://www.biorxiv.org/content/10.1101/2024.09.02.610652).
 
 ```
-@article{bragantini2023ucmtracking,
-      title={Large-Scale Multi-Hypotheses Cell Tracking Using Ultrametric Contours Maps},
-      author={Jordão Bragantini and Merlin Lange and Loïc Royer},
-      year={2023},
-      eprint={2308.04526},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@inproceedings{bragantini2024ucmtracking,
+  title={Large-scale multi-hypotheses cell tracking using ultrametric contours maps},
+  author={Bragantini, Jord{\~a}o and Lange, Merlin and Royer, Lo{\"\i}c},
+  booktitle={European Conference on Computer Vision},
+  pages={36--54},
+  year={2024},
+  organization={Springer}
 }
 
 @article{bragantini2024ultrack,
   title={Ultrack: pushing the limits of cell tracking across biological scales},
-  author={Bragantini, Jordao and Theodoro, Ilan and Zhao, Xiang and Huijben, Teun APM and Hirata-Miyasaki, Eduardo and VijayKumar, Shruthi and Balasubramanian, Akilandeswari and Lao, Tiger and Agrawal, Richa and Xiao, Sheng and others},
+  author={Bragantini, Jord{~a}o and Theodoro, Ilan and Zhao, Xiang and Huijben, Teun APM and Hirata-Miyasaki, Eduardo and VijayKumar, Shruthi and Balasubramanian, Akilandeswari and Lao, Tiger and Agrawal, Richa and Xiao, Sheng and others},
   journal={bioRxiv},
   pages={2024--09},
   year={2024},
