@@ -189,7 +189,6 @@ class DataForms:
         """
         if field_metadata["type"] == "number":
             label = QLabel(f'{field_metadata["label"]} {chr(0xF059)}')
-            label.setFont(qta.font("fa", 14))
             label.setToolTip(field_metadata["tooltip"])
             layout.addWidget(label)
 
