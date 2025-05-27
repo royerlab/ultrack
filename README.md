@@ -123,7 +123,7 @@ Depending on the operating system, the gurobi library might be missing and you n
 
 ## Who is using Ultrack?
 
-You can find a list of projects and papers that are and have used ultrack at [this page](https://royerlab.github.io/ultrack/appearances.html).
+You can find a list of projects and papers that have used ultrack on [this page](https://royerlab.github.io/ultrack/appearances.html).
 
 ## Contributing
 
@@ -157,7 +157,11 @@ If you use `ultrack` in your research, please cite the following papers, [the al
 }
 ```
 
-And the respective auxiliary methods (e.g. Cellpose, napari, etc) depending on your usage.
+And the respective auxiliary methods according to your use, a non-exhaustive list being:
+- [napari](https://github.com/Napari/napari)
+- [cellpose](https://github.com/MouseLand/cellpose)
+- [stardist](https://github.com/stardist/stardist)
+- [fiji](https://fiji.sc)
 
 ## Acknowledgements
 
