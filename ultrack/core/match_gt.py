@@ -1,9 +1,11 @@
 import logging
-import pickle
 from contextlib import nullcontext
 from enum import IntEnum
-from functools import lru_cache
 from typing import Dict, Optional, Tuple, Union
+import pickle
+import gc
+import time as time_mod
+import torch
 
 import fasteners
 import numpy as np
@@ -18,7 +20,6 @@ from ultrack.config.config import MainConfig
 from ultrack.core.database import NO_PARENT, GTLinkDB, GTNodeDB, NodeDB, OverlapDB
 from ultrack.core.linking.processing import compute_spatial_neighbors
 from ultrack.core.segmentation.node import Node
-from ultrack.core.segmentation.processing import _insert_db
 from ultrack.core.solve.sqlgtmatcher import SQLGTMatcher
 from ultrack.tracks.stats import estimate_drift
 from ultrack.utils.multiprocessing import (
@@ -38,16 +39,232 @@ class UnmatchedNode(IntEnum):
     NO_OVERLAP = -1
     BLOCKED = 0
 
+def split_into_tiles(arr_shape: Tuple, n: int, overlap: int):
+    tiles = []
+    height, width = arr_shape
+    tile_height = height // n
+    tile_width = width // n
+
+    row_stride = tile_height - overlap
+    col_stride = tile_width - overlap
+    index = []
+    for i in range(n):
+        row_start = i * row_stride
+        row_stop = row_start + tile_height
+        if row_stop > height:
+            row_stop = height
+
+        for j in range(n):
+            col_start = j * col_stride
+            col_stop = col_start + tile_width
+            if col_stop > width:
+                col_stop = width
+            index.append((i, j))
+            tiles.append((row_start, row_stop, col_start, col_stop))
+
+    return tiles, index
+
+def _edge_mask(labels, ignore=[None]):
+    labels = labels.squeeze()
+    first_row = labels[0, :]
+    last_row = labels[-1, :]
+    first_column = labels[:, 0]
+    last_column = labels[:, -1]
+
+    edges = []
+    if 'top' not in ignore:
+        edges.append(first_row)
+    if 'bottom' not in ignore:
+        edges.append(last_row)
+    if 'left' not in ignore:
+        edges.append(first_column)
+    if 'right' not in ignore:
+        edges.append(last_column)
+
+    if len(edges) == 0:
+        return torch.zeros_like(labels).bool()
+
+    edges = torch.cat(edges, dim=0)
+    return torch.isin(labels, edges[edges > 0])
+
+
+def _remove_edge_labels(labels, ignore=[None]):
+    labels = torch.as_tensor(labels)
+    labels = labels.squeeze()
+    return labels * ~_edge_mask(labels, ignore=ignore)
 
 @curry
-def _match_ground_truth_frame(
+def _match_ground_truth_frame(time: int,
+    gt_labels: ArrayLike,
+    config: MainConfig,
+    scale: Optional[ArrayLike],
+    write_lock: Optional[fasteners.InterProcessLock],
+    segmentation_gt: bool,
+) -> float:
+    
+    # Tile image (with overlap)
+    gt_labels = np.asarray(gt_labels[time])
+    tiles, indx = split_into_tiles(gt_labels.shape, 2, 50)
+
+    gt_props = regionprops(gt_labels, cache=False)
+
+    if len(gt_props) == 0:
+        LOG.warning(f"No objects found in time point {time}")
+        return 0.0
+
+    centroids = set()
+    for tile in tiles:
+        y_start, y_stop, x_start, x_stop = tile
+        gt_tile = gt_labels[y_start:y_stop, x_start:x_stop]
+        print(f'tile shape: {gt_tile.shape}')
+
+        # remove edge labels from tile
+        gt_tile = _remove_edge_labels(gt_tile).cpu().numpy()
+        print(f' tile shape: {gt_tile.shape}')
+
+        gt_props = regionprops(gt_tile, cache=False)
+
+        print('Done!')
+
+        LOG.info(f"Found {len(gt_props)} objects in time point {time}")
+
+        print(f"Found {len(gt_props)} objects in time point {time}")
+        connect_args = {"timeout": 45}
+        engine = sqla.create_engine(
+            config.data_config.database_path, connect_args=connect_args
+        )
+        gt_db_rows = []
+        gt_nodes = []
+        gt_id_to_props = {}
+
+        start = time_mod.time()
+        with Session(engine, expire_on_commit=False) as session:
+            with session.begin():
+                # adding ground-truth nodes
+                for h, obj in enumerate(gt_props):
+                    node = Node.from_mask(
+                        node_id=obj.label, time=time, mask=obj.image, 
+                        bbox=tuple(np.add(obj.bbox, (y_start, x_start, y_start, x_start)))
+                    )
+                    gt_id_to_props[obj.label] = obj
+
+                    if len(node.centroid) == 2:
+                        y, x = node.centroid
+                        y = y+y_start
+                        x = x+x_start
+                        z = 0
+                    else:
+                        z, y, x = node.centroid
+                        y = y+y_start
+                        x = x+x_start
+                    
+                    rounded_centroid = (z, round(y), round(x))
+                    if rounded_centroid in centroids:
+                        continue
+
+                    gt_db_rows.append(
+                        GTNodeDB(
+                            t=time,
+                            label=obj.label,
+                            pickle=pickle.dumps(node),
+                            z=z,
+                            y=y,
+                            x=x,
+                        )
+                    )
+                    node.mask = None
+                    gt_nodes.append(node)
+
+                if write_lock is None:
+                    print('saving')
+                    session.bulk_save_objects(gt_db_rows)
+                    session.commit()
+                    gt_db_rows.clear()
+                
+                elif write_lock.acquire(blocking=False):
+                    print(f'building tile took {(time_mod.time() - start) / h} per object')
+                    print('saving with lock')
+                    start = time_mod.time()
+                    session.bulk_save_objects(gt_db_rows)
+                    print(f'saving took {time_mod.time() - start}')
+                    gt_db_rows.clear()
+                    write_lock.release()
+                    start = time_mod.time()
+
+    print("Adding ground-truth nodes to the database")
+
+    with write_lock if write_lock is not None else nullcontext():
+        connect_args = {"timeout": 45}
+        engine = sqla.create_engine(
+            config.data_config.database_path, connect_args=connect_args
+        )
+
+        with Session(engine) as session:
+            session.add_all(gt_db_rows)
+            session.commit()
+            session.flush()
+            del gt_db_rows
+            print("Done adding ground-truth nodes to the database")
+
+            source_nodes = [
+                n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
+            ]
+
+            print("Loading source nodes from the database")
+
+        engine.dispose()
+
+    def _weight_func(tgt: Node, src: Node) -> float:
+        # lazy loading mask from region props object
+        tgt.mask = gt_id_to_props[tgt.id].image
+        weight = tgt.intersection(src)
+        tgt.mask = None
+        return weight
+    
+    source_pos = np.asarray([n.centroid for n in source_nodes])
+    target_pos = np.asarray([n.centroid for n in gt_nodes], dtype=np.float32)
+    print(target_pos.shape)
+
+    compute_spatial_neighbors(
+        time,
+        config=config.linking_config,
+        source_nodes=source_nodes,
+        target_nodes=gt_nodes,
+        target_shift=np.zeros((len(gt_nodes), 3), dtype=np.float32),
+        table_name=GTLinkDB.__tablename__,
+        db_path=config.data_config.database_path,
+        scale=scale,
+        images=[],
+        write_lock=write_lock,
+        weight_func=_weight_func,
+        edge_must_be_positive=True,
+    )
+
+    # computing GT matching
+    gt_matcher = SQLGTMatcher(config, write_lock=write_lock)
+    total_score = gt_matcher(
+        time=time,
+        match_templates=not segmentation_gt,
+    )
+
+    if len(gt_nodes) > 0:
+        mean_score = total_score / len(gt_nodes)
+    else:
+        mean_score = 0.0
+
+    LOG.info(f"time {time} total score: {total_score:0.4f}")
+    LOG.info(f"time {time} mean score: {mean_score:0.4f}")
+
+    return mean_score
+
+@curry
+def _match_ground_truth_frame_old(
     time: int,
     gt_labels: ArrayLike,
     config: MainConfig,
     scale: Optional[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock],
     segmentation_gt: bool,
-    insertion_throttle_rate: int = 1000,
 ) -> float:
     """
     Matches candidate hypotheses to ground-truth labels for a given time point.
@@ -67,9 +284,6 @@ def _match_ground_truth_frame(
         Lock for writing to the database.
     segmentation_gt : bool
         Wether the ground-truth labels are segmentation masks or points.
-    insertion_throttle_rate : int
-        THrottle rate for insertion.
-        Only used if `write_lock` is not None, non-sqlite or not multi processing.
 
     Returns
     -------
@@ -77,7 +291,10 @@ def _match_ground_truth_frame(
         Mean score of the matching.
     """
     gt_labels = np.asarray(gt_labels[time])
+    print(f'gt_labels shape: {gt_labels.shape}')
+    print('getting region props')
     gt_props = regionprops(gt_labels, cache=False)
+    print('Done!')
 
     if len(gt_props) == 0:
         LOG.warning(f"No objects found in time point {time}")
@@ -85,69 +302,96 @@ def _match_ground_truth_frame(
 
     LOG.info(f"Found {len(gt_props)} objects in time point {time}")
 
+    print(f"Found {len(gt_props)} objects in time point {time}")
+    insertion_throttle_rate = 10
     connect_args = {"timeout": 45}
     engine = sqla.create_engine(
         config.data_config.database_path, connect_args=connect_args
     )
-
     gt_db_rows = []
     gt_nodes = []
     gt_id_to_props = {}
-    # adding ground-truth nodes
-    for i, obj in enumerate(gt_props):
-        node = Node.from_mask(
-            node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
-        )
-        gt_id_to_props[obj.label] = obj
-        obj._cache.clear()
 
-        if len(node.centroid) == 2:
-            y, x = node.centroid
-            z = 0
-        else:
-            z, y, x = node.centroid
+    start = time_mod.time()
+    with Session(engine, expire_on_commit=False) as session:
+        with session.begin():
+            # adding ground-truth nodes
+            for h, obj in enumerate(gt_props):
+                print(obj.bbox)
+                node = Node.from_mask(
+                    node_id=obj.label, time=time, mask=obj.image, bbox=obj.bbox
+                )
+                print(f"time to get node: {time_mod.time() - start}")
+                start = time_mod.time()
+                gt_id_to_props[obj.label] = obj
 
-        gt_db_rows.append(
-            GTNodeDB(
-                t=time,
-                label=obj.label,
-                pickle=pickle.dumps(node),
-                z=z,
-                y=y,
-                x=x,
-            )
-        )
+                if len(node.centroid) == 2:
+                    y, x = node.centroid
+                    z = 0
+                else:
+                    z, y, x = node.centroid
+                
+                print(f"time to get centroid: {time_mod.time() - start}")
+                start = time_mod.time()
 
-        if write_lock is None:
-            if (i + 1) % insertion_throttle_rate == 0:
-                _insert_db(engine, time, gt_db_rows, [])
+                gt_db_rows.append(
+                    GTNodeDB(
+                        t=time,
+                        label=obj.label,
+                        pickle=pickle.dumps(node),
+                        z=z,
+                        y=y,
+                        x=x,
+                    )
+                )
+                node.mask = None
+                gt_nodes.append(node)
+                print(f"time to append node: {time_mod.time() - start}")
 
-        elif write_lock.acquire(blocking=False):
-            _insert_db(engine, time, gt_db_rows, [])
-            write_lock.release()
+                if h % insertion_throttle_rate == 0:
+                    if write_lock is None:
+                        print('saving')
+                        session.bulk_save_objects(gt_db_rows)
+                        session.commit()
+                        gt_db_rows.clear()
+                    
+                    elif write_lock.acquire(blocking=False):
+                        print(f'building 10 rows took {time_mod.time() - start}')
+                        print('saving with lock')
+                        start = time_mod.time()
+                        session.bulk_save_objects(gt_db_rows)
+                        print(f'saving took {time_mod.time() - start}')
+                        gt_db_rows.clear()
+                        write_lock.release()
+                        start = time_mod.time()
 
-        node.mask = None  # freeing mask memory
-        gt_nodes.append(node)
+        
+    print("Adding ground-truth nodes to the database")
 
     with write_lock if write_lock is not None else nullcontext():
-        _insert_db(
-            engine,
-            time=time,
-            nodes=gt_db_rows,
-            overlaps=[],
+        connect_args = {"timeout": 45}
+        engine = sqla.create_engine(
+            config.data_config.database_path, connect_args=connect_args
         )
+
         with Session(engine) as session:
+            session.add_all(gt_db_rows)
+            session.commit()
+            session.flush()
+            del gt_db_rows
+            print("Done adding ground-truth nodes to the database")
+
             source_nodes = [
                 n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
             ]
 
-    @lru_cache(maxsize=1)
-    def _cached_get_mask(tgt_id: int) -> np.ndarray:
-        return gt_id_to_props[tgt_id].image
+            print("Loading source nodes from the database")
+
+        engine.dispose()
 
     def _weight_func(tgt: Node, src: Node) -> float:
         # lazy loading mask from region props object
-        tgt.mask = _cached_get_mask(tgt.id)
+        tgt.mask = gt_id_to_props[tgt.id].image
         weight = tgt.intersection(src)
         tgt.mask = None
         return weight
@@ -337,10 +581,7 @@ def match_to_ground_truth(
         batch_index,
     )
 
-    with multiprocessing_sqlite_lock(
-        config.data_config,
-        config.segmentation_config.n_workers,
-    ) as lock:
+    with multiprocessing_sqlite_lock(config.data_config) as lock:
         ious = multiprocessing_apply(
             _match_ground_truth_frame(
                 gt_labels=gt_labels,
