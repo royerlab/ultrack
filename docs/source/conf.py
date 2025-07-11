@@ -80,6 +80,14 @@ html_theme = "furo"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+# Logo for the documentation
+html_theme_options = {
+    "light_logo": "ultrack_no_bkg.svg",
+    "dark_logo": "ultrack_dark_bkg.svg",
+    "sidebar_hide_name": True,
+}
+
+
 html_css_files = [
     "css/style.css",
 ]

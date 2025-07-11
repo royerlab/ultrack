@@ -1,4 +1,7 @@
-# ULTRACK
+
+<div align="left">
+  <img src="logo/ultrack_no_bkg.svg" alt="Ultrack Logo" width="300"/>
+</div>
 
 ![tests](https://github.com/royerlab/ultrack/actions/workflows/test_pull_request.yml/badge.svg)
 [![codecov](https://codecov.io/gh/royerlab/ultrack/branch/main/graph/badge.svg?token=9FFo4zNtYP)](https://codecov.io/gh/royerlab/ultrack)
