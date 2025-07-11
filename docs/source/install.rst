@@ -41,7 +41,7 @@ You can install the additional packages required for GPU acceleration by running
     # linux only
     conda install cucim -c rapidsai
     # for windows, you can install cucim using pip
-    pip install git+https://github.com/rapidsai/cucim.git#egg=cucim&subdirectory=python/cucim"
+    pip install "git+https://github.com/rapidsai/cucim.git@v22.04.00#egg=cucim&subdirectory=python/cucim"
 
 See the `PyTorch website <https://pytorch.org/get-started/locally/>`_ for more information on how to install PyTorch with GPU support.
 
