@@ -94,10 +94,14 @@ class HierarchyVizWidget(Container):
             column["name"]: getattr(NodeDB, column["name"])
             for column in inspector.get_columns(NodeDB.__table__.name)
             if getattr(NodeDB, column["name"]) != NodeDB.pickle
-        } | {
-            "gt_id": GTLinkDB.target_id,
-            "gt_weight": GTLinkDB.weight,
         }
+
+        # Add GTLinkDB attributes if the table exists
+        if inspector.has_table(GTLinkDB.__tablename__):
+            self._node_attributes |= {
+                "gt_id": GTLinkDB.target_id,
+                "gt_weight": GTLinkDB.weight,
+            }
 
         if hasattr(self, "_node_attribute_w"):
             self._node_attribute_w.choices = list(self._node_attributes.keys())
@@ -126,11 +130,12 @@ class HierarchyVizWidget(Container):
         scale = self.config.data_config.metadata.get("scale", [1, 1])
 
         try:
-            self._viewer.add_labels(
+            layer = self._viewer.add_labels(
                 self._ultrack_array,
                 name=self.HIER_LAYER_NAME,
                 scale=scale,
             )
+            layer.refresh()
         except TypeError:
             layer = self._viewer.add_image(
                 self._ultrack_array,
@@ -151,7 +156,7 @@ class HierarchyVizWidget(Container):
     def _slider_update(self, value: float) -> None:
         mapped_value = self._mapping(value)
         LOG.info("value %d mapped_value: %d", value, mapped_value)
-        self._ultrack_array.num_pix_threshold = mapped_value
+        self._ultrack_array._filter_value = int(mapped_value)
         self._slider_label.label = str(int(mapped_value))
         self._viewer.layers[self.HIER_LAYER_NAME].refresh()
 

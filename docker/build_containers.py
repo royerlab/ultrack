@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 def get_ultrack_version():
     conn = http.client.HTTPSConnection("pypi.org")
-    url = f"/pypi/ultrack/json"
+    url = "/pypi/ultrack/json"
     conn.request("GET", url)
     response = conn.getresponse()
 
