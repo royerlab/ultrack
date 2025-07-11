@@ -5,17 +5,9 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from ultrack.imgproc.utils import _channel_iterator, _parse_voxel_size
-from ultrack.utils.cuda import import_module, to_cpu
+from ultrack.utils.cuda import import_module, to_cpu, xp
 
 LOG = logging.getLogger(__name__)
-
-try:
-    import cupy as xp
-
-except ImportError as e:
-    LOG.info(e)
-    LOG.info("cupy not found, using CPU processing")
-    import numpy as xp
 
 
 def normalize(
