@@ -1,8 +1,11 @@
+import functools
 from pathlib import Path
 from typing import Tuple
+from unittest.mock import Mock, patch
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 import pytest
 import torch as th
 import torch.nn.functional as F
@@ -172,6 +175,15 @@ def test_outputs(
     nx_original = tracks_layer_to_networkx(df_original)
 
     assert nx.utils.graphs_equal(nx_tracker, nx_original)
+
+    # test to_geff
+    with patch("ultrack.core.export.geff.geff.write_nx") as mock_write_nx:
+        tracker.to_geff("test.geff")
+        mock_write_nx.assert_called_once()
+
+        # Test with overwrite=True
+        tracker.to_geff("test.geff", overwrite=True)
+        assert mock_write_nx.call_count == 2
 
 
 @pytest.mark.parametrize(
