@@ -11,14 +11,24 @@ from numpy.typing import ArrayLike
 
 LOG = logging.getLogger(__name__)
 
+
+malloc_managed = None
+
 try:
     import cupy as cp
-    from cupy.cuda.memory import malloc_managed
 
-    LOG.info("cupy found.")
+    if not cupy.cuda.is_available():
+        cp = None
+        LOG.info("cupy found but cuda is not available.")
+    else:
+        from cupy.cuda.memory import malloc_managed
+        LOG.info("cupy found.")
+        xp = cp
+
 except (ModuleNotFoundError, ImportError):
     LOG.info("cupy not found.")
     cp = None
+    xp = np
 
 try:
     import torch as th
@@ -54,6 +64,7 @@ def unified_memory() -> Generator:
     cupy's functions will run slower but it will spill memory memory into cpu without crashing.
     """
     # starts unified memory
+    previous_allocator = None
     if cp is not None:
         previous_allocator = cp.cuda.get_allocator()
         cp.cuda.set_allocator(malloc_managed)
