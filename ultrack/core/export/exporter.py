@@ -65,17 +65,10 @@ def export_tracks_by_extension(
         df, _ = to_tracks_layer(config, include_parents=True)
         df.to_csv(filename, index=False)
     elif file_ext.lower() == ".zarr":
-        # check if it is a ".geff.zarr" and bypass warning
-        if str(filename).lower().endswith(".geff"):
-            to_geff(config, filename, overwrite=overwrite)
-        else:
-            LOG.warning(
-                "Ultrack by default uses the zarr format to export the dense segmentations "
-                "masks. If you want to export the tracks using the geff standard, use the "
-                "function `to_geff` or add the `.geff.zarr` extension to the filename."
-            )
-            df, _ = to_tracks_layer(config)
-            tracks_to_zarr(config, df, filename, overwrite=True)
+        df, _ = to_tracks_layer(config)
+        tracks_to_zarr(config, df, filename, overwrite=True)
+    elif file_ext.lower() == ".geff":
+        to_geff(config, filename, overwrite=overwrite)
     elif file_ext.lower() == ".parquet":
         df, _ = to_tracks_layer(config)
         df.to_parquet(filename)
@@ -90,5 +83,5 @@ def export_tracks_by_extension(
     else:
         raise ValueError(
             f"Unknown file extension: {file_ext}. "
-            "Supported extensions are .xml, .csv, .zarr, .parquet, .dot, and .json."
+            "Supported extensions are .xml, .csv, .zarr, .geff, .parquet, .dot, and .json."
         )

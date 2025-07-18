@@ -37,6 +37,6 @@ def to_geff(
 
     # Get the networkx graph from the configuration
     graph = to_networkx(config)
-    
+
     # Write the graph to geff format
-    geff.write_nx(graph, filename) 
+    geff.write_nx(graph, filename)
