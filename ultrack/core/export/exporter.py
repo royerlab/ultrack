@@ -26,7 +26,7 @@ def export_tracks_by_extension(
     - `.csv` exports to a CSV file.
     - `.parquet` exports to a Parquet file.
     - `.zarr` exports the tracks to dense segments in a `zarr` array format.
-    - `.geff.zarr` exports the tracks to a `zarr` array format using the geff standard.
+    - `.geff` exports the tracks to a `zarr` format using the geff standard.
     - `.dot` exports to a Graphviz DOT file.
     - `.json` exports to a networkx JSON file.
 
