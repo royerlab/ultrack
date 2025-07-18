@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ultrack"
+name = "ultrackBeehive"
 dynamic = ["version"]
 description = "Large-scale multi-hypotheses cell tracking"
 readme = "README.md"
@@ -79,10 +79,10 @@ ml = [
 ]
 
 [project.scripts]
-ultrack = "ultrack.cli.main:main"
+ultrackBeehive = "ultrackBeehive.cli.main:main"
 
 [project.entry-points."napari.manifest"]
-ultrack = "ultrack:napari.yaml"
+ultrackBeehive = "ultrackBeehive:napari.yaml"
 
 # pixi config
 [tool.pixi.project]
@@ -159,7 +159,7 @@ filterwarnings = [
 ]
 
 [tool.pixi.pypi-dependencies]
-ultrack = { path = ".", editable = true }
+ultrackBeehive = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
@@ -169,15 +169,15 @@ ml = { features = ["ml"], solve-group = "default" }
 test = { features = ["test", "ml"], solve-group = "default" }
 
 [tool.pixi.feature.test.tasks]
-test = "pytest -v --color=yes --cov=ultrack --cov-report=html --durations=15 ."
+test = "pytest -v --color=yes --cov=ultrackBeehive --cov-report=html --durations=15 ."
 
 # Hatch config
 [tool.hatch.version]
-path = "ultrack/__init__.py"
+path = "ultrackBeehive/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
-    "/ultrack",
+    "/ultrackBeehive",
 ]
 
 [tool.hatch.metadata]

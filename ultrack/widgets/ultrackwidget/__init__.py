@@ -1,1 +1,0 @@
-from ultrack.widgets.ultrackwidget.ultrackwidget import UltrackWidget

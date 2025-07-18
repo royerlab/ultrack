@@ -1,0 +1,27 @@
+import click
+
+from ultrackBeehive.cli.utils import config_option
+from ultrackBeehive.config.config import MainConfig
+from ultrackBeehive.core.database import clear_all_data
+from ultrackBeehive.core.linking.utils import clear_linking_data
+from ultrackBeehive.core.match_gt import clear_ground_truths
+from ultrackBeehive.core.solve.sqltracking import SQLTracking
+
+
+@click.command("clear_database")
+@click.argument("mode", type=click.Choice(["all", "links", "solutions", "gt"]))
+@config_option()
+def clear_database_cli(mode: str, config: MainConfig) -> None:
+    """Cleans database content."""
+
+    database_path = config.data_config.database_path
+    if mode == "all":
+        clear_all_data(database_path)
+    elif mode == "links":
+        clear_linking_data(database_path)
+    elif mode == "solutions":
+        SQLTracking.clear_solution_from_database(database_path)
+    elif mode == "gt":
+        clear_ground_truths(database_path)
+    else:
+        raise NotImplementedError(f"Clear database mode {mode} not implemented.")
