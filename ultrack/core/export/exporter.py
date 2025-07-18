@@ -21,7 +21,7 @@ def export_tracks_by_extension(
     """
     Export tracks to a file given the file extension.
 
-    Supported file extensions are .xml, .csv, .zarr, .parquet, .dot, .json, and .geff.zarr.
+    Supported file extensions are .xml, .csv, .zarr, .parquet, .dot, .json, and .geff
     - `.xml` exports to a TrackMate compatible XML file.
     - `.csv` exports to a CSV file.
     - `.parquet` exports to a Parquet file.
@@ -66,7 +66,7 @@ def export_tracks_by_extension(
         df.to_csv(filename, index=False)
     elif file_ext.lower() == ".zarr":
         # check if it is a ".geff.zarr" and bypass warning
-        if str(filename).lower().endswith(".geff.zarr"):
+        if str(filename).lower().endswith(".geff"):
             to_geff(config, filename, overwrite=overwrite)
         else:
             LOG.warning(
