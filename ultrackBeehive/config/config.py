@@ -46,6 +46,21 @@ class LinkingConfig(BaseModel):
     the segmentation masks of neighboring segments
     """
 
+    iou_weight: float = 0.4
+    """Weight applied to the intersection over union (IoU) of segment masks"""
+
+    area_weight: float = -0.4
+    """Weight to the absolute value of the percent difference in segment areas"""
+
+    circularity_weight: float = -0.1
+    """Weight to the absolute value of the percent difference in segment circularities"""
+
+    # mean_intensity_weight: float = -0.2
+    # """Weight to the absolute value of the percent difference in mean intensities"""
+
+    # std_intensity_weight: float = 0.2
+    # """Weight to the absolute value of the percent difference in standard deviations of intensities"""
+
     model_config = ConfigDict(extra="forbid")
 
 

@@ -157,6 +157,7 @@ def _match_ground_truth_frame(
         tgt.mask = _cached_get_mask(tgt.id)
         weight = tgt.intersection(src) # this is the IoU
         print(type(tgt.mask), type(src.mask))
+        print(weight)
         raise Exception("This is a test exception to check the mask types.")
         tgt.mask = None
         return weight

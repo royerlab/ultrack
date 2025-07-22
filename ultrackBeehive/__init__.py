@@ -1,7 +1,7 @@
 import os
 import warnings
 
-if os.environ.get("ULTRACK_DEBUG", False):
+if os.environ.get("ultrackBeehive_DEBUG", False):
     import logging
 
     logger = logging.getLogger()
@@ -12,16 +12,16 @@ warnings.filterwarnings("ignore", message="The value of the smallest subnormal f
 
 __version__ = "0.7.0.dev0"
 
-from ultrack.config.config import MainConfig, load_config
-from ultrack.core.export.ctc import to_ctc
-from ultrack.core.export.exporter import export_tracks_by_extension
-from ultrack.core.export.trackmate import to_trackmate
-from ultrack.core.export.tracks_layer import to_tracks_layer
-from ultrack.core.export.zarr import tracks_to_zarr
-from ultrack.core.interactive import add_new_node
-from ultrack.core.linking.processing import link
-from ultrack.core.main import track
-from ultrack.core.segmentation.processing import segment
-from ultrack.core.solve.processing import solve
-from ultrack.core.tracker import Tracker
-from ultrack.imgproc.flow import add_flow
+from ultrackBeehive.config.config import MainConfig, load_config
+from ultrackBeehive.core.export.ctc import to_ctc
+from ultrackBeehive.core.export.exporter import export_tracks_by_extension
+from ultrackBeehive.core.export.trackmate import to_trackmate
+from ultrackBeehive.core.export.tracks_layer import to_tracks_layer
+from ultrackBeehive.core.export.zarr import tracks_to_zarr
+from ultrackBeehive.core.interactive import add_new_node
+from ultrackBeehive.core.linking.processing import link
+from ultrackBeehive.core.main import track
+from ultrackBeehive.core.segmentation.processing import segment
+from ultrackBeehive.core.solve.processing import solve
+from ultrackBeehive.core.tracker import Tracker
+from ultrackBeehive.imgproc.flow import add_flow

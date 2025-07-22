@@ -8,7 +8,8 @@ import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
 from scipy import fft
-
+from skimage.measurements import perimeter
+from ultrackBeehive.config import LinkingConfig
 from ultrackBeehive.core.segmentation.vendored.node import Node as _Node
 
 try:
@@ -133,6 +134,29 @@ class Node(_Node):
 
     def IoU(self, other: "Node") -> float:
         return _fast_iou_with_bbox(self.bbox, other.bbox, self.mask, other.mask)
+    
+    def circularityComparison(self, other: "Node") -> float:
+        """Compare circularity of two nodes."""
+        return np.abs(1 - (self.calcCircularity() / other.calcCircularity()))
+    
+    def areaComparison(self, other: "Node") -> float:
+        """Compare area of two nodes."""
+        self_area = self.area
+        other_area = other.area
+        return np.abs(1 - (self_area / other_area))
+
+    def calcCircularity(self, eps = 1e-5) -> float:
+        area = self.area
+        per = perimeter(self.mask)
+        return 4 * np.pi * area / (per ** 2 + eps)
+    
+    def customWeightFunc(self, other: "Node", config:LinkingConfig) -> float:
+        """Custom weight function for node comparison."""
+        iou = self.IoU(other) * config.iou_weight
+        circularity = self.circularityComparison(other) * config.circularity_weight
+        area = self.areaComparison(other) * config.area_weight
+
+        return iou + circularity + area
 
     def intersection(self, other: "Node") -> float:
         """Compute the intersection between two nodes."""

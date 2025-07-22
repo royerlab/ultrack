@@ -263,7 +263,7 @@ def _process(
                 frontier=hier_node.frontier,
                 height=hier_node.height,
                 pickle=pickle.dumps(hier_node),  # pickling to reduce memory usage
-                features=node_feats,
+                features=node_feats, # this is where we specify fields in https://scikit-image.org/docs/0.24.x/api/skimage.measure.html#skimage.measure.regionprops, accessible at call time in notebook
             )
 
             hier_index_map[hier_node._h_node_index] = node

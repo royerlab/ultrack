@@ -171,7 +171,8 @@ def compute_spatial_neighbors(
     db_path: str,
     images: Sequence[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock] = None,
-    weight_func: Callable[[Node, Node], float] = Node.IoU,
+    # weight_func: Callable[[Node, Node], float] = Node.IoU,
+    weight_func: Callable[[Node, Node, LinkingConfig], float] = Node.customWeightFunc, # custom weight function defined on Node class
     edge_must_be_positive: bool = False,
 ) -> pd.DataFrame:
 
@@ -228,7 +229,8 @@ def compute_spatial_neighbors(
         neighborhood = []
         for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
             neigh = source_nodes[neigh_idx]
-            edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
+            # edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
+            edge_weight = weight_func(node, neigh, config) - distance_w * neigh_dist # using custom weight function
             # using dist as a tie-breaker
             if edge_must_be_positive and edge_weight <= 0:
                 continue
