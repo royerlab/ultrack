@@ -8,7 +8,7 @@ import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
 from scipy import fft
-from skimage.measurements import perimeter
+from skimage.measure import perimeter
 from ultrackBeehive.config import LinkingConfig
 from ultrackBeehive.core.segmentation.vendored.node import Node as _Node
 
