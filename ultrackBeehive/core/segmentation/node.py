@@ -150,13 +150,22 @@ class Node(_Node):
         per = perimeter(self.mask)
         return 4 * np.pi * area / (per ** 2 + eps)
     
+    def intensityComparison(self, other: "Node", config:LinkingConfig) -> float:
+        """Compare intensity stats of two nodes."""
+        mean_diff = np.abs(1 - (self.features['intensity_mean']/other.features['intensity_mean'])) * config.mean_intensity_weight
+        max_diff = np.abs(1 - (self.features['intensity_max']/other.features['intensity_max'])) * config.max_intensity_weight
+        std_diff = np.abs(1 - (self.features['intensity_std']/other.features['intensity_std'])) * config.std_intensity_weight
+        return np.sum([mean_diff, max_diff, std_diff])
+    
     def customWeightFunc(self, other: "Node", config:LinkingConfig) -> float:
         """Custom weight function for node comparison."""
         iou = self.IoU(other) * config.iou_weight
         circularity = self.circularityComparison(other) * config.circularity_weight
         area = self.areaComparison(other) * config.area_weight
+        intensity = self.intensityComparison(other, config)
+        extent = np.abs(1 - (self.features['extent']/other.features['extent'])) * config.extent_weight
 
-        return iou + circularity + area
+        return iou + circularity + area + intensity + extent
 
     def intersection(self, other: "Node") -> float:
         """Compute the intersection between two nodes."""

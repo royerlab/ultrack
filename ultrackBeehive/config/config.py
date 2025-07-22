@@ -55,11 +55,18 @@ class LinkingConfig(BaseModel):
     circularity_weight: float = -0.1
     """Weight to the absolute value of the percent difference in segment circularities"""
 
-    # mean_intensity_weight: float = -0.2
-    # """Weight to the absolute value of the percent difference in mean intensities"""
+    mean_intensity_weight: float = -0.2
+    """Weight to the absolute value of the percent difference in mean intensities"""
 
-    # std_intensity_weight: float = 0.2
-    # """Weight to the absolute value of the percent difference in standard deviations of intensities"""
+    std_intensity_weight: float = 0.2
+    """Weight to the absolute value of the percent difference in standard deviations of intensities"""
+
+    max_intensity_weight: float = -0.1
+    """Weight to the absolute value of the percent difference in maximum intensities"""
+
+    extent_weight: float = -0.05
+    """Weight to the absolute value of the percent difference in extent of segments"""
+
 
     model_config = ConfigDict(extra="forbid")
 
