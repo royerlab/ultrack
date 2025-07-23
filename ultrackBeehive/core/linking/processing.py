@@ -93,6 +93,24 @@ def _std_phase_intensity(
     node.compute_mask_attribute(frame[..., 1], np.std, "std_phase_intensity")
     return
 
+def _max_red_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
+
+    node.compute_mask_attribute(frame[..., 0], np.max, "max_red_intensity")
+    return
+
+def _max_phase_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
+
+    node.compute_mask_attribute(frame[..., 1], np.max, "max_phase_intensity")
+    return
+
 @curry
 def _process(
     time: int,
@@ -122,9 +140,23 @@ def _process(
     connect_args = {"timeout": 45} if write_lock is not None else {}
     engine = sqla.create_engine(db_path, connect_args=connect_args)
     with Session(engine) as session:
+
+        # TODO: find a way to allow user to customize later
+        feature_funcs = {
+            "mean_red_intensity": _mean_red_intensity,
+            "mean_phase_intensity": _mean_phase_intensity,
+            "std_red_intensity": _std_red_intensity,
+            "std_phase_intensity": _std_phase_intensity,
+            'max_red_intensity': _max_red_intensity,
+            'max_phase_intensity': _max_phase_intensity,
+        }
+
+
         current_nodes = [
             n for n, in session.query(NodeDB.pickle).where(NodeDB.t == time)
         ]
+
+        _compute_features(time, current_nodes, images, feature_funcs, threeD=False) # not 3D compatible yet
 
         query = session.query(
             NodeDB.pickle,
@@ -134,6 +166,7 @@ def _process(
         ).where(NodeDB.t == time + 1)
 
         next_nodes = [row[0] for row in query]
+        _compute_features(time+1, next_nodes, images, feature_funcs, threeD=False) # not 3D compatible yet
         next_shift = np.asarray([row[1:] for row in query])
 
     compute_spatial_neighbors(
@@ -153,15 +186,14 @@ def _process(
 def compute_spatial_neighbors(
     time: int,
     config: LinkingConfig,
-    source_nodes: List[Node],
-    target_nodes: List[Node],
+    source_nodes: List[Node], # time t
+    target_nodes: List[Node], # time t + 1
     target_shift: ArrayLike,
     scale: Optional[Sequence[float]],
     table_name: str,
     db_path: str,
     images: Sequence[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock] = None,
-    # weight_func: Callable[[Node, Node], float] = Node.IoU,
     weight_func: Callable[[Node, Node, LinkingConfig, ArrayLike], float] = Node.customWeightFunc, # custom weight function defined on Node class
     edge_must_be_positive: bool = False,
 ) -> pd.DataFrame:
@@ -189,24 +221,12 @@ def compute_spatial_neighbors(
         k=2 * config.max_neighbors,
         distance_upper_bound=config.max_distance,
     )
-    if False: # deprecating this, it doesn't work properly. Was never implemented for 2D
-        filtered_by_color = color_filtering_mask(
-            time,
-            source_nodes,
-            target_nodes,
-            images,
-            neighbors,
-            config.z_score_threshold,
-        )
-    else:
-        filtered_by_color = np.ones_like(neighbors, dtype=bool)
+
 
     int_next_shift = np.round(target_shift).astype(int)
 
     # NOTE: moving bbox with shift, MUST be after `feature computation`
-    # not true if I save the old bbox
     for node, shift in zip(target_nodes, int_next_shift):
-        node.old_bbox = node.bbox.copy()  # save old bbox
         node.bbox[:n_dim] += shift
         node.bbox[-n_dim:] += shift
 
@@ -214,7 +234,7 @@ def compute_spatial_neighbors(
     links = []
 
     for i, node in enumerate(target_nodes):
-        valid = (~np.isinf(distances[i])) & filtered_by_color[i]
+        valid = (~np.isinf(distances[i]))
         valid_neighbors = neighbors[i, valid]
         neigh_distances = distances[i, valid]
 
@@ -230,13 +250,9 @@ def compute_spatial_neighbors(
                 (edge_weight, -neigh_dist, neigh.id, node.id)
             )  # current, next
 
-        neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
+        neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors] # the use this to cut the number of possible neighbors based on distance, not edge weight?
         LOG.info("Node %s links %s", node.id, neighborhood)
         links += neighborhood
-
-        if hasattr(node, "old_bbox"):
-            # delete old bbox
-            del node.old_bbox
 
     if len(links) == 0:
         raise ValueError(

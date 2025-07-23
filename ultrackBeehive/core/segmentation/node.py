@@ -126,12 +126,6 @@ class Node(_Node):
         super().__init__(h_node_index=h_node_index, **kwargs)
         self.id = id
         self.time = time
-        self.phase_mean_intensity = None
-        self.phase_max_intensity = None
-        self.phase_std_intensity = None
-        self.red_mean_intensity = None
-        self.red_max_intensity = None
-        self.red_std_intensity = None
         if self.mask is None:
             self.centroid = None
         else:
@@ -157,31 +151,24 @@ class Node(_Node):
         per = measure.perimeter(self.mask)
         return 4 * np.pi * area / (per ** 2 + eps)
 
-    def meanIntensityVal(self, image: ArrayLike) -> float:
-        """Compute the mean intensity value for this node."""
-        indices = self.mask_indices()
-        return np.mean(image[indices])
+    def intensityComparison(self, other: "Node", config: LinkingConfig) -> float:
+        mean_red_diff = np.abs(1 - (self.mean_red_intensity/other.mean_red_intensity)) * config.mean_red_intensity_weight
+        max_red_diff = np.abs(1 - (self.max_red_intensity/other.max_red_intensity)) * config.max_red_intensity_weight
+        std_red_diff = np.abs(1 - (self.std_red_intensity/other.std_red_intensity)) * config.std_red_intensity_weight
 
-    def maxIntensityVal(self, image: ArrayLike) -> float:
-        """Compute the max intensity value for this node."""
-        indices = self.mask_indices()
-        return np.max(image[indices])
+        mean_phase_diff = np.abs(1 - (self.mean_phase_intensity/other.mean_phase_intensity)) * config.mean_phase_intensity_weight
+        max_phase_diff = np.abs(1 - (self.max_phase_intensity/other.max_phase_intensity)) * config.max_phase_intensity_weight
+        std_phase_diff = np.abs(1 - (self.std_phase_intensity/other.std_phase_intensity)) * config.std_phase_intensity_weight
 
-    def stdIntensityVal(self, image: ArrayLike) -> float:
-        """Compute the standard deviation of intensity for this node."""
-        indices = self.mask_indices()
-        return np.std(image[indices])
-
-    def intensityComparison(self, other: "Node", config: LinkingConfig, image: ArrayLike) -> float:
-        # between source and target, which is t and which is t+1?
-        return 0
+        weight_sum = mean_red_diff + max_red_diff + std_red_diff + mean_phase_diff + max_phase_diff + std_phase_diff
+        return weight_sum
 
     def customWeightFunc(self, other: "Node", config:LinkingConfig, images: ArrayLike) -> float:
         """Custom weight function for node comparison."""
         iou = self.IoU(other) * config.iou_weight
         circularity = self.circularityComparison(other) * config.circularity_weight
         area = self.areaComparison(other) * config.area_weight
-        intensity = self.intensityComparison(other, config, images)
+        intensity = self.intensityComparison(other, config)
         return iou + circularity + area + intensity
 
     def intersection(self, other: "Node") -> float:
