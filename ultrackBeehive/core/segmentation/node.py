@@ -8,9 +8,10 @@ import zarr
 from numba import njit, types
 from numpy.typing import ArrayLike
 from scipy import fft
-from skimage.measure import perimeter
+from skimage import measure
 from ultrackBeehive.config import LinkingConfig
 from ultrackBeehive.core.segmentation.vendored.node import Node as _Node
+import traceback
 
 try:
     import tensorstore as ts
@@ -125,6 +126,12 @@ class Node(_Node):
         super().__init__(h_node_index=h_node_index, **kwargs)
         self.id = id
         self.time = time
+        self.phase_mean_intensity = None
+        self.phase_max_intensity = None
+        self.phase_std_intensity = None
+        self.red_mean_intensity = None
+        self.red_max_intensity = None
+        self.red_std_intensity = None
         if self.mask is None:
             self.centroid = None
         else:
@@ -147,25 +154,35 @@ class Node(_Node):
 
     def calcCircularity(self, eps = 1e-5) -> float:
         area = self.area
-        per = perimeter(self.mask)
+        per = measure.perimeter(self.mask)
         return 4 * np.pi * area / (per ** 2 + eps)
-    
-    def intensityComparison(self, other: "Node", config:LinkingConfig) -> float:
-        """Compare intensity stats of two nodes."""
-        mean_diff = np.abs(1 - (self.features['intensity_mean']/other.features['intensity_mean'])) * config.mean_intensity_weight
-        max_diff = np.abs(1 - (self.features['intensity_max']/other.features['intensity_max'])) * config.max_intensity_weight
-        std_diff = np.abs(1 - (self.features['intensity_std']/other.features['intensity_std'])) * config.std_intensity_weight
-        return np.sum([mean_diff, max_diff, std_diff])
-    
-    def customWeightFunc(self, other: "Node", config:LinkingConfig) -> float:
+
+    def meanIntensityVal(self, image: ArrayLike) -> float:
+        """Compute the mean intensity value for this node."""
+        indices = self.mask_indices()
+        return np.mean(image[indices])
+
+    def maxIntensityVal(self, image: ArrayLike) -> float:
+        """Compute the max intensity value for this node."""
+        indices = self.mask_indices()
+        return np.max(image[indices])
+
+    def stdIntensityVal(self, image: ArrayLike) -> float:
+        """Compute the standard deviation of intensity for this node."""
+        indices = self.mask_indices()
+        return np.std(image[indices])
+
+    def intensityComparison(self, other: "Node", config: LinkingConfig, image: ArrayLike) -> float:
+        # between source and target, which is t and which is t+1?
+        return 0
+
+    def customWeightFunc(self, other: "Node", config:LinkingConfig, images: ArrayLike) -> float:
         """Custom weight function for node comparison."""
         iou = self.IoU(other) * config.iou_weight
         circularity = self.circularityComparison(other) * config.circularity_weight
         area = self.areaComparison(other) * config.area_weight
-        intensity = self.intensityComparison(other, config)
-        extent = np.abs(1 - (self.features['extent']/other.features['extent'])) * config.extent_weight
-
-        return iou + circularity + area + intensity + extent
+        intensity = self.intensityComparison(other, config, images)
+        return iou + circularity + area + intensity
 
     def intersection(self, other: "Node") -> float:
         """Compute the intersection between two nodes."""
@@ -215,6 +232,8 @@ class Node(_Node):
         for i in range(len(indices)):
             indices[i] += self.bbox[i]  # centering at bbox
         return tuple(indices)
+
+        
 
     def contains(self, coords: Union[np.ndarray, Tuple]) -> bool:
         coords = np.round(coords)
@@ -310,23 +329,24 @@ class Node(_Node):
         d["mask"] = blosc2.unpack_array(d["mask"])
         self.__dict__ = d
 
-    def intensity_mean(
-        self,
-        image: ArrayLike,
-    ) -> ArrayLike:
-        """Compute the mean intensity feature for this node."""
-        features = np.mean(image[self.mask_indices()], axis=0)
-        assert features.shape[0] == image.shape[-1], f"{features.shape}, {image.shape}"
-        return features
+    def compute_mask_attribute(
+            self,
+            image,
+            func,
+            attr,
+            threeD=False
+    ) -> None:
+        """Compute a masked attribute for the given image.
 
-    def intensity_std(
-        self,
-        image: ArrayLike,
-    ) -> ArrayLike:
-        """Compute the standard deviation of intensity feature for this node."""
-        features = image[self.mask_indices()].std(axis=0)
-        assert features.shape[0] == image.shape[-1], f"{features.shape}, {image.shape}"
-        return features
+        Args:
+            image (ArrayLike): 2D image array
+            func (Callable): function to compute the attribute
+            attr (str): name of the attribute to set
+        """
+
+        ret = func(image[self.mask_indices()])
+        setattr(self, attr, ret)
+        return None
 
     @staticmethod
     def from_mask(

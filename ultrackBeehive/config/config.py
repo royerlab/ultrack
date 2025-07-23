@@ -55,17 +55,32 @@ class LinkingConfig(BaseModel):
     circularity_weight: float = -0.1
     """Weight to the absolute value of the percent difference in segment circularities"""
 
-    mean_intensity_weight: float = -0.2
-    """Weight to the absolute value of the percent difference in mean intensities"""
+    mean_phase_intensity_weight: float = -0.2
+    """Weight to the absolute value of the percent difference in mean intensities in the phase channel"""
 
-    std_intensity_weight: float = 0.2
-    """Weight to the absolute value of the percent difference in standard deviations of intensities"""
+    std_phase_intensity_weight: float = 0.2
+    """Weight to the absolute value of the percent difference in standard deviations of intensities in the phase channel"""
 
-    max_intensity_weight: float = -0.1
-    """Weight to the absolute value of the percent difference in maximum intensities"""
+    max_phase_intensity_weight: float = -0.1
+    """Weight to the absolute value of the percent difference in maximum intensities in the phase channel"""
+
+    mean_red_intensity_weight: float = -0.2
+    """Weight to the absolute value of the percent difference in mean intensities in the red channel"""
+
+    std_red_intensity_weight: float = 0.2
+    """Weight to the absolute value of the percent difference in standard deviations of intensities in the red channel"""
+
+    max_red_intensity_weight: float = -0.1
+    """Weight to the absolute value of the percent difference in maximum intensities in the red channel"""
 
     extent_weight: float = -0.05
     """Weight to the absolute value of the percent difference in extent of segments"""
+
+    red_channel: int = 0
+    """Index of the red channel in the image stack"""
+
+    phase_channel: int = 1
+    """Index of the phase channel in the image stack"""
 
 
     model_config = ConfigDict(extra="forbid")

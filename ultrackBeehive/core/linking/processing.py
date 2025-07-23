@@ -1,7 +1,7 @@
 import logging
 from contextlib import nullcontext
 from typing import Callable, List, Optional, Sequence
-
+import traceback
 import fasteners
 import numpy as np
 import pandas as pd
@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
 from sqlalchemy.orm import Session
 from toolz import curry
-
+from typing import Dict
 from ultrackBeehive.config.config import LinkingConfig, MainConfig
 from ultrackBeehive.core.database import LinkDB, NodeDB, maximum_time_from_database
 from ultrackBeehive.core.linking.utils import clear_linking_data
@@ -32,76 +32,66 @@ def _compute_features(
     time: int,
     nodes: List[Node],
     images: Sequence[ArrayLike],
-    feature_funcs: List[Callable[[Node, ArrayLike], ArrayLike]],
+    feature_funcs: Dict[str, Callable[[Node, ArrayLike], None]],
+    threeD: bool = False, # TODO: need to propagate later
 ) -> List[ArrayLike]:
     """Compute mean intensity for each node"""
 
-    frames = np.stack(
-        [np.asarray(image[time]) for image in images],
-        axis=-1,
-    )
-    LOG.info(f"Image with shape {[f.shape for f in frames]}")
+    if threeD:
 
-    return [
-        np.stack([func(node, frames) for node in nodes], axis=0)
-        for func in feature_funcs
-    ]
+        # frames = np.stack(
+        #     [np.asarray(image[time]) for image in images],
+        #     axis=-1,
+        # )
 
+        # LOG.info(f"Image with shape {[f.shape for f in frames]}")
 
-def color_filtering_mask(
-    time: int,
-    current_nodes: List[Node],
-    next_nodes: List[Node],
-    images: Sequence[ArrayLike],
-    neighbors: ArrayLike,
-    z_score_threshold: float,
-) -> ArrayLike:
-    """
-    Filtering by color z-score.
+        raise Exception("3D feature computation is not implemented yet.")
 
-    Parameters
-    ----------
-    time : int
-        Current time.
-    current_nodes : List[Node]
-        List of source nodes.
-    next_nodes : List[Node]
-        List of target nodes.
-    images : Sequence[ArrayLike]
-        Sequence of images to extract color features for filtering.
-    neighbors : ArrayLike
-        Neighbors indices (current/source) for each target (next) node.
-    z_score_threshold : float
-        Z-score threshold for color filtering.
+    else:
+        frame = images[time]
+        LOG.info(f"Image with shape {frame.shape}")
 
-    Returns
-    -------
-    ArrayLike
-        Boolean mask of neighboring nodes within color z-score threshold.
+        for node in nodes:
+            for attr, func in feature_funcs.items():
+                func(node, frame, attr)
+    return
 
-    """
-    LOG.info(f"computing filtering by color z-score from t={time}")
-    (current_features,) = _compute_features(
-        time, current_nodes, images, [Node.intensity_mean]
-    )
-    # inserting dummy value for missing neighbors
-    current_features = np.append(
-        current_features,
-        np.zeros((1, current_features.shape[1])),
-        axis=0,
-    )
-    next_features, next_features_std = _compute_features(
-        time + 1, next_nodes, images, [Node.intensity_mean, Node.intensity_std]
-    )
-    LOG.info(
-        f"Features Std. Dev. range {next_features_std.min()} {next_features_std.max()}"
-    )
-    next_features_std[next_features_std <= 1e-6] = 1.0
-    difference = next_features[:, None, ...] - current_features[neighbors]
-    difference /= next_features_std[:, None, ...]
-    filtered_by_color = np.abs(difference).max(axis=-1) <= z_score_threshold
-    return filtered_by_color
+def _mean_red_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
 
+    node.compute_mask_attribute(frame[..., 0], np.mean, "mean_red_intensity")
+    return
+
+def _mean_phase_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
+
+    node.compute_mask_attribute(frame[..., 1], np.mean, "mean_phase_intensity")
+    return
+
+def _std_red_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
+    
+    node.compute_mask_attribute(frame[..., 0], np.std, "std_red_intensity")
+    return
+
+def _std_phase_intensity(
+    node: Node,
+    frame: ArrayLike,
+    attr: str,
+) -> None:
+
+    node.compute_mask_attribute(frame[..., 1], np.std, "std_phase_intensity")
+    return
 
 @curry
 def _process(
@@ -172,7 +162,7 @@ def compute_spatial_neighbors(
     images: Sequence[ArrayLike],
     write_lock: Optional[fasteners.InterProcessLock] = None,
     # weight_func: Callable[[Node, Node], float] = Node.IoU,
-    weight_func: Callable[[Node, Node, LinkingConfig], float] = Node.customWeightFunc, # custom weight function defined on Node class
+    weight_func: Callable[[Node, Node, LinkingConfig, ArrayLike], float] = Node.customWeightFunc, # custom weight function defined on Node class
     edge_must_be_positive: bool = False,
 ) -> pd.DataFrame:
 
@@ -199,8 +189,7 @@ def compute_spatial_neighbors(
         k=2 * config.max_neighbors,
         distance_upper_bound=config.max_distance,
     )
-
-    if len(images) > 0:
+    if False: # deprecating this, it doesn't work properly. Was never implemented for 2D
         filtered_by_color = color_filtering_mask(
             time,
             source_nodes,
@@ -213,8 +202,11 @@ def compute_spatial_neighbors(
         filtered_by_color = np.ones_like(neighbors, dtype=bool)
 
     int_next_shift = np.round(target_shift).astype(int)
+
     # NOTE: moving bbox with shift, MUST be after `feature computation`
+    # not true if I save the old bbox
     for node, shift in zip(target_nodes, int_next_shift):
+        node.old_bbox = node.bbox.copy()  # save old bbox
         node.bbox[:n_dim] += shift
         node.bbox[-n_dim:] += shift
 
@@ -230,7 +222,7 @@ def compute_spatial_neighbors(
         for neigh_idx, neigh_dist in zip(valid_neighbors, neigh_distances):
             neigh = source_nodes[neigh_idx]
             # edge_weight = weight_func(node, neigh) - distance_w * neigh_dist
-            edge_weight = weight_func(node, neigh, config) - distance_w * neigh_dist # using custom weight function
+            edge_weight = weight_func(node, neigh, config, images[time:time+2]) - distance_w * neigh_dist # using custom weight function
             # using dist as a tie-breaker
             if edge_must_be_positive and edge_weight <= 0:
                 continue
@@ -241,6 +233,10 @@ def compute_spatial_neighbors(
         neighborhood = sorted(neighborhood, reverse=True)[: config.max_neighbors]
         LOG.info("Node %s links %s", node.id, neighborhood)
         links += neighborhood
+
+        if hasattr(node, "old_bbox"):
+            # delete old bbox
+            del node.old_bbox
 
     if len(links) == 0:
         raise ValueError(
@@ -288,6 +284,7 @@ def link(
 
     for image in images:
         check_array_chunk(image)
+
 
     max_t = maximum_time_from_database(config.data_config)
     time_points = batch_index_range(max_t, config.linking_config.n_workers, batch_index)
