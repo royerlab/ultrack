@@ -13,6 +13,17 @@
 
 Large-scale cell tracking under segmentation uncertainty.
 
+## Beehive Usage
+In the main project diretory, in an environment of your choice, run:
+
+```bash
+pip install -e .
+```
+
+## Notes
+- Why are they shifting location of the nodes?
+  - Answer: This comes from the flow field. Given a flow field estimation, ultrack reshifts target cells to where they would be had there been no flow, allowing for more accurate tracking of moving cells
+
 ## Overview
 
 Ultrack is a versatile and scalable cell tracking method designed to address the challenges of tracking cells across 2D, 3D, and multichannel timelapse recordings, especially in complex and crowded tissues where segmentation is often ambiguous. By evaluating multiple candidate segmentations and employing temporal consistency, Ultrack ensures robust performance under segmentation uncertainty. Ultrack's methodology is explained [here](https://arxiv.org/pdf/2308.04526).

@@ -93,6 +93,16 @@ def _std_phase_intensity(
     node.compute_mask_attribute(frame[..., 1], np.std, "std_phase_intensity")
     return
 
+def _get_mask_embedding_vector(
+        node: Node,
+        frame: ArrayLike,
+        attr: str,
+) -> None:
+    # load model
+    # get mask for node
+    # node.mask 
+    pass
+
 def _max_red_intensity(
     node: Node,
     frame: ArrayLike,
@@ -104,7 +114,7 @@ def _max_red_intensity(
 
 def _max_phase_intensity(
     node: Node,
-    frame: ArrayLike,
+    frame: ArrayLike, # (y, x, channels)
     attr: str,
 ) -> None:
 
