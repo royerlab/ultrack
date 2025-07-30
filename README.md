@@ -1,6 +1,15 @@
 
 <div align="left">
-  <img src="logo/ultrack_no_bkg.svg" alt="Ultrack Logo" width="300"/>
+<picture>
+  <!-- loads when the visitor is in dark‑mode -->
+  <source media="(prefers-color-scheme: dark)" srcset="logo/ultrack_dark_bkg.svg" />
+
+  <!-- loads when the visitor is in light‑mode -->
+  <source media="(prefers-color-scheme: light)" srcset="logo/ultrack_no_bkg.svg" />
+
+  <!-- fallback if the browser doesn’t understand <picture> -->
+  <img alt="Ultrack Logo" src="logo/ultrack_no_bkg.svg" style="width:400px;"  />
+</picture>
 </div>
 
 ![tests](https://github.com/royerlab/ultrack/actions/workflows/test_pull_request.yml/badge.svg)
