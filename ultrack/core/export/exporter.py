@@ -1,16 +1,18 @@
 import json
+import logging
 from pathlib import Path
 from typing import Union
 
 import networkx as nx
 
 from ultrack.config import MainConfig
-from ultrack.core.export import (
-    to_networkx,
-    to_trackmate,
-    to_tracks_layer,
-    tracks_to_zarr,
-)
+from ultrack.core.export.geff import to_geff
+from ultrack.core.export.networkx import to_networkx
+from ultrack.core.export.trackmate import to_trackmate
+from ultrack.core.export.tracks_layer import to_tracks_layer
+from ultrack.core.export.zarr import tracks_to_zarr
+
+LOG = logging.getLogger(__name__)
 
 
 def export_tracks_by_extension(
@@ -19,11 +21,12 @@ def export_tracks_by_extension(
     """
     Export tracks to a file given the file extension.
 
-    Supported file extensions are .xml, .csv, .zarr, .dot, and .json.
+    Supported file extensions are .xml, .csv, .zarr, .parquet, .dot, .json, and .geff
     - `.xml` exports to a TrackMate compatible XML file.
     - `.csv` exports to a CSV file.
     - `.parquet` exports to a Parquet file.
     - `.zarr` exports the tracks to dense segments in a `zarr` array format.
+    - `.geff` exports the tracks to a `zarr` format using the geff standard.
     - `.dot` exports to a Graphviz DOT file.
     - `.json` exports to a networkx JSON file.
 
@@ -46,13 +49,16 @@ def export_tracks_by_extension(
         Export tracks to a `zarr` array.
     to_networkx :
         Export tracks to a networkx graph.
+    to_geff :
+        Export tracks to a geff file.
     """
-    if Path(filename).exists() and not overwrite:
+    filename = Path(filename)
+    if filename.exists() and not overwrite:
         raise FileExistsError(
             f"File {filename} already exists. Set `overwrite=True` to overwrite the file"
         )
 
-    file_ext = Path(filename).suffix
+    file_ext = filename.suffix
     if file_ext.lower() == ".xml":
         to_trackmate(config, filename, overwrite=True)
     elif file_ext.lower() == ".csv":
@@ -61,6 +67,8 @@ def export_tracks_by_extension(
     elif file_ext.lower() == ".zarr":
         df, _ = to_tracks_layer(config)
         tracks_to_zarr(config, df, filename, overwrite=True)
+    elif file_ext.lower() == ".geff":
+        to_geff(config, filename, overwrite=overwrite)
     elif file_ext.lower() == ".parquet":
         df, _ = to_tracks_layer(config)
         df.to_parquet(filename)
@@ -75,5 +83,5 @@ def export_tracks_by_extension(
     else:
         raise ValueError(
             f"Unknown file extension: {file_ext}. "
-            "Supported extensions are .xml, .csv, .zarr, .parquet, .dot, and .json."
+            "Supported extensions are .xml, .csv, .zarr, .geff, .parquet, .dot, and .json."
         )

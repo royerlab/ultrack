@@ -11,6 +11,7 @@ from ultrack import export_tracks_by_extension
 from ultrack.config import MainConfig
 from ultrack.core.export import (
     to_ctc,
+    to_geff,
     to_tracks_layer,
     tracks_layer_to_networkx,
     tracks_layer_to_trackmate,
@@ -153,6 +154,11 @@ class Tracker:
     def to_ctc(self, *args, **kwargs) -> None:
         self._assert_solved()
         to_ctc(config=self.config, *args, **kwargs)
+
+    @functools.wraps(to_geff)
+    def to_geff(self, filename: str, overwrite: bool = False) -> None:
+        self._assert_solved()
+        to_geff(self.config, filename, overwrite=overwrite)
 
     @functools.wraps(to_tracks_layer)
     def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
