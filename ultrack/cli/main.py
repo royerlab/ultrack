@@ -14,6 +14,7 @@ from ultrack.cli.predict import add_probs_cli
 from ultrack.cli.segment import segmentation_cli
 from ultrack.cli.server import server_cli
 from ultrack.cli.solve import solve_cli
+from ultrack.cli.trackmate import trackmate_cli
 from ultrack.cli.view import view_cli
 
 
@@ -36,4 +37,5 @@ main.add_command(add_probs_cli)
 main.add_command(segmentation_cli)
 main.add_command(solve_cli)
 main.add_command(server_cli)
+main.add_command(trackmate_cli)
 main.add_command(view_cli)
