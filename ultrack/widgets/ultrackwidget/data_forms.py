@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
-import qtawesome as qta
 from napari.layers import Image, Layer
 from qtpy.QtWidgets import (
     QCheckBox,
