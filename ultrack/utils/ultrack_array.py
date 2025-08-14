@@ -108,14 +108,23 @@ class UltrackArray:
     def shape(self) -> Tuple[int, ...]:
         """
         Return the shape of the array.
-        If metadata does not contain shape, returns a dummy dimension (1, 10, 10).
+        If metadata does not exist or does not contain shape, raises an error.
 
         Returns
         -------
         Tuple[int, ...]
             Shape of the array.
         """
-        return tuple(self.config.data_config.metadata.get("shape", (1, 10, 10)))
+
+        if self.config.data_config.metadata_path.exists():
+            if "shape" in self.config.data_config.metadata:
+                return tuple(self.config.data_config.metadata.get("shape"))
+            else:
+                raise ValueError("Metadata does not contain shape")
+        else:
+            raise ValueError(
+                "Metadata does not exist (metadata.toml should be present in the config.data_config.working_dir)"
+            )
 
     @property
     def t_max(self) -> int:
