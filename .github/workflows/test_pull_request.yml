@@ -38,7 +38,7 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # see https://github.com/actions/runner-images/issues/709#issuecomment-612569242
       - name: Workaround to free up space on github runner
@@ -52,7 +52,7 @@ jobs:
 
       - uses: tlambert03/setup-qt-libs@v1
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
