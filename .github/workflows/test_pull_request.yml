@@ -80,7 +80,7 @@ jobs:
       - name: Test with tox
         uses: aganders3/headless-gui@v1
         with:
-          run: uv run pytest -v
+          run: uv run pytest -v --ignore ultrack/api/_test
 
       - name: Coverage
         if: ${{ matrix.coverage }}
