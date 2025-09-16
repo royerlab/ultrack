@@ -58,19 +58,18 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Setup headless display (All platforms)
-        uses: pyvista/setup-headless-display-action@v4.2
-        with:
-          qt: true
-          wm: herbstluftwm
-
       # tox and tox-gh-actions will take care of the "actual" installation
       # of python dependendencies into a virtualenv.  see tox.ini for more
       - name: Install dependencies
         run: |
           uv pip install setuptools tox tox-gh-actions
           uv pip install ".[test]"
-
+          
+      - name: Setup headless display (All platforms)
+        uses: pyvista/setup-headless-display-action@v4.2
+        with:
+          qt: true
+          wm: herbstluftwm
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
       # tox "factors" ... limiting the scope of what gets tested on each platform
@@ -78,7 +77,7 @@ jobs:
       # `tox -e py38-linux-pyqt,py38-linux-pyside`
       # see tox.ini for more
       - name: Test with tox
-        uses: aganders3/headless-gui@v1
+        uses: aganders3/headless-gui@v2.2
         with:
           run: uv run pytest -v --ignore ultrack/api/_test
 
