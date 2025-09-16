@@ -80,11 +80,7 @@ jobs:
       - name: Test with tox
         uses: aganders3/headless-gui@v1
         with:
-          run: python -m tox
-        env:
-          PLATFORM: ${{ matrix.platform }}
-          BACKEND: ${{ matrix.backend }}
-          TOXENV: ${{ matrix.toxenv }}
+          run: uv run pytest -v
 
       - name: Coverage
         if: ${{ matrix.coverage }}
