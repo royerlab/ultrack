@@ -50,21 +50,17 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - uses: tlambert03/setup-qt-libs@v1
-
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
-
-      # strategy borrowed from vispy for installing opengl libs on windows
-      - name: Install Windows OpenGL
-        if: runner.os == 'Windows'
-        run: |
-          git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
-          powershell gl-ci-helpers/appveyor/install_opengl.ps1
-          if (Test-Path -Path "C:\Windows\system32\opengl32.dll" -PathType Leaf) {Exit 0} else {Exit 1}
+      
+      - name: Setup headless screenL
+        uses: pyvista/setup-headless-display-action@7d84ae825e6d9297a8e99bdbbae20d1b919a0b19 # v4.2
+        with:
+          qt: true
+          wm: herbstluftwm
 
       # tox and tox-gh-actions will take care of the "actual" installation
       # of python dependendencies into a virtualenv.  see tox.ini for more
@@ -80,7 +76,6 @@ jobs:
       # `tox -e py38-linux-pyqt,py38-linux-pyside`
       # see tox.ini for more
       - name: Test with tox
-        uses: GabrielBB/xvfb-action@v1
         with:
           run: python -m tox
         env:
