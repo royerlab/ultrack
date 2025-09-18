@@ -75,8 +75,8 @@ jobs:
       # for instance, on ubuntu-latest with python 3.8, it would be equivalent to this command:
       # `tox -e py38-linux-pyqt,py38-linux-pyside`
       # see tox.ini for more
-      - name: Test with tox
-        run: python -m tox
+      - name: Testing
+        run: pytest -v --color=yes --cov=ultrack --cov-report=xml --durations=15 .
         env:
           PLATFORM: ${{ matrix.platform }}
           BACKEND: ${{ matrix.backend }}
