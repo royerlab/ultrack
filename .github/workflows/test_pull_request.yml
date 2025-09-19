@@ -49,6 +49,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.37.0
+          manifest-path: pyproject.toml
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
