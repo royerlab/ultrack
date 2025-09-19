@@ -8,18 +8,10 @@ from tqdm import tqdm
 from zarr.storage import Store
 
 from ultrack.utils.array import create_zarr
-from ultrack.utils.cuda import import_module, to_cpu
+from ultrack.utils.cuda import import_module, to_cpu, xp
 from ultrack.utils.deprecation import rename_argument
 
 LOG = logging.getLogger(__name__)
-
-try:
-    import cupy as xp
-
-except ImportError as e:
-    LOG.info(e)
-    LOG.info("cupy not found, using CPU processing")
-    import numpy as xp
 
 
 @rename_argument("detection_store_or_path", "foreground_store_or_path")
