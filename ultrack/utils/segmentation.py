@@ -256,15 +256,16 @@ def copy_segments(
         overwrite=overwrite,
     )
 
-    if is_zarr:
-        print("Copying segments...")
-        # not very clean because we just created the array above
-        zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
-        out_segments = zarr.open(
-            out_segments.store
-        )  # not sure why this is necessary in large datasets
-    else:
-        for t in tqdm(range(segments.shape[0]), "Copying segments"):
-            out_segments[t] = np.asarray(segments[t])
+    # FIXME: waiting for zarr v3 to implement `zarr.copy_store`
+    # if is_zarr:
+    #     print("Copying segments...")
+    #     # not very clean because we just created the array above
+    #     zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
+    #     out_segments = zarr.open(
+    #         out_segments.store
+    #     )  # not sure why this is necessary in large datasets
+    # else:
+    for t in tqdm(range(segments.shape[0]), "Copying segments"):
+        out_segments[t] = np.asarray(segments[t])
 
     return out_segments
