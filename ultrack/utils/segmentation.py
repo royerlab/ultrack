@@ -1,14 +1,13 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
 import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.array import create_zarr
 
@@ -228,7 +227,7 @@ class SegmentationPainter:
 
 def copy_segments(
     segments: ArrayLike,
-    segments_store_or_path: Union[Store, Path, str, None] = None,
+    segments_store_or_path: StoreLike = None,
     overwrite: bool = False,
 ) -> zarr.Array:
     """

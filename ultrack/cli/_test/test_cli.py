@@ -75,11 +75,12 @@ class TestCommandLine:
             + zarr_dataset_paths
         )
 
-    def test_add_flow(self, instance_config_path: str) -> None:
+    def test_add_flow(self, instance_config_path: str, tmp_path: Path) -> None:
         config = load_config(instance_config_path)
-        tmp_store = zarr.TempStore(suffix=".zarr")
+        tmp_path = tmp_path / "flow.zarr"
+        tmp_store = zarr.storage.LocalStore(tmp_path)
         zarr.zeros((2,) + tuple(config.data_config.metadata["shape"]), store=tmp_store)
-        _run_command(["add_flow", "-cfg", str(instance_config_path), tmp_store.path])
+        _run_command(["add_flow", "-cfg", str(instance_config_path), str(tmp_path)])
 
     def test_link_iou(self, instance_config_path: str) -> None:
         _run_command(["link", "-cfg", str(instance_config_path)])

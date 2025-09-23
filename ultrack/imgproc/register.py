@@ -1,11 +1,11 @@
 import logging
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.array import create_zarr
 from ultrack.utils.cuda import import_module, to_cpu
@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 def register_timelapse(
     timelapse: ArrayLike,
     *,
-    store_or_path: Union[Store, str, None] = None,
+    store_or_path: Optional[StoreLike] = None,
     overwrite: bool = False,
     to_device: Callable[[ArrayLike], ArrayLike] = lambda x: x,
     reference_channel: Optional[int] = None,
@@ -33,7 +33,7 @@ def register_timelapse(
     timelapse : ArrayLike
         Input timelapse sequence, T(CZ)YX array C and Z are optional.
         NOTE: when provided, C must be the second dimension after T.
-    store_or_path : Union[Store, str, None], optional
+    store_or_path : StoreLike, optional
         Zarr storage or a file path, to save the output, useful for larger than memory datasets.
         By default it loads the data into memory.
     overwrite : bool, optional

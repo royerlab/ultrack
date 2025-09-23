@@ -2,10 +2,9 @@ import logging
 from functools import wraps
 from typing import Optional, Sequence, Tuple, Union
 
-import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.array import create_zarr
 from ultrack.utils.cuda import import_module, to_cpu
@@ -27,8 +26,8 @@ except ImportError as e:
 def labels_to_contours(
     labels: Union[ArrayLike, Sequence[ArrayLike]],
     sigma: Optional[Union[Sequence[float], float]] = None,
-    foreground_store_or_path: Union[Store, str, None] = None,
-    contours_store_or_path: Union[Store, str, None] = None,
+    foreground_store_or_path: Optional[StoreLike] = None,
+    contours_store_or_path: Optional[StoreLike] = None,
     overwrite: bool = False,
 ) -> Tuple[ArrayLike, ArrayLike]:
     """
@@ -41,11 +40,11 @@ def labels_to_contours(
     sigma : Optional[Union[Sequence[float], float]], optional
         Contours smoothing parameter (gaussian blur), contours aren't smoothed when not provided.
     foreground_store_or_path : str, zarr.storage.Store, optional
-        Zarr storage, it can be used with zarr.NestedDirectoryStorage to save the output into disk.
-        By default it loads the data into memory.
+        Zarr storage, it can be used with zarr.storage.LocalStore to save the output into disk.
+        By default it creates a temporary store.
     contours_store_or_path : str, zarr.storage.Store, optional
-        Zarr storage, it can be used with zarr.NestedDirectoryStorage to save the output into disk.
-        By default it loads the data into memory.
+        Zarr storage, it can be used with zarr.storage.LocalStore to save the output into disk.
+        By default it creates a temporary store.
     overwrite : bool, optional
         Overwrite output output files if they already exist, by default False.
 
@@ -74,14 +73,14 @@ def labels_to_contours(
         dtype=bool,
         store_or_path=foreground_store_or_path,
         overwrite=overwrite,
-        default_store_type=zarr.TempStore,
+        default_store_type=None,
     )
     contours = create_zarr(
         shape=shape,
         dtype=xp.float32,
         store_or_path=contours_store_or_path,
         overwrite=overwrite,
-        default_store_type=zarr.TempStore,
+        default_store_type=None,
     )
 
     for t in tqdm(range(shape[0]), "Converting labels to contours"):

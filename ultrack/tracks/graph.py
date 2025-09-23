@@ -1,12 +1,11 @@
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from numba import njit, typed, types
 from numpy.typing import ArrayLike
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.segmentation import SegmentationPainter, copy_segments
@@ -615,7 +614,7 @@ def filter_short_sibling_tracks(
     tracks_df: pd.DataFrame,
     min_length: int,
     segments: Optional[ArrayLike] = None,
-    segments_store_or_path: Union[Store, Path, str, None] = None,
+    segments_store_or_path: StoreLike = None,
     overwrite: bool = False,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, ArrayLike]]:
     """

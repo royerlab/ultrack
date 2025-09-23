@@ -341,7 +341,7 @@ def _process(
 
 
 def _check_zarr_memory_store(arr: ArrayLike) -> None:
-    if isinstance(arr, zarr.Array) and isinstance(arr.store, zarr.MemoryStore):
+    if isinstance(arr, zarr.Array) and isinstance(arr.store, zarr.storage.MemoryStore):
         LOG.warning(
             "Found zarr with MemoryStore. "
             "Using an zarr with MemoryStore can lead to considerable memory usage."

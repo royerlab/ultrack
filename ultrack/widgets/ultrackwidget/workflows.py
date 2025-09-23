@@ -246,7 +246,7 @@ class UltrackWorkflow:
                 segments = tracks_to_zarr(
                     config,
                     tracks_df,
-                    store_or_path=zarr.TempStore(suffix="segments"),
+                    store_or_path=None,
                     overwrite=True,
                 )
 
@@ -354,7 +354,7 @@ class UltrackWorkflow:
                     del flow_kwargs["__enable__"]
                     flow_field = timelapse_flow(
                         image.data,
-                        store_or_path=zarr.TempStore(suffix="flow"),
+                        store_or_path=None,
                         **flow_kwargs,
                     )
                     flow_kwargs["__enable__"] = True
@@ -471,18 +471,10 @@ class UltrackWorkflow:
         Tuple[ArrayLike, ArrayLike]
             The detection and contours arrays.
         """
-        store_detection = zarr.TempStore(suffix="detection")
-        store_contours = zarr.TempStore(suffix="contours")
-
-        labels_to_contours(
+        zarr_detection, zarr_contours = labels_to_contours(
             labels,
-            detection_store_or_path=store_detection,
-            contours_store_or_path=store_contours,
             **label_to_contours_kwargs,
         )
-
-        zarr_detection = zarr.open(store_detection)
-        zarr_contours = zarr.open(store_contours)
 
         return zarr_detection, zarr_contours
 
