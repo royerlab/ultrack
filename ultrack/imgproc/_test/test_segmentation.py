@@ -10,19 +10,9 @@ from skimage.morphology import reconstruction
 
 from ultrack.imgproc import Cellpose, detect_foreground, inverted_edt, robust_invert
 from ultrack.imgproc.segmentation import reconstruction_by_dilation
-from ultrack.utils.cuda import to_cpu
+from ultrack.utils.cuda import to_cpu, xp
 
 LOG = logging.getLogger(__name__)
-
-try:
-    import cupy as xp
-
-    LOG.info("cupy found.")
-
-except (ModuleNotFoundError, ImportError):
-    import numpy as xp
-
-    LOG.info("cupy not found using numpy.")
 
 
 @pytest.mark.parametrize("np_module,channel_axis", [(xp, None), (xp, 0), (np, 2)])

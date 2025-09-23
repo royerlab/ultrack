@@ -19,22 +19,12 @@ from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
 from ultrack.utils.array import create_zarr, large_chunk_size
 from ultrack.utils.constants import ULTRACK_DEBUG
-from ultrack.utils.cuda import import_module, torch_default_device
+from ultrack.utils.cuda import import_module, torch_default_device, xp
 
 logging.basicConfig()
 logging.getLogger("sqlachemy.engine").setLevel(logging.INFO)
 
 LOG = logging.getLogger(__name__)
-
-try:
-    import cupy as xp
-
-    LOG.info("cupy found.")
-
-except (ModuleNotFoundError, ImportError):
-    import numpy as xp
-
-    LOG.info("cupy not found using numpy and scipy.")
 
 
 _ALIGN_CORNERS = True

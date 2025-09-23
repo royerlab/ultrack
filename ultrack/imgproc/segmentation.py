@@ -8,17 +8,10 @@ from skimage.morphology import reconstruction
 
 from ultrack.imgproc.utils import _channel_iterator, _parse_voxel_size
 from ultrack.utils.constants import ULTRACK_DEBUG
-from ultrack.utils.cuda import import_module, is_cupy_array, to_cpu
+from ultrack.utils.cuda import import_module, is_cupy_array, to_cpu, xp
 
 LOG = logging.getLogger(__name__)
 
-try:
-    import cupy as xp
-
-except ImportError as e:
-    LOG.info(e)
-    LOG.info("cupy not found, using CPU processing")
-    import numpy as xp
 
 
 def reconstruction_by_dilation(
