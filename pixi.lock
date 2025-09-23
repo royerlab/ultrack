@@ -16213,8 +16213,8 @@ packages:
   timestamp: 1725784449622
 - pypi: .
   name: ultrack
-  version: 0.7.0rc1
-  sha256: c2cbf42c9c502281967ac1886d69e0e2680f735411bc8a4ff5a5e881b71a754e
+  version: 0.7.0rc2
+  sha256: dd41a4d1ad622e88108cc4af63332639e5162eecef895b7c464b8691e94a8839
   requires_dist:
   - blosc2>=2.2.0
   - click>=8.1.3
@@ -16232,7 +16232,7 @@ packages:
   - mip>=1.16rc0
   - napari>=0.4.18
   - numba>=0.57.0
-  - numcodecs
+  - numcodecs<0.16
   - ome-zarr>=0.9.0
   - pandas>=2.0.1
   - pillow>=10.0.0
