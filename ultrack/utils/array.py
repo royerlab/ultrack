@@ -1,15 +1,18 @@
 import itertools
 import logging
 import shutil
+import tempfile
 import warnings
 from pathlib import Path
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type, Union
 
 import numpy as np
 import zarr
+import zarr.storage
 from numpy.typing import ArrayLike
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.abc.store import Store
+from zarr.storage import StoreLike
 
 LOG = logging.getLogger(__name__)
 
@@ -164,9 +167,9 @@ def array_apply(
 def create_zarr(
     shape: Tuple[int, ...],
     dtype: np.dtype,
-    store_or_path: Union[Store, Path, str, None] = None,
+    store_or_path: Optional[StoreLike] = None,
     overwrite: bool = False,
-    default_store_type: Type[Store] = zarr.TempStore,
+    default_store_type: Optional[Type[Store]] = None,
     chunks: Optional[Tuple[int]] = None,
     **kwargs,
 ) -> zarr.Array:
@@ -178,8 +181,8 @@ def create_zarr(
         Shape of the array.
     dtype : np.dtype
         Data type of the array.
-    store_or_path : Optional[Union[Path, str]], optional
-        Path to store the array, if None a zarr.MemoryStore is used, by default None
+    store_or_path : Optional[StoreLike], optional
+        Path to store the array, if None a zarr.storage.MemoryStore is used, by default None
     overwrite : bool, optional
         Overwrite existing file, by default False
     chunks : Optional[Tuple[int]], optional
@@ -194,7 +197,11 @@ def create_zarr(
         raise ValueError("`path` is not a valid argument, use `store_or_path` instead.")
 
     if store_or_path is None:
-        store = default_store_type()
+        if default_store_type is None:
+            tmp_dir = tempfile.TemporaryDirectory()
+            store = zarr.storage.LocalStore(root=tmp_dir.name)
+        else:
+            store = default_store_type()
 
     elif isinstance(store_or_path, Store):
         store = store_or_path
@@ -205,7 +212,7 @@ def create_zarr(
 
         validate_and_overwrite_path(store_or_path, overwrite, msg_type="api")
 
-        store = zarr.NestedDirectoryStore(str(store_or_path))
+        store = zarr.storage.LocalStore(str(store_or_path))
 
     if chunks is None:
         chunks = large_chunk_size(shape, dtype=dtype)

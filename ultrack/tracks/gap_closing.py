@@ -1,11 +1,10 @@
-from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 from numpy.typing import ArrayLike
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.segmentation import SegmentationPainter, copy_segments
@@ -116,7 +115,7 @@ def close_tracks_gaps(
     spatial_columns: List[str] = ["z", "y", "x"],
     scale: Optional[ArrayLike] = None,
     segments: Optional[ArrayLike] = None,
-    segments_store_or_path: Union[Store, Path, str, None] = None,
+    segments_store_or_path: Optional[StoreLike] = None,
     overwrite: bool = False,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, ArrayLike]]:
     """

@@ -1,6 +1,5 @@
 import logging
 import math as m
-from pathlib import Path
 from typing import Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
@@ -13,11 +12,11 @@ from numpy.typing import ArrayLike
 from skimage.measure import regionprops_table
 from sqlalchemy.orm import Session
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
-from ultrack.utils.array import create_zarr, large_chunk_size
+from ultrack.utils.array import create_zarr
 from ultrack.utils.constants import ULTRACK_DEBUG
 from ultrack.utils.cuda import import_module, torch_default_device, xp
 
@@ -552,7 +551,7 @@ def _to_tensor(
 
 def timelapse_flow(
     images: ArrayLike,
-    store_or_path: Union[None, Store, Path, str] = None,
+    store_or_path: Optional[StoreLike] = None,
     chunks: Optional[Tuple[int]] = None,
     channel_axis: Optional[int] = None,
     im_factor: int = 4,
@@ -568,8 +567,8 @@ def timelapse_flow(
     ----------
     images : ArrayLike
         Timelapse images shape as (T, ...).
-    store_or_path : Union[None, Store, Path, str], optional
-        Zarr storage or output path, if not provided zarr.TempStore is used.
+    store_or_path : Optional[StoreLike], optional
+        Zarr storage or output path, if not provided a temporary store is used.
     chunks : Optional[Tuple[int]], optional
         Chunk size, if not provided it chunks time with 1 and the spatial dimensions as big as possible.
     channel_axis : Optional[int], optional
@@ -605,20 +604,13 @@ def timelapse_flow(
     shape = (images.shape[0], len(imgs_shape), *resized_shape)  # (T, D, (Z), Y, X)
     dtype = np.float16
 
-    if chunks is None:
-        chunks = large_chunk_size(shape, dtype=dtype)
-
-    if isinstance(store_or_path, Store):
-        output = zarr.zeros(shape, dtype=dtype, store=store_or_path, chunks=chunks)
-
-    else:
-        output = create_zarr(
-            shape,
-            dtype=dtype,
-            store_or_path=store_or_path,
-            chunks=chunks,
-            default_store_type=zarr.TempStore,
-        )
+    output = create_zarr(
+        shape,
+        dtype=dtype,
+        store_or_path=store_or_path,
+        chunks=chunks,
+        default_store_type=None,
+    )
 
     target = _to_tensor(images[0], channel_axis, device)
 

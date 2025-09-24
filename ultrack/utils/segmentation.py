@@ -1,14 +1,13 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as ndi
 import zarr
 from numpy.typing import ArrayLike
 from tqdm import tqdm
-from zarr.storage import Store
+from zarr.storage import StoreLike
 
 from ultrack.utils.array import create_zarr
 
@@ -228,7 +227,7 @@ class SegmentationPainter:
 
 def copy_segments(
     segments: ArrayLike,
-    segments_store_or_path: Union[Store, Path, str, None] = None,
+    segments_store_or_path: StoreLike = None,
     overwrite: bool = False,
 ) -> zarr.Array:
     """
@@ -257,15 +256,16 @@ def copy_segments(
         overwrite=overwrite,
     )
 
-    if is_zarr:
-        print("Copying segments...")
-        # not very clean because we just created the array above
-        zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
-        out_segments = zarr.open(
-            out_segments.store
-        )  # not sure why this is necessary in large datasets
-    else:
-        for t in tqdm(range(segments.shape[0]), "Copying segments"):
-            out_segments[t] = np.asarray(segments[t])
+    # FIXME: waiting for zarr v3 to implement `zarr.copy_store`
+    # if is_zarr:
+    #     print("Copying segments...")
+    #     # not very clean because we just created the array above
+    #     zarr.copy_store(segments.store, out_segments.store, if_exists="replace")
+    #     out_segments = zarr.open(
+    #         out_segments.store
+    #     )  # not sure why this is necessary in large datasets
+    # else:
+    for t in tqdm(range(segments.shape[0]), "Copying segments"):
+        out_segments[t] = np.asarray(segments[t])
 
     return out_segments

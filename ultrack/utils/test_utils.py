@@ -60,8 +60,8 @@ def zarr_dataset_paths(
         timelapse_mock_data, ("foreground.zarr", "contours.zarr", "labels.zarr")
     ):
         path = tmp_path / filename
-        dst_store = zarr.NestedDirectoryStore(path)
-        zarr.copy_store(src_array.store, dst_store)
+        out_store = zarr.storage.LocalStore(path)
+        zarr.save(out_store, src_array[...])
         paths.append(str(path))
 
     return paths
@@ -85,13 +85,22 @@ def timelapse_mock_data(request) -> Tuple[zarr.Array, zarr.Array, zarr.Array]:
     shape = (length,) + blobs.shape
 
     foreground = zarr.empty(
-        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=blobs.dtype
+        shape,
+        store=zarr.storage.MemoryStore(),
+        chunks=(1, *blobs.shape),
+        dtype=blobs.dtype,
     )
     edge = zarr.empty(
-        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=contours.dtype
+        shape,
+        store=zarr.storage.MemoryStore(),
+        chunks=(1, *blobs.shape),
+        dtype=contours.dtype,
     )
     segmentation = zarr.empty(
-        shape, store=zarr.MemoryStore(), chunks=(1, *blobs.shape), dtype=labels.dtype
+        shape,
+        store=zarr.storage.MemoryStore(),
+        chunks=(1, *blobs.shape),
+        dtype=labels.dtype,
     )
 
     for t in range(length):
