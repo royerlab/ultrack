@@ -6,12 +6,13 @@ import geff
 import numpy as np
 import pandas as pd
 import sqlalchemy as sqla
+import zarr
 from geff.core_io import construct_var_len_props, write_arrays
 from geff_spec import Axis, PropMetadata
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
-from ultrack.core.database import NO_PARENT, LinkDB, NodeDB
+from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB
 
 
 def to_geff(
@@ -85,6 +86,12 @@ def to_geff(
         node_df.rename(columns={"selected": "solution"}, inplace=True)
         node_df.drop(["id", "parent_id"], axis=1, inplace=True)
 
+        overlap_stmt = session.query(
+            OverlapDB.node_id,
+            OverlapDB.ancestor_id,
+        ).statement
+        overlap_df = pd.read_sql(overlap_stmt, session.bind)
+
     node_props_metadata = {
         c: PropMetadata(
             identifier=c,
@@ -145,3 +152,10 @@ def to_geff(
         },
         metadata=geff_metadata,
     )
+
+    # custom element to geff
+    store = zarr.open(filename, mode="a")
+    store["overlaps/ids"] = overlap_df[["ancestor_id", "node_id"]].to_numpy(
+        dtype=np.uint64
+    )
+    store.create_group("overlaps/props")

@@ -62,3 +62,5 @@ def test_geff_correctness(
     ultrack_nx = to_networkx(tracked_database_mock_data)
 
     assert nx.is_isomorphic(solution_geff_nx, ultrack_nx)
+    assert (output_file / "overlaps/ids").exists()
+    assert (output_file / "overlaps/props").exists()
