@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Union
 
 import geff
-import networkx as nx
 
 from ultrack.config import MainConfig
 from ultrack.core.export.networkx import to_networkx
@@ -16,7 +15,7 @@ def to_geff(
     """
     Export tracks to a geff (Graph Exchange File Format) file.
 
-    Parametersmnist
+    Parameters
     ----------
     config : MainConfig
         The configuration object.
@@ -39,4 +38,4 @@ def to_geff(
     graph = to_networkx(config)
 
     # Write the graph to geff format
-    geff.write_nx(graph, filename)
+    geff.write(graph, filename)

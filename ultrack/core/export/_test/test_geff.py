@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import networkx as nx
 import pytest
@@ -10,13 +10,13 @@ from ultrack.core.export.geff import to_geff
 
 def test_to_geff_basic_functionality(
     tracked_database_mock_data: MainConfig, tmp_path: Path
-):
+) -> None:
     """Test basic functionality of to_geff function and call chain."""
     output_file = tmp_path / "test_tracks.geff.zarr"
 
     # Mock both functions to verify the call chain
     with patch("ultrack.core.export.geff.to_networkx") as mock_to_networkx, patch(
-        "ultrack.core.export.geff.geff.write_nx"
+        "ultrack.core.export.geff.geff.write"
     ) as mock_write_nx:
 
         # Set up the mock to return a simple graph
@@ -34,7 +34,7 @@ def test_to_geff_basic_functionality(
 
 def test_to_geff_file_overwrite_false(
     tracked_database_mock_data: MainConfig, tmp_path: Path
-):
+) -> None:
     """Test that FileExistsError is raised when file exists and overwrite=False."""
     output_file = tmp_path / "test_tracks.geff.zarr"
 
@@ -56,7 +56,7 @@ def test_to_geff_file_overwrite_true(
     output_file.touch()
 
     # Mock the geff.write_nx function
-    with patch("ultrack.core.export.geff.geff.write_nx") as mock_write_nx:
+    with patch("ultrack.core.export.geff.geff.write") as mock_write_nx:
         # This should not raise an error
         to_geff(tracked_database_mock_data, output_file, overwrite=True)
 
@@ -64,7 +64,9 @@ def test_to_geff_file_overwrite_true(
         mock_write_nx.assert_called_once()
 
 
-def test_geff_correctness(tracked_database_mock_data: MainConfig, tmp_path: Path):
+def test_geff_correctness(
+    tracked_database_mock_data: MainConfig, tmp_path: Path
+) -> None:
     """Test that the geff file is correct."""
     output_file = tmp_path / "test_tracks.geff.zarr"
     to_geff(tracked_database_mock_data, output_file)
@@ -72,7 +74,7 @@ def test_geff_correctness(tracked_database_mock_data: MainConfig, tmp_path: Path
     # Read the geff file
     import geff
 
-    geff_nx = geff.read_nx(output_file)
+    geff_nx, _ = geff.read(output_file, backend="networkx")
 
     from ultrack.core.export import to_networkx
 
