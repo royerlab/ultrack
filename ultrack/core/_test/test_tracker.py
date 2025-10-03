@@ -176,11 +176,11 @@ def test_outputs(
 
     # test to_geff
     with patch("ultrack.core.export.geff.write_arrays") as mock_write_nx:
-        tracker.to_geff("test.geff")
+        tracker.to_geff(tmp_path / "test.geff")
         mock_write_nx.assert_called_once()
 
         # Test with overwrite=True
-        tracker.to_geff("test.geff", overwrite=True)
+        tracker.to_geff(tmp_path / "test.geff", overwrite=True)
         assert mock_write_nx.call_count == 2
 
 
