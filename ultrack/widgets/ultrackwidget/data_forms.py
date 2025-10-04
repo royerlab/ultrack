@@ -89,9 +89,10 @@ class DataForms:
         Setup and initialize the forms based on metadata.
         """
         rsrc_dir = Path(__file__).parent / "resources"
-        with open(rsrc_dir / "forms.json") as forms, open(
-            rsrc_dir / "additional_options.json"
-        ) as opts:
+        with (
+            open(rsrc_dir / "forms.json") as forms,
+            open(rsrc_dir / "additional_options.json") as opts,
+        ):
             forms_metadata = json.load(forms)
             additional_options = json.load(opts)
             forms_metadata["additional_options"] = {

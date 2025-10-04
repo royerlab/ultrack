@@ -14,7 +14,7 @@ TRACKS_HEADER = ("track_id", "t", "z", "y", "x")
 
 
 def napari_get_reader(
-    path: Union[str, List[str]]
+    path: Union[str, List[str]],
 ) -> Callable[[Union[str, List[str]]], List[LayerDataTuple]]:
     """
     Return a Napari reader function for CSV tracks data.

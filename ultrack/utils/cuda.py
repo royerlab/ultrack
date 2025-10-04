@@ -17,11 +17,12 @@ malloc_managed = None
 try:
     import cupy as cp
 
-    if not cupy.cuda.is_available():
+    if not cp.cuda.is_available():
         cp = None
         LOG.info("cupy found but cuda is not available.")
     else:
         from cupy.cuda.memory import malloc_managed
+
         LOG.info("cupy found.")
         xp = cp
 

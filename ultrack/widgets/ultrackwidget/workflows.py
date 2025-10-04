@@ -538,7 +538,7 @@ class UltrackWorkflow:
 
 
 def _create_temp_detection_and_contours(
-    shape: tuple[int, ...]
+    shape: tuple[int, ...],
 ) -> tuple[ArrayLike, ArrayLike]:
     """
     Create temporary storage for detection and contours arrays.
