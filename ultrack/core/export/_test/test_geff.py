@@ -1,40 +1,15 @@
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
-import networkx as nx
 import pytest
 
 from ultrack import MainConfig
 from ultrack.core.export.geff import to_geff
 
 
-def test_to_geff_basic_functionality(
-    tracked_database_mock_data: MainConfig, tmp_path: Path
-):
-    """Test basic functionality of to_geff function and call chain."""
-    output_file = tmp_path / "test_tracks.geff.zarr"
-
-    # Mock both functions to verify the call chain
-    with patch("ultrack.core.export.geff.to_networkx") as mock_to_networkx, patch(
-        "ultrack.core.export.geff.geff.write_nx"
-    ) as mock_write_nx:
-
-        # Set up the mock to return a simple graph
-        mock_graph = nx.Graph()
-        mock_to_networkx.return_value = mock_graph
-
-        to_geff(tracked_database_mock_data, output_file)
-
-        # Verify that to_networkx was called with the config
-        mock_to_networkx.assert_called_once_with(tracked_database_mock_data)
-
-        # Verify that geff.write_nx was called with the graph and filename
-        mock_write_nx.assert_called_once_with(mock_graph, output_file)
-
-
 def test_to_geff_file_overwrite_false(
     tracked_database_mock_data: MainConfig, tmp_path: Path
-):
+) -> None:
     """Test that FileExistsError is raised when file exists and overwrite=False."""
     output_file = tmp_path / "test_tracks.geff.zarr"
 
@@ -53,10 +28,10 @@ def test_to_geff_file_overwrite_true(
     output_file = tmp_path / "test_tracks.geff.zarr"
 
     # Create a file that already exists
-    output_file.touch()
+    output_file.mkdir()
 
     # Mock the geff.write_nx function
-    with patch("ultrack.core.export.geff.geff.write_nx") as mock_write_nx:
+    with patch("ultrack.core.export.geff.write_arrays") as mock_write_nx:
         # This should not raise an error
         to_geff(tracked_database_mock_data, output_file, overwrite=True)
 
@@ -64,18 +39,28 @@ def test_to_geff_file_overwrite_true(
         mock_write_nx.assert_called_once()
 
 
-def test_geff_correctness(tracked_database_mock_data: MainConfig, tmp_path: Path):
+def test_geff_correctness(
+    tracked_database_mock_data: MainConfig, tmp_path: Path
+) -> None:
     """Test that the geff file is correct."""
     output_file = tmp_path / "test_tracks.geff.zarr"
     to_geff(tracked_database_mock_data, output_file)
 
-    # Read the geff file
     import geff
-
-    geff_nx = geff.read_nx(output_file)
+    import networkx as nx
 
     from ultrack.core.export import to_networkx
 
+    geff_nx, _ = geff.read(output_file, backend="networkx")
+
+    solution_geff_nx = nx.subgraph_view(
+        geff_nx,
+        filter_node=lambda n: geff_nx.nodes[n]["solution"],
+        filter_edge=lambda s, t: geff_nx.edges[s, t]["solution"],
+    )
+
     ultrack_nx = to_networkx(tracked_database_mock_data)
 
-    assert nx.is_isomorphic(geff_nx, ultrack_nx)
+    assert nx.is_isomorphic(solution_geff_nx, ultrack_nx)
+    assert (output_file / "overlaps/ids").exists()
+    assert (output_file / "overlaps/props").exists()
