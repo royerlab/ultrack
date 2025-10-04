@@ -170,9 +170,9 @@ def test_filter_short_sibling_tracks() -> None:
         index=[0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12],
     )
     expected_segm = np.zeros((8, 6), dtype=np.uint8)
-    expected_segm[
-        expected_df["t"].astype(int), expected_df["x"].astype(int)
-    ] = expected_df["track_id"].values
+    expected_segm[expected_df["t"].astype(int), expected_df["x"].astype(int)] = (
+        expected_df["track_id"].values
+    )
 
     pd.testing.assert_frame_equal(
         filtered_df,

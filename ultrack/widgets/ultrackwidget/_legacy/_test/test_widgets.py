@@ -48,9 +48,9 @@ def test_ultrack_widget(
     assert widget._segmentation_w.config.threshold == 0.42
 
     # checking if func combo is working
-    widget._segmentation_w._attr_to_widget[
-        "ws_hierarchy"
-    ].value = hg.watershed_hierarchy_by_dynamics
+    widget._segmentation_w._attr_to_widget["ws_hierarchy"].value = (
+        hg.watershed_hierarchy_by_dynamics
+    )
     assert (
         widget.config.segmentation_config.ws_hierarchy
         == hg.watershed_hierarchy_by_dynamics

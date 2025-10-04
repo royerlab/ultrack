@@ -4,6 +4,7 @@ to compute a custom edge weight between nodes, in this case, the cosine distance
 
 For this we consider a 3D image as a 2D video, it's more a didactic example than a real use case.
 """
+
 import napari
 import numpy as np
 from scipy.spatial.distance import cdist

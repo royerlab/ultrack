@@ -81,9 +81,9 @@ def update_track_id(
     mask = tracks_df["track_id"] == old_track_id
     tracks_df.loc[mask, "track_id"] = new_track_id
     tracks_df.loc[mask, "parent_track_id"] = new_track_id_parent
-    tracks_df.loc[
-        tracks_df["parent_track_id"] == old_track_id, "parent_track_id"
-    ] = new_track_id
+    tracks_df.loc[tracks_df["parent_track_id"] == old_track_id, "parent_track_id"] = (
+        new_track_id
+    )
 
     if segmentation_painter is not None:
         for t in tracks_df.loc[mask, "t"]:
