@@ -136,9 +136,11 @@ def test_manual_segment(experiment_instance: Experiment):
         json_exp = json.loads(
             json.dumps(
                 experiment.model_dump(),
-                default=lambda o: o.isoformat()
-                if isinstance(o, (datetime.date, datetime.datetime))
-                else None,
+                default=lambda o: (
+                    o.isoformat()
+                    if isinstance(o, (datetime.date, datetime.datetime))
+                    else None
+                ),
             )
         )
         websocket.send_json({"experiment": json_exp})
@@ -185,9 +187,11 @@ def test_auto_detect(
         json_exp = json.loads(
             json.dumps(
                 experiment.model_dump(),
-                default=lambda o: o.isoformat()
-                if isinstance(o, (datetime.date, datetime.datetime))
-                else None,
+                default=lambda o: (
+                    o.isoformat()
+                    if isinstance(o, (datetime.date, datetime.datetime))
+                    else None
+                ),
             )
         )
 
@@ -256,9 +260,11 @@ def test_from_labels(experiment_instance: Experiment, label_to_edges_kwargs: dic
         json_exp = json.loads(
             json.dumps(
                 experiment.model_dump(),
-                default=lambda o: o.isoformat()
-                if isinstance(o, (datetime.date, datetime.datetime))
-                else o,
+                default=lambda o: (
+                    o.isoformat()
+                    if isinstance(o, (datetime.date, datetime.datetime))
+                    else o
+                ),
             )
         )
         if label_to_edges_kwargs:
@@ -299,9 +305,11 @@ def test_output_experiment(experiment_instance: Experiment):
         json_exp = json.loads(
             json.dumps(
                 experiment_instance.model_dump(),
-                default=lambda o: o.isoformat()
-                if isinstance(o, (datetime.date, datetime.datetime))
-                else None,
+                default=lambda o: (
+                    o.isoformat()
+                    if isinstance(o, (datetime.date, datetime.datetime))
+                    else None
+                ),
             )
         )
         websocket.send_json({"experiment": json_exp})
@@ -346,9 +354,11 @@ def test_available_configs(experiment_instance: Experiment):
             json_exp = json.loads(
                 json.dumps(
                     config_metadata["experiment"],
-                    default=lambda o: o.isoformat()
-                    if isinstance(o, (datetime.date, datetime.datetime))
-                    else None,
+                    default=lambda o: (
+                        o.isoformat()
+                        if isinstance(o, (datetime.date, datetime.datetime))
+                        else None
+                    ),
                 )
             )
             websocket.send_json({"experiment": json_exp})
