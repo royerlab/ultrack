@@ -220,7 +220,7 @@ def geff_cli(
     """
     if output_path is None:
         # Generate output path from database path
-        output_path = database_path.parent / f"{database_path.stem}_geff.geff"
+        output_path = database_path.parent / f"{database_path.stem}.geff"
     else:
         # Validate that the output path has a geff extension
         output_str = str(output_path)
