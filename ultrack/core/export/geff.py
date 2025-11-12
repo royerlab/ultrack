@@ -15,6 +15,17 @@ from ultrack.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB
 
 
+# Helper function to convert pandas/numpy dtypes to string dtype names
+def dtype_to_str(dtype) -> str:
+    """Convert pandas/numpy dtype to string dtype name for PropMetadata."""
+    # Convert to numpy dtype first to get consistent .name attribute
+    np_dtype = np.dtype(dtype)
+    dtype_name = np_dtype.name
+
+    # Most dtypes work directly (int64, float64, bool, etc.)
+    return dtype_name
+
+
 def to_geff_from_database(
     database_path: Union[str, Path],
     filename: Union[str, Path],
@@ -122,6 +133,7 @@ def to_geff_from_database(
         # Create nodes dataframe (only scalar values, no pickle objects)
         node_df = pd.DataFrame(all_nodes_data)
         node_df.set_index("id", inplace=True)
+        node_df["solution"] = node_df["solution"].astype(bool)
 
         # Query edges
         edge_stmt = session.query(
@@ -140,6 +152,8 @@ def to_geff_from_database(
         edge_df = edge_df.merge(sol_links_df, on=["source_id", "target_id"], how="left")
         edge_df.loc[edge_df["solution"].isna(), "solution"] = False
         edge_df["solution"] = edge_df["solution"].astype(bool)
+        if "weight" in edge_df.columns:
+            edge_df["weight"] = edge_df["weight"].astype(np.float64)
 
         # Query overlaps
         overlap_stmt = session.query(
@@ -147,16 +161,6 @@ def to_geff_from_database(
             OverlapDB.ancestor_id,
         ).statement
         overlap_df = pd.read_sql(overlap_stmt, session.bind)
-
-    # Helper function to convert pandas/numpy dtypes to string dtype names
-    def dtype_to_str(dtype) -> str:
-        """Convert pandas/numpy dtype to string dtype name for PropMetadata."""
-        # Convert to numpy dtype first to get consistent .name attribute
-        np_dtype = np.dtype(dtype)
-        dtype_name = np_dtype.name
-
-        # Most dtypes work directly (int64, float64, bool, etc.)
-        return dtype_name
 
     # Create node properties metadata
     node_props_metadata = {}
@@ -208,9 +212,6 @@ def to_geff_from_database(
     for c in node_df.columns:
         # Convert to appropriate numpy dtype
         values = node_df[c].to_numpy()
-        # Ensure bool columns are properly typed
-        if c == "solution":
-            values = values.astype(bool)
         node_props[c] = {"values": values, "missing": None}
 
     # Handle mask - use the separately stored masks
@@ -224,12 +225,6 @@ def to_geff_from_database(
     edge_props = {}
     for c in edge_df.columns:
         values = edge_df[c].to_numpy()
-        # Ensure bool columns are properly typed
-        if c == "solution":
-            values = values.astype(bool)
-        # Ensure weight is float
-        elif c == "weight":
-            values = values.astype(np.float64)
         edge_props[c] = {"values": values, "missing": None}
 
     write_arrays(
