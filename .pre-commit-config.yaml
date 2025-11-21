@@ -1,7 +1,7 @@
 repos:
 # basic pre-commit
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -12,30 +12,30 @@ repos:
       - id: detect-private-key
 # make every import absolute
   - repo: https://github.com/MarcoGorelli/absolufy-imports
-    rev: v0.3.0
+    rev: v0.3.1
     hooks:
       - id: absolufy-imports
 # sorting imports
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 7.0.0
     hooks:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
 # automatic upgrade to newer python versions syntax
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.30.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: ["--py38-plus", "--keep-runtime-typing"]
 # syntax linting and formatting
   - repo: https://github.com/myint/autoflake
-    rev: v1.4
+    rev: v2.3.1
     hooks:
       - id: autoflake
         args: [--in-place, --remove-all-unused-imports,
                --ignore-init-module-imports]
   - repo: https://github.com/PyCQA/flake8
-    rev: 4.0.1
+    rev: 7.3.0
     hooks:
       - id: flake8
         args: [--max-line-length, '120',
@@ -45,7 +45,7 @@ repos:
                --min-python-version, '3.9']
         additional_dependencies: [flake8-typing-imports==1.12.0]
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 25.11.0
     hooks:
       - id: black
 
