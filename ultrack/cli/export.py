@@ -15,7 +15,13 @@ from ultrack.cli.utils import (
     tuple_callback,
 )
 from ultrack.config import MainConfig
-from ultrack.core.export import to_ctc, to_trackmate, to_tracks_layer, tracks_to_zarr
+from ultrack.core.export import (
+    to_ctc,
+    to_geff_from_database,
+    to_trackmate,
+    to_tracks_layer,
+    tracks_to_zarr,
+)
 from ultrack.core.solve.sqltracking import SQLTracking
 from ultrack.imgproc.measure import tracks_properties
 from ultrack.utils.data import validate_and_overwrite_path
@@ -187,6 +193,45 @@ def trackmate_cli(
     to_trackmate(config, output_path, overwrite)
 
 
+@click.command("geff")
+@click.argument(
+    "database_path",
+    type=click.Path(path_type=Path, exists=True),
+)
+@click.option(
+    "--output-path",
+    "-o",
+    required=False,
+    type=click.Path(path_type=Path),
+    default=None,
+    help=(
+        "Geff (Graph Exchange File Format) output path. "
+        "If not provided, saves to same directory as database with '_geff.geff' extension."
+    ),
+)
+@overwrite_option()
+def geff_cli(
+    database_path: Path,
+    output_path: Optional[Path],
+    overwrite: bool,
+) -> None:
+    """
+    Exports tracking results to Geff (Graph Exchange File Format) format.
+    """
+    if output_path is None:
+        # Generate output path from database path
+        output_path = database_path.parent / f"{database_path.stem}.geff"
+    else:
+        # Validate that the output path has a geff extension
+        output_str = str(output_path)
+        if not (output_str.endswith(".geff") or output_str.endswith(".geff.zarr")):
+            raise click.BadParameter(
+                f"Output path must have a .geff or .geff.zarr extension, got: {output_path}"
+            )
+
+    to_geff_from_database(database_path, output_path, overwrite)
+
+
 @click.command("lp")
 @click.option(
     "--output-path",
@@ -229,6 +274,7 @@ def export_cli() -> None:
 
 
 export_cli.add_command(ctc_cli)
+export_cli.add_command(geff_cli)
 export_cli.add_command(lp_cli)
 export_cli.add_command(trackmate_cli)
 export_cli.add_command(zarr_napari_cli)
