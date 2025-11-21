@@ -86,7 +86,7 @@ ultrack = "ultrack.cli.main:main"
 ultrack = "ultrack:napari.yaml"
 
 # pixi config
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge", "nvidia", "pytorch", "numba", "gurobi"]
 platforms = ["linux-64", "win-64", "osx-64"]
 preview = ["pixi-build"]  # required to use git links
