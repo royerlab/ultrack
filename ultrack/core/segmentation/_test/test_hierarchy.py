@@ -15,7 +15,7 @@ from ultrack.core.segmentation.vendored.hierarchy import to_labels
     indirect=True,
 )
 def test_horizontal_cut(
-    segmentation_mock_data: Tuple[np.ndarray, np.ndarray, np.ndarray]
+    segmentation_mock_data: Tuple[np.ndarray, np.ndarray, np.ndarray],
 ) -> None:
     foreground, edge, _ = segmentation_mock_data
     hierarchies = create_hierarchies(

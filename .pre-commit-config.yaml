@@ -39,7 +39,7 @@ repos:
     hooks:
       - id: flake8
         args: [--max-line-length, '120',
-               --ignore, 'E741,W503,E203',
+               --ignore, 'E741,W503,E203,E704',
                --per-file-ignores,
                '__init__.py:F401 ultrack/__init__.py:F401,E402 debug_mainwidget.py:E402',
                --min-python-version, '3.9']

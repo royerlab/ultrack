@@ -20,11 +20,9 @@ LOG.addHandler(RichHandler())
 
 
 class ProbabilisticClassifier(Protocol):
-    def fit(self, X: ArrayLike, y: ArrayLike) -> "ProbabilisticClassifier":
-        ...
+    def fit(self, X: ArrayLike, y: ArrayLike) -> "ProbabilisticClassifier": ...
 
-    def predict_proba(self, X: ArrayLike) -> ArrayLike:
-        ...
+    def predict_proba(self, X: ArrayLike) -> ArrayLike: ...
 
 
 def _validate_classifier(

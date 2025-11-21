@@ -13,7 +13,6 @@ from ultrack.utils.cuda import import_module, is_cupy_array, to_cpu, xp
 LOG = logging.getLogger(__name__)
 
 
-
 def reconstruction_by_dilation(
     seed: ArrayLike, mask: ArrayLike, iterations: int
 ) -> ArrayLike:
