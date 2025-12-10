@@ -5,7 +5,6 @@ from typing import Dict, Generator, List, Optional, Sequence
 import napari
 import numpy as np
 import pandas as pd
-import zarr
 from napari.layers import Image, Labels, Layer, Tracks
 from napari.types import ArrayLike
 
@@ -553,19 +552,14 @@ def _create_temp_detection_and_contours(
     Tuple[ArrayLike, ArrayLike]
         The paths to the temporary detection and contours arrays.
     """
-    detection_store = zarr.TempStore(suffix="detection")
-    contours_store = zarr.TempStore(suffix="contours")
-
     zarr_detection = create_zarr(
         shape=shape,
         dtype=bool,
-        store_or_path=detection_store,
         overwrite=True,
     )
     zarr_contours = create_zarr(
         shape=shape,
         dtype=np.float16,
-        store_or_path=contours_store,
         overwrite=True,
     )
 
