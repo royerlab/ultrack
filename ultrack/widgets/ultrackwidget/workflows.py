@@ -5,7 +5,6 @@ from typing import Dict, Generator, List, Optional, Sequence
 import napari
 import numpy as np
 import pandas as pd
-import zarr
 from napari.layers import Image, Labels, Layer, Tracks
 from napari.types import ArrayLike
 
