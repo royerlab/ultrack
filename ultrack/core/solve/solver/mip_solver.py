@@ -243,8 +243,9 @@ class MIPSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
+        # FIXED: Copy inputs like add_edges
+        sources = self._forward_map[np.asarray(sources, dtype=int).copy(order='C')]
+        targets = self._forward_map[np.asarray(targets, dtype=int).copy(order='C')]
 
         for i in range(len(sources)):
             self._model.add_constr(
