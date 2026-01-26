@@ -63,7 +63,6 @@ class MIPSolver(BaseSolver):
                 "See https://www.gurobi.com/academia/academic-program-and-licenses/"
             )
 
-         None
         self._backward_map = None
         self._nodes = None
         self._appearances = None
@@ -80,7 +79,7 @@ class MIPSolver(BaseSolver):
         self._model.lp_method = self._config.method
         self._model.max_mip_gap = self._config.solution_gap
 
-     def add_nodes(
+    def add_nodes(
         self,
         indices: ArrayLike,
         is_first_t: ArrayLike,
