@@ -146,6 +146,14 @@ def _process(
         next_nodes = [row[0] for row in query]
         next_shift = np.asarray([row[1:] for row in query])
 
+    if len(next_nodes) == 0:
+        print(f"No nodes found for time {time + 1}")
+        return
+
+    if len(current_nodes) == 0:
+        print(f"No nodes found for time {time}")
+        return
+
     compute_spatial_neighbors(
         time,
         config,
