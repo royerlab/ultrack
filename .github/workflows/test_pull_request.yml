@@ -47,8 +47,10 @@ jobs:
 
       - name: Install Pixi
         run: |
+          set -euo pipefail
           curl -sSf https://pixi.sh/install.sh | bash -s -- -y
-          echo "$HOME/.pixi/bin" >> $GITHUB_PATH
+          echo "$HOME/.pixi/bin" >> "$GITHUB_PATH"
+          "$HOME/.pixi/bin/pixi" --version
 
       - name: Setup headless screenL
         uses: pyvista/setup-headless-display-action@7d84ae825e6d9297a8e99bdbbae20d1b919a0b19 # v4.2
