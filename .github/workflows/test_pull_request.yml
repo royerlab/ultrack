@@ -49,7 +49,7 @@ jobs:
         with:
           pixi-version: v0.62.2
           cache: true
-      
+
       - name: Setup headless screenL
         uses: pyvista/setup-headless-display-action@7d84ae825e6d9297a8e99bdbbae20d1b919a0b19 # v4.2
         with:
