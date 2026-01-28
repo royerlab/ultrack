@@ -421,7 +421,7 @@ def split_tracks_df_by_lineage(
     List[pd.DataFrame]
         List of dataframes, one for each lineage.
     """
-    roots = tracks_df[tracks_df["parent_track_id"] == NO_PARENT]["track_id"].to_numpy()
+    roots = tracks_df[tracks_df["parent_track_id"] == NO_PARENT]["track_id"].unique()
     lineages = [get_subgraph(tracks_df, root) for root in np.sort(roots)]
     return lineages
 
