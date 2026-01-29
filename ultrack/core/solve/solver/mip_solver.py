@@ -63,7 +63,6 @@ class MIPSolver(BaseSolver):
                 "See https://www.gurobi.com/academia/academic-program-and-licenses/"
             )
 
-        self._forward_map = None
         self._backward_map = None
         self._nodes = None
         self._appearances = None
@@ -89,7 +88,7 @@ class MIPSolver(BaseSolver):
         nodes_prob: Optional[ArrayLike] = None,
     ) -> None:
         """Add nodes slack variables to gurobi model.
-
+    
         Parameters
         ----------
         indices : ArrayLike
@@ -106,29 +105,35 @@ class MIPSolver(BaseSolver):
         """
         if self._nodes is not None:
             raise ValueError("Nodes have already been added.")
-
+    
         assert_same_length(
             indices=indices,
             is_first_t=is_first_t,
             is_last_t=is_last_t,
             nodes_prob=nodes_prob,
         )
-
+    
         LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
         LOG.info("# %s nodes at last `t`.", np.sum(is_last_t))
-
+    
         appear_weight = (
             np.logical_not(is_first_t | is_border) * self._config.appear_weight
         )
         disappear_weight = (
             np.logical_not(is_last_t | is_border) * self._config.disappear_weight
         )
-
-        indices = np.asarray(indices, dtype=int)
-        self._backward_map = np.array(indices, copy=True)
-        self._forward_map = ArrayMap(indices, np.arange(len(indices)))
+    
+        indices = np.asarray(indices, dtype=int).copy(order='C')  # FIXED: Writable owner
+        self._backward_map = indices.copy()
+        
+        # FIXED: ArrayMap with writable copies
+        self._forward_map = ArrayMap(
+            indices.copy(order='C'), 
+            np.arange(len(indices)).copy(order='C')
+        )
+        
         size = (len(indices),)
-
+    
         self._nodes = self._model.add_var_tensor(
             size, name="nodes", var_type=mip.BINARY
         )
@@ -141,13 +146,13 @@ class MIPSolver(BaseSolver):
         self._divisions = self._model.add_var_tensor(
             size, name="division", var_type=mip.BINARY
         )
-
+    
         if nodes_prob is None:
             node_weights = 0
         else:
             nodes_prob = self._config.apply_link_function(np.asarray(nodes_prob))
             node_weights = mip.xsum(nodes_prob * self._nodes)
-
+    
         self._model.objective = (
             mip.xsum(self._divisions * self._config.division_weight)
             + mip.xsum(self._appearances * appear_weight)
@@ -155,11 +160,12 @@ class MIPSolver(BaseSolver):
             + node_weights
         )
 
+
     def add_edges(
         self, sources: ArrayLike, targets: ArrayLike, weights: ArrayLike
     ) -> None:
         """Add edges to model and applies weights link function from config.
-
+    
         Parameters
         ----------
         source : ArrayLike
@@ -171,23 +177,24 @@ class MIPSolver(BaseSolver):
         """
         if self._edges is not None:
             raise ValueError("Edges have already been added.")
-
+    
         assert_same_length(sources=sources, targets=targets, weights=weights)
-
+    
         weights = self._config.apply_link_function(weights.astype(float))
-
+    
         LOG.info("transformed edge weights %s", weights)
-
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
-
+    
+        # FIXED: Copy Pandas Series before mapping
+        sources = self._forward_map[np.asarray(sources, dtype=int).copy(order='C')]
+        targets = self._forward_map[np.asarray(targets, dtype=int).copy(order='C')]
+    
         self._edges = self._model.add_var_tensor(
             (len(weights),), name="edges", var_type=mip.BINARY
         )
         self._edges_df = pd.DataFrame(
             np.asarray([sources, targets]).T, columns=["sources", "targets"]
         )
-
+    
         self._model.objective += mip.xsum(weights * self._edges)
 
     def set_standard_constraints(self) -> None:
@@ -236,8 +243,9 @@ class MIPSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
+        # FIXED: Copy inputs like add_edges
+        sources = self._forward_map[np.asarray(sources, dtype=int).copy(order='C')]
+        targets = self._forward_map[np.asarray(targets, dtype=int).copy(order='C')]
 
         for i in range(len(sources)):
             self._model.add_constr(
