@@ -29,6 +29,7 @@ def tracks_starts(tracks_df: pd.DataFrame) -> pd.DataFrame:
     starts = starting_tracklets.groupby("track_id").apply(
         lambda x: x.loc[x["t"].idxmin()]
     )
+    starts["track_id"] = starts.index.astype(int)
     return starts
 
 
@@ -49,6 +50,7 @@ def tracks_ends(tracks_df: pd.DataFrame) -> pd.DataFrame:
     """
     ending_tracks = tracks_df[~tracks_df["track_id"].isin(tracks_df["parent_track_id"])]
     ends = ending_tracks.groupby("track_id").apply(lambda x: x.loc[x["t"].idxmax()])
+    ends["track_id"] = ends.index.astype(int)
     return ends
 
 
