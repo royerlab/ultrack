@@ -1,5 +1,6 @@
+import functools
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import edt
 import numpy as np
@@ -213,20 +214,33 @@ def inverted_edt(
     return dist
 
 
-class Cellpose:
-    def __init__(self, **kwargs) -> None:
-        """See cellpose.models.Cellpose documentation for details."""
+def _maybe_wrap(wrapper_name: str) -> Callable:
+    """Wraps function with cellpose model method if cellpose is available."""
+    try:
         from cellpose.models import CellposeModel as _Cellpose
+    except ImportError:
+        return lambda x: x
+
+    return functools.wraps(getattr(_Cellpose, wrapper_name))
+
+
+class Cellpose:
+    @_maybe_wrap("__init__")
+    def __init__(self, **kwargs) -> None:
+        try:
+            from cellpose.models import CellposeModel as _Cellpose
+        except ImportError as e:
+            raise ImportError(
+                "Cellpose not found, please install it."
+                "See for instructions https://github.com/MouseLand/cellpose"
+            ) from e
 
         if "pretrained_model" not in kwargs and "model_type" not in kwargs:
             kwargs["model_type"] = "cyto"
 
         self.model = _Cellpose(**kwargs)
 
+    @_maybe_wrap("eval")
     def __call__(self, image: ArrayLike, **kwargs) -> np.ndarray:
-        """
-        Predicts image labels.
-        See cellpose.models.Cellpose.eval documentation for details.
-        """
         labels, _, _ = self.model.eval(image, **kwargs)
         return labels
