@@ -154,12 +154,15 @@ def _add_overlaps(
 
     overlaps = []
 
-    for (neigh_node,) in session.query(NodeDB.pickle).where(NodeDB.id.in_(ind)).all():
+    # Query both id and pickle for robustness (don't assume pickle contains id)
+    for neigh_id, neigh_node in (
+        session.query(NodeDB.id, NodeDB.pickle).where(NodeDB.id.in_(ind)).all()
+    ):
         if node.IoU(neigh_node) > 0.0:
             overlaps.append(
                 OverlapDB(
                     node_id=node.id,
-                    ancestor_id=neigh_node.id,
+                    ancestor_id=neigh_id,  # Use database ID instead of pickle's id
                 )
             )
 
