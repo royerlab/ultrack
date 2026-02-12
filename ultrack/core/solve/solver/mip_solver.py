@@ -124,7 +124,7 @@ class MIPSolver(BaseSolver):
             np.logical_not(is_last_t | is_border) * self._config.disappear_weight
         )
 
-        indices = np.asarray(indices, dtype=int)
+        indices = np.asarray(indices, dtype=int, copy=True)
         self._backward_map = np.array(indices, copy=True)
         self._forward_map = ArrayMap(indices, np.arange(len(indices)))
         size = (len(indices),)
@@ -178,8 +178,8 @@ class MIPSolver(BaseSolver):
 
         LOG.info("transformed edge weights %s", weights)
 
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
+        sources = self._forward_map[np.asarray(sources, dtype=int, copy=True)]
+        targets = self._forward_map[np.asarray(targets, dtype=int, copy=True)]
 
         self._edges = self._model.add_var_tensor(
             (len(weights),), name="edges", var_type=mip.BINARY
@@ -236,8 +236,8 @@ class MIPSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
+        sources = self._forward_map[np.asarray(sources, dtype=int, copy=True)]
+        targets = self._forward_map[np.asarray(targets, dtype=int, copy=True)]
 
         for i in range(len(sources)):
             self._model.add_constr(
@@ -261,7 +261,7 @@ class MIPSolver(BaseSolver):
         value : bool
             Value to constraint to.
         """
-        indices = self._forward_map[np.asarray(indices, dtype=int)]
+        indices = self._forward_map[np.asarray(indices, dtype=int, copy=True)]
 
         variable_arr = {
             "appear": self._appearances,
@@ -297,8 +297,8 @@ class MIPSolver(BaseSolver):
         if self._edges_df is None:
             raise ValueError("Edges must be added before enforcing their value.")
 
-        sources = self._forward_map[np.asarray(sources, dtype=int)]
-        targets = self._forward_map[np.asarray(targets, dtype=int)]
+        sources = self._forward_map[np.asarray(sources, dtype=int, copy=True)]
+        targets = self._forward_map[np.asarray(targets, dtype=int, copy=True)]
 
         # saving indices
         df = self._edges_df.reset_index()
@@ -333,7 +333,7 @@ class MIPSolver(BaseSolver):
         total_sum : int
             Total sum of nodes' variables.
         """
-        indices = self._forward_map[np.asarray(indices, dtype=int)]
+        indices = self._forward_map[np.asarray(indices, dtype=int, copy=True)]
         self._model.add_constr(mip.xsum([self._nodes[i] for i in indices]) == total_sum)
 
     def _set_solution_guess(self) -> None:
