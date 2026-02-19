@@ -324,6 +324,42 @@ class Hierarchy:
         return list(self._nodes.values())
 
 
+def _fast_watershed_cut_by_area(
+    contours: ArrayLike,
+    mask: ArrayLike,
+    max_area: int,
+    anisotropy_pen: float,
+) -> ArrayLike:
+    """
+    This function computes a fast watershed cut by area given the contours and a mask
+    by computing watershed superpixels using skimage.
+
+    Parameters
+    ----------
+    contours : ArrayLike
+        Contours used for the watershed segmentation.
+    mask : ArrayLike
+        Mask used to restrict the watershed segmentation.
+    max_area : int
+        Maximum area for the watershed hierarchy cut.
+    anisotropy_pen : float
+        Edge weight penalization for the z-axis.
+
+    Returns
+    -------
+    ArrayLike
+        Labels from area cut of the watershed hierarchy.
+    """
+    graph, weights = mask_to_graph(mask, contours, anisotropy_pen)
+    labels = segmentation.watershed(contours, mask=mask)
+    rag = hg.make_region_adjacency_graph_from_labelisation(graph, labels[mask])
+    rag_weights = hg.rag_accumulate_on_edges(rag, hg.Accumulators.min, weights)
+    rag_tree, rag_alt = hg.watershed_hierarchy_by_area(rag, rag_weights)
+    rag_cut = hg.labelisation_horizontal_cut_from_threshold(rag_tree, rag_alt, max_area)
+    cut = hg.rag_back_project_vertex_weights(rag, rag_cut)
+    return cut
+
+
 def oversegment_components(
     labels: ArrayLike, boundaries: ArrayLike, max_area: int, anisotropy_pen: float = 0.0
 ) -> ArrayLike:
@@ -353,9 +389,9 @@ def oversegment_components(
     new_labels = np.zeros_like(labels)
     for c in measure.regionprops(labels, boundaries):
         if c.area > max_area:
-            graph, weights = mask_to_graph(c.image, c.intensity_image, anisotropy_pen)
-            tree, alt = hg.watershed_hierarchy_by_area(graph, weights)
-            cut = hg.labelisation_horizontal_cut_from_threshold(tree, alt, max_area)
+            cut = _fast_watershed_cut_by_area(
+                c.intensity_image, c.image, max_area, anisotropy_pen
+            )
             cut, _, _ = segmentation.relabel_sequential(cut, offset=offset)
             offset = cut.max() + 1
             new_labels[c.slice][c.image] = cut
