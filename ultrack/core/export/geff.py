@@ -149,11 +149,14 @@ def to_geff_from_database(
                 "solution": True,
             }
         )
-        edge_df = edge_df.merge(sol_links_df, on=["source_id", "target_id"], how="left")
+        # Use outer merge so solution edges not in the links table are preserved.
+        # This happens when annotators manually create parent-child connections
+        # (e.g. cell divisions) that weren't in the original candidate edge set.
+        edge_df = edge_df.merge(sol_links_df, on=["source_id", "target_id"], how="outer")
         edge_df.loc[edge_df["solution"].isna(), "solution"] = False
         edge_df["solution"] = edge_df["solution"].astype(bool)
         if "weight" in edge_df.columns:
-            edge_df["weight"] = edge_df["weight"].astype(np.float64)
+            edge_df["weight"] = edge_df["weight"].fillna(0.0).astype(np.float64)
 
         # Query overlaps
         overlap_stmt = session.query(
