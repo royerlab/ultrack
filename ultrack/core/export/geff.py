@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 from typing import Union
+from warnings import warn
 
 import geff
 import numpy as np
@@ -105,6 +106,8 @@ def to_geff_from_database(
             NodeDB.selected,
             NodeDB.pickle,
         ):
+            if not selected:
+                continue
             node_dict = {
                 "id": node_id,
                 "parent_id": parent_id,
@@ -153,6 +156,14 @@ def to_geff_from_database(
         edge_df["solution"] = edge_df["solution"].fillna(True).astype(bool)
         if "weight" in edge_df.columns:
             edge_df["weight"] = edge_df["weight"].fillna(0.0).astype(np.float64)
+
+        valid_edges = edge_df["target_id"].isin(node_df.index) & edge_df[
+            "source_id"
+        ].isin(node_df.index)
+        if not valid_edges.all():
+            invalid_edges = edge_df.loc[~valid_edges]
+            edge_df = edge_df.loc[valid_edges]
+            warn(f"Found invalid edges. They are being removed.\n{invalid_edges}")
 
         # Query overlaps
         overlap_stmt = session.query(
