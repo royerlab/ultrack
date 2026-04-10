@@ -9,7 +9,6 @@ from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
 from rich.logging import RichHandler
 
-from ultrack.cli.segment import _get_layer_data
 from ultrack.cli.utils import (
     batch_index_option,
     config_option,
@@ -21,6 +20,7 @@ from ultrack.cli.utils import (
 from ultrack.config import MainConfig
 from ultrack.core.match_gt import match_to_ground_truth
 from ultrack.ml.classification import fit_links_prob, fit_nodes_prob
+from ultrack.utils.napari import get_layer_data
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -134,7 +134,7 @@ def match_gt_cli(
         else:
             ground_truth_layer = viewer.layers[0].name
 
-    gt = _get_layer_data(viewer, ground_truth_layer)
+    gt = get_layer_data(viewer.layers[ground_truth_layer])
 
     # Match ground-truth to database
     gt_df, new_config = match_to_ground_truth(
