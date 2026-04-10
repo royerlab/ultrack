@@ -20,7 +20,8 @@ from ultrack.tracks import tracks_df_movement
 from ultrack.utils import labels_to_contours
 from ultrack.utils.array import array_apply, create_zarr
 from ultrack.utils.cuda import on_gpu
-from ultrack.widgets.ultrackwidget.utils import UltrackInput, get_layer_data
+from ultrack.utils.napari import get_layer_data
+from ultrack.widgets.ultrackwidget.utils import UltrackInput
 
 LOGGER = logging.getLogger(__name__)
 
