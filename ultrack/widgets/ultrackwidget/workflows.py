@@ -20,6 +20,7 @@ from ultrack.tracks import tracks_df_movement
 from ultrack.utils import labels_to_contours
 from ultrack.utils.array import array_apply, create_zarr
 from ultrack.utils.cuda import on_gpu
+from ultrack.utils.napari import get_layer_data
 from ultrack.widgets.ultrackwidget.utils import UltrackInput
 
 LOGGER = logging.getLogger(__name__)
@@ -188,8 +189,8 @@ class UltrackWorkflow:
                         scale = labels.scale
 
                     detection, contours = self._run_preprocessing(
-                        image=image.data if image is not None else None,
-                        labels=labels.data if labels is not None else None,
+                        image=get_layer_data(image) if image is not None else None,
+                        labels=get_layer_data(labels) if labels is not None else None,
                         choice=workflow_choice,
                         **additional_options,
                     )
@@ -351,14 +352,15 @@ class UltrackWorkflow:
                 flow_kwargs = additional_options["flow_kwargs"]
                 if flow_kwargs["__enable__"]:
                     del flow_kwargs["__enable__"]
+                    image_data = get_layer_data(image)
                     flow_field = timelapse_flow(
-                        image.data,
+                        image_data,
                         store_or_path=None,
                         **flow_kwargs,
                     )
                     flow_kwargs["__enable__"] = True
 
-                    shape = list(image.data.shape)
+                    shape = list(image_data.shape)
                     if flow_kwargs["channel_axis"]:
                         shape.pop(flow_kwargs["channel_axis"] + 1)
 
@@ -489,8 +491,8 @@ class UltrackWorkflow:
             The contours napari layer.
         """
         segment(
-            detection=detection.data,
-            edge=contours.data,
+            detection=get_layer_data(detection),
+            edge=get_layer_data(contours),
             config=self.config,
             overwrite=True,
         )

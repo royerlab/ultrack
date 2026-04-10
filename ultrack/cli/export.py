@@ -25,6 +25,7 @@ from ultrack.core.export import (
 from ultrack.core.solve.sqltracking import SQLTracking
 from ultrack.imgproc.measure import tracks_properties
 from ultrack.utils.data import validate_and_overwrite_path
+from ultrack.utils.napari import get_layer_data
 
 
 @click.command("ctc")
@@ -156,7 +157,7 @@ def zarr_napari_cli(
             _initialize_plugins()
             viewer = ViewerModel()
             image = [
-                layer.data[0] if layer.multiscale else layer.data
+                get_layer_data(layer)
                 for layer in viewer.open(image_path, plugin=reader_plugin)
             ]
             del viewer

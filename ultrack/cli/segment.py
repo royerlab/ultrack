@@ -5,7 +5,6 @@ import click
 import dask.array as da
 from napari.plugins import _initialize_plugins
 from napari.viewer import ViewerModel
-from numpy.typing import ArrayLike
 
 from ultrack import segment
 from ultrack.cli.utils import (
@@ -16,15 +15,7 @@ from ultrack.cli.utils import (
     paths_argument,
 )
 from ultrack.config import MainConfig
-
-
-def _get_layer_data(viewer: ViewerModel, key: str) -> ArrayLike:
-    """Get layer data from napari viewer."""
-    layer = viewer.layers[key]
-    if layer.multiscale:
-        return layer.data[0]
-    else:
-        return layer.data
+from ultrack.utils.napari import get_layer_data
 
 
 @click.command("segment")
@@ -87,8 +78,8 @@ def segmentation_cli(
     viewer = ViewerModel()
     viewer.open(path=paths, plugin=reader_plugin)
 
-    foreground = _get_layer_data(viewer, foreground_layer)
-    edge = _get_layer_data(viewer, contours_layer)
+    foreground = get_layer_data(viewer.layers[foreground_layer])
+    edge = get_layer_data(viewer.layers[contours_layer])
 
     if len(images_layer) == 0:
         images = None
@@ -102,10 +93,10 @@ def segmentation_cli(
             )
 
         if len(images_layer) == 1:
-            images = _get_layer_data(viewer, images_layer[0])
+            images = get_layer_data(viewer.layers[images_layer[0]])
         else:
             images = da.stack(
-                [_get_layer_data(viewer, key) for key in images_layer], axis=-1
+                [get_layer_data(viewer.layers[key]) for key in images_layer], axis=-1
             )
 
     if batch_index is None or batch_index == 0:

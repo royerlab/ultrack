@@ -13,6 +13,7 @@ from ultrack.cli.utils import (
 )
 from ultrack.config import MainConfig
 from ultrack.imgproc.flow import add_flow
+from ultrack.utils.napari import get_layer_data
 
 
 @click.command("add_flow")
@@ -32,7 +33,7 @@ def add_flow_cli(
     viewer = ViewerModel()
 
     vector_field = [
-        layer.data[0] if layer.multiscale else layer.data
+        get_layer_data(layer)
         for layer in viewer.open(paths, channel_axis=channel_axis, plugin=reader_plugin)
     ]
     del viewer

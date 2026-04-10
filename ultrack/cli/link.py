@@ -15,6 +15,7 @@ from ultrack.cli.utils import (
     paths_argument,
 )
 from ultrack.config import MainConfig
+from ultrack.utils.napari import get_layer_data
 
 
 @click.command("link")
@@ -48,7 +49,7 @@ def link_cli(
             kwargs["channel_axis"] = channel_axis
 
         images = [
-            layer.data[0] if layer.multiscale else layer.data
+            get_layer_data(layer)
             for layer in viewer.open(paths, **kwargs, plugin=reader_plugin)
         ]
         del viewer
