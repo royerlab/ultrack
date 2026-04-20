@@ -85,7 +85,6 @@ test = [
     "pytest-qt >=4.2.0",
     "pytrackmate >=1.3.4",
     "napari[testing] >0.4.18",
-    "pyqt5 >=5.15.4",
 ]
 ml = [
     "catboost >=1.2.7",
