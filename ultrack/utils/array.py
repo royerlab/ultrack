@@ -220,6 +220,19 @@ def create_zarr(
     return zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
 
 
+def make_array_writeable(array: np.ndarray) -> np.ndarray:
+    """Set the writeable flag on a numpy array in-place and return it.
+
+    Workaround for https://github.com/scikit-image/scikit-image/issues/6378:
+    skimage's map_array / relabel_sequential require writable input arrays even
+    though they do not mutate them. Pandas and other libraries may return
+    read-only views, so this helper clears the restriction before passing
+    arrays into affected skimage functions.
+    """
+    array.flags.writeable = True
+    return array
+
+
 def assert_same_length(**kwargs) -> None:
     """Validates if key-word arguments have the same length."""
     for k1, v1 in kwargs.items():

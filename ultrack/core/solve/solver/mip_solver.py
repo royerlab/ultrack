@@ -11,7 +11,7 @@ from skimage.util._map_array import ArrayMap
 
 from ultrack.config.config import TrackingConfig
 from ultrack.core.solve.solver.base_solver import BaseSolver
-from ultrack.utils.array import assert_same_length
+from ultrack.utils.array import assert_same_length, make_array_writeable
 from ultrack.utils.constants import NO_PARENT
 
 LOG = logging.getLogger(__name__)
@@ -21,21 +21,6 @@ _KEY_TO_SOLVER_NAME = {
     "GRB": "Gurobi",
     "GUROBI": "Gurobi",
 }
-
-
-def make_np_array_writeable(in_array: "np.array"):
-    """
-    Set the writable flag to allow ArrayMap operations to continue.
-
-    At this time (2-11-2026) it is a recognized issue that utils.map_array
-    requires the input arrays to be writable, even though it does not write to
-    the input arrays. This function is meant as a temporary fix to allow
-    ArrayMap to function with read-only arrays.
-
-    For more details: https://github.com/scikit-image/scikit-image/issues/6378
-    """
-    in_array.flags.writeable = True
-    return in_array
 
 
 class MIPSolver(BaseSolver):
@@ -139,7 +124,7 @@ class MIPSolver(BaseSolver):
             np.logical_not(is_last_t | is_border) * self._config.disappear_weight
         )
 
-        indices = make_np_array_writeable(np.asarray(indices, dtype=int))
+        indices = make_array_writeable(np.asarray(indices, dtype=int))
         self._backward_map = np.array(indices, copy=True)
         self._forward_map = ArrayMap(indices, np.arange(len(indices)))
         size = (len(indices),)
@@ -194,10 +179,10 @@ class MIPSolver(BaseSolver):
         LOG.info("transformed edge weights %s", weights)
 
         sources = self._forward_map[
-            make_np_array_writeable(np.asarray(sources, dtype=int))
+            make_array_writeable(np.asarray(sources, dtype=int))
         ]
         targets = self._forward_map[
-            make_np_array_writeable(np.asarray(targets, dtype=int))
+            make_array_writeable(np.asarray(targets, dtype=int))
         ]
 
         self._edges = self._model.add_var_tensor(
@@ -256,10 +241,10 @@ class MIPSolver(BaseSolver):
             Target nodes indices.
         """
         sources = self._forward_map[
-            make_np_array_writeable(np.asarray(sources, dtype=int))
+            make_array_writeable(np.asarray(sources, dtype=int))
         ]
         targets = self._forward_map[
-            make_np_array_writeable(np.asarray(targets, dtype=int))
+            make_array_writeable(np.asarray(targets, dtype=int))
         ]
 
         for i in range(len(sources)):
@@ -285,7 +270,7 @@ class MIPSolver(BaseSolver):
             Value to constraint to.
         """
         indices = self._forward_map[
-            make_np_array_writeable(np.asarray(indices, dtype=int))
+            make_array_writeable(np.asarray(indices, dtype=int))
         ]
 
         variable_arr = {
@@ -323,10 +308,10 @@ class MIPSolver(BaseSolver):
             raise ValueError("Edges must be added before enforcing their value.")
 
         sources = self._forward_map[
-            make_np_array_writeable(np.asarray(sources, dtype=int))
+            make_array_writeable(np.asarray(sources, dtype=int))
         ]
         targets = self._forward_map[
-            make_np_array_writeable(np.asarray(targets, dtype=int))
+            make_array_writeable(np.asarray(targets, dtype=int))
         ]
 
         # saving indices
@@ -363,7 +348,7 @@ class MIPSolver(BaseSolver):
             Total sum of nodes' variables.
         """
         indices = self._forward_map[
-            make_np_array_writeable(np.asarray(indices, dtype=int))
+            make_array_writeable(np.asarray(indices, dtype=int))
         ]
         self._model.add_constr(mip.xsum([self._nodes[i] for i in indices]) == total_sum)
 

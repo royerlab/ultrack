@@ -32,6 +32,7 @@ from ultrack.tracks.graph import (
     tracks_df_forest,
 )
 from ultrack.tracks.stats import estimate_drift
+from ultrack.utils.array import make_array_writeable
 from ultrack.utils.constants import NO_PARENT
 from ultrack.utils.data import validate_and_overwrite_path
 
@@ -370,9 +371,13 @@ def to_ctc(
             stitch_tracks=stitch_tracks,
         )
 
-    df["track_id"], fw, _ = relabel_sequential(df["track_id"].values)
+    df["track_id"], fw, _ = relabel_sequential(
+        make_array_writeable(df["track_id"].values)
+    )
     mask = df["parent_track_id"] != NO_PARENT
-    df.loc[mask, "parent_track_id"] = fw[df.loc[mask, "parent_track_id"].values]
+    df.loc[mask, "parent_track_id"] = fw[
+        make_array_writeable(df.loc[mask, "parent_track_id"].values)
+    ]
 
     # convert to CTC format and write output
     tracks_df = ctc_compress_forest(df)
