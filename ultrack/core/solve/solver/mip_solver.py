@@ -25,7 +25,7 @@ _KEY_TO_SOLVER_NAME = {
 
 def make_np_array_writeable(in_array: "np.array"):
     """
-    Set the writable flag to allow ArrayMap operations to continue. 
+    Set the writable flag to allow ArrayMap operations to continue.
 
     At this time (2-11-2026) it is a recognized issue that utils.map_array
     requires the input arrays to be writable, even though it does not write to
@@ -193,8 +193,12 @@ class MIPSolver(BaseSolver):
 
         LOG.info("transformed edge weights %s", weights)
 
-        sources = self._forward_map[make_np_array_writeable(np.asarray(sources, dtype=int))]
-        targets = self._forward_map[make_np_array_writeable(np.asarray(targets, dtype=int))]
+        sources = self._forward_map[
+            make_np_array_writeable(np.asarray(sources, dtype=int))
+        ]
+        targets = self._forward_map[
+            make_np_array_writeable(np.asarray(targets, dtype=int))
+        ]
 
         self._edges = self._model.add_var_tensor(
             (len(weights),), name="edges", var_type=mip.BINARY
@@ -251,8 +255,12 @@ class MIPSolver(BaseSolver):
         target : ArrayLike
             Target nodes indices.
         """
-        sources = self._forward_map[make_np_array_writeable(np.asarray(sources, dtype=int))]
-        targets = self._forward_map[make_np_array_writeable(np.asarray(targets, dtype=int))]
+        sources = self._forward_map[
+            make_np_array_writeable(np.asarray(sources, dtype=int))
+        ]
+        targets = self._forward_map[
+            make_np_array_writeable(np.asarray(targets, dtype=int))
+        ]
 
         for i in range(len(sources)):
             self._model.add_constr(
@@ -276,7 +284,9 @@ class MIPSolver(BaseSolver):
         value : bool
             Value to constraint to.
         """
-        indices = self._forward_map[make_np_array_writeable(np.asarray(indices, dtype=int))]
+        indices = self._forward_map[
+            make_np_array_writeable(np.asarray(indices, dtype=int))
+        ]
 
         variable_arr = {
             "appear": self._appearances,
@@ -312,8 +322,12 @@ class MIPSolver(BaseSolver):
         if self._edges_df is None:
             raise ValueError("Edges must be added before enforcing their value.")
 
-        sources = self._forward_map[make_np_array_writeable(np.asarray(sources, dtype=int))]
-        targets = self._forward_map[make_np_array_writeable(np.asarray(targets, dtype=int))]
+        sources = self._forward_map[
+            make_np_array_writeable(np.asarray(sources, dtype=int))
+        ]
+        targets = self._forward_map[
+            make_np_array_writeable(np.asarray(targets, dtype=int))
+        ]
 
         # saving indices
         df = self._edges_df.reset_index()
@@ -348,7 +362,9 @@ class MIPSolver(BaseSolver):
         total_sum : int
             Total sum of nodes' variables.
         """
-        indices = self._forward_map[make_np_array_writeable(np.asarray(indices, dtype=int))]
+        indices = self._forward_map[
+            make_np_array_writeable(np.asarray(indices, dtype=int))
+        ]
         self._model.add_constr(mip.xsum([self._nodes[i] for i in indices]) == total_sum)
 
     def _set_solution_guess(self) -> None:
