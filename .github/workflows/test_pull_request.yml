@@ -11,26 +11,29 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.platform }} ${{ matrix.python }} ${{ matrix.toxenv || matrix.backend }}
+    name: ${{ matrix.platform }} py${{ matrix.python }} ${{ matrix.backend }}
     if: github.event.pull_request.draft == false
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest]
-        python: ["3.10", "3.12"]
-        backend: [pyqt5]
         include:
-          # - python: 3.11
-          #   platform: windows-latest
-          #   backend: pyqt5
-          # - python: 3.11
-          #   platform: macos-13  # latest not-arm version
-          #   backend: pyside2
-          - python: 3.11 # only this run execute coverage
-            platform: ubuntu-latest
+          - platform: ubuntu-latest
+            python: "3.11"
             backend: pyside6
             coverage: true
+          - platform: ubuntu-latest
+            python: "3.12"
+            backend: pyqt5
+          - platform: ubuntu-latest
+            python: "3.13"
+            backend: pyqt5
+          - platform: macos-latest
+            python: "3.13"
+            backend: pyqt5
+          - platform: windows-latest
+            python: "3.13"
+            backend: pyqt5
 
     steps:
       - name: Cancel Previous Runs
@@ -38,36 +41,39 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       # see https://github.com/actions/runner-images/issues/709#issuecomment-612569242
       - name: Workaround to free up space on github runner
         if: runner.os == 'Linux'
         run: sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          pixi-version: v0.62.2
-          cache: true
+          python-version: ${{ matrix.python }}
+          enable-cache: true
 
-      - name: Setup headless screenL
+      - name: Setup headless display
+        if: runner.os == 'Linux'
         uses: pyvista/setup-headless-display-action@5bc8de3bc71fcda7a96439571287a554901541a0 # v4.3
         with:
           qt: true
           wm: herbstluftwm
 
-      - name: Install dependencies with pixi
-        run: pixi install -e test
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -e ".[test,ml]" "${{ matrix.backend }}"
 
       - name: Run pre-commit
-        run: pixi run -e test pre-commit run --all-files
+        run: uvx pre-commit run --all-files
 
       - name: Testing
-        run: pixi run -e test test --cov-report=xml
+        run: uv run pytest -v --color=yes --cov=ultrack --cov-report=xml --durations=15 .
         env:
           PLATFORM: ${{ matrix.platform }}
           BACKEND: ${{ matrix.backend }}
-          TOXENV: ${{ matrix.toxenv }}
 
       - name: Coverage
         if: ${{ matrix.coverage }}

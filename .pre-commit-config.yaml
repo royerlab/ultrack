@@ -17,7 +17,7 @@ repos:
       - id: absolufy-imports
 # sorting imports
   - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
+    rev: 8.0.1
     hooks:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
@@ -29,7 +29,7 @@ repos:
         args: ["--py38-plus", "--keep-runtime-typing"]
 # syntax linting and formatting
   - repo: https://github.com/myint/autoflake
-    rev: v2.3.1
+    rev: v2.3.3
     hooks:
       - id: autoflake
         args: [--in-place, --remove-all-unused-imports,
@@ -45,7 +45,7 @@ repos:
                --min-python-version, '3.9']
         additional_dependencies: [flake8-typing-imports==1.12.0]
   - repo: https://github.com/psf/black
-    rev: 25.11.0
+    rev: 26.3.1
     hooks:
       - id: black
 

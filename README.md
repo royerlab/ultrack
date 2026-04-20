@@ -42,29 +42,16 @@ Zebrafish imaged using [DaXi](https://www.nature.com/articles/s41592-022-01417-2
 
 ## Installation
 
-Install or update [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
-
-To avoid conflicts between different packages, we recommend using conda to create an isolated environment:
-
 ```bash
-conda create -n ultrack python=3.11 higra gurobi pytorch pyqt -c pytorch -c gurobi -c conda-forge
-conda activate ultrack
 pip install ultrack
 ```
 
-The installation should take a few minutes, depending on your internet speed and conda.
-
-NOTE: `gurobi` and `-c gurobi` are optional but recommended; they can be installed later, as shown below.
+We recommend installing into a virtual environment to avoid package conflicts.
+`gurobi` is optional but recommended for best performance; see the [installation guide](https://ultrack.readthedocs.io/en/latest/install.html) for details on Gurobi setup and GPU acceleration.
 
 Optionally, we provide multiple Docker images. For instructions, see the [docker folder](https://github.com/royerlab/ultrack/tree/main/docker).
 
 ## Usage
-
-**ATTENTION**: every time you need to run this software, you'll have to activate this environment
-
-```bash
-conda activate ultrack
-```
 
 Here is a basic example to get you started:
 
