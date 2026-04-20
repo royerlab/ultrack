@@ -31,9 +31,9 @@ jobs:
           - platform: macos-latest
             python: "3.13"
             backend: pyqt5
-          - platform: windows-latest
-            python: "3.13"
-            backend: pyside6
+              # - platform: windows-latest
+              #   python: "3.13"
+              #   backend: pyside6
 
     steps:
       - name: Cancel Previous Runs
