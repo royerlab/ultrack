@@ -305,7 +305,7 @@ def select_competing_links(
     )
     LOG.info(
         "Found %d competing links out of %d candidates",
-        has_competing_links.sum(),
+        int(has_competing_links.sum()),
         len(target_ids),
     )
 
@@ -357,7 +357,7 @@ def add_links_gt(
 
     LOG.info(
         "Found %d ground-truth links out of %d candidates",
-        gt_links.sum(),
+        int(gt_links.sum()),
         len(gt_links),
     )
 
