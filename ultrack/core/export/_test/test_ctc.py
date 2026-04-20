@@ -49,10 +49,10 @@ def dataframe_forest() -> pd.DataFrame:
 def dataframe_forest_with_time(dataframe_forest: pd.DataFrame) -> pd.DataFrame:
     df = dataframe_forest.copy()
     df["t"] = -1
-    df["t"].values[:10] = np.arange(10)
-    df["t"].values[10:20] = np.arange(10, 20)
-    df["t"].values[20:30] = np.arange(10, 20)
-    df["t"].values[30:40] = np.arange(5, 15)
+    df.iloc[:10, df.columns.get_loc("t")] = np.arange(10)
+    df.iloc[10:20, df.columns.get_loc("t")] = np.arange(10, 20)
+    df.iloc[20:30, df.columns.get_loc("t")] = np.arange(10, 20)
+    df.iloc[30:40, df.columns.get_loc("t")] = np.arange(5, 15)
     return df
 
 
