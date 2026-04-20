@@ -61,16 +61,11 @@ jobs:
           qt: true
           wm: herbstluftwm
 
-      - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install -e ".[test,ml]" "${{ matrix.backend }}"
-
       - name: Run pre-commit
         run: uvx pre-commit run --all-files
 
       - name: Testing
-        run: uv run pytest -v --color=yes --cov=ultrack --cov-report=xml --durations=15 .
+        run: uv run --extra test --extra ml --with "${{ matrix.backend }}" pytest -v --color=yes --cov=ultrack --cov-report=xml --durations=15 .
         env:
           PLATFORM: ${{ matrix.platform }}
           BACKEND: ${{ matrix.backend }}
