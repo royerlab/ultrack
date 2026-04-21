@@ -68,7 +68,7 @@ def create_hierarchies(
         #  This is mainly for lonely cells.
         morphology.remove_small_objects(
             labels,
-            min_size=int(kwargs["min_area"] / kwargs.get("min_area_factor", 4.0)),
+            max_size=int(kwargs["min_area"] / kwargs.get("min_area_factor", 4.0)) - 1,
             out=labels,
         )
 

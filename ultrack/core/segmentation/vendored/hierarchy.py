@@ -154,7 +154,7 @@ class Hierarchy:
             Tuple[hg.Tree, ArrayLike]:
             It returns the watershed hierarchy (tree), its altitudes.
         """
-        image = self.props.intensity_image
+        image = self.props.image_intensity
         if image.dtype == np.float16:
             image = image.astype(np.float32)
 
@@ -353,7 +353,7 @@ def oversegment_components(
     new_labels = np.zeros_like(labels)
     for c in measure.regionprops(labels, boundaries):
         if c.area > max_area:
-            graph, weights = mask_to_graph(c.image, c.intensity_image, anisotropy_pen)
+            graph, weights = mask_to_graph(c.image, c.image_intensity, anisotropy_pen)
             tree, alt = hg.watershed_hierarchy_by_area(graph, weights)
             cut = hg.labelisation_horizontal_cut_from_threshold(tree, alt, max_area)
             cut, _, _ = segmentation.relabel_sequential(cut, offset=offset)

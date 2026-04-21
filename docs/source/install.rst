@@ -1,27 +1,38 @@
 Installation
 ============
 
-The recommended way to install the package is to use the conda (or mamba) package manager.
-
-We also provide a `pixi <https://pixi-docs.com/>`_ configuration for the package, which allows you to setup an environment with all the dependencies in a single command. See the section :ref:`pixi_install` for more details.
-
-If you do not have conda installed, we recommend to install mamba first, which is a faster alternative to conda.
-You can find mamba installation instructions `here <https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html>`_.
-
-Once you have conda (mamba) installed, you should create an environment for ``ultrack`` as follows:
+The simplest way to install ``ultrack`` is with pip:
 
 .. code-block:: bash
 
-    conda create -n ultrack python=3.11 higra gurobi pytorch pyqt -c pytorch -c gurobi -c conda-forge
+    pip install ultrack
 
-Then, you can activate the environment and install ``ultrack``:
+We recommend installing into a virtual environment to avoid package conflicts.
+With Python's built-in ``venv`` on Linux / macOS:
 
 .. code-block:: bash
 
+    python -m venv ultrack-env
+    source ultrack-env/bin/activate
+    pip install ultrack
+
+On Windows:
+
+.. code-block:: bat
+
+    python -m venv ultrack-env
+    ultrack-env\Scripts\activate
+    pip install ultrack
+
+Or with `conda <https://docs.conda.io/projects/conda/en/latest/>`_:
+
+.. code-block:: bash
+
+    conda create -n ultrack python=3.11
     conda activate ultrack
     pip install ultrack
 
-You can check if the installation was successful by running:
+You can verify the installation by running:
 
 .. code-block:: bash
 
@@ -31,40 +42,29 @@ You can check if the installation was successful by running:
 GPU acceleration
 ----------------
 
-Ultrack makes use of GPU for image processing operations.
-You can install the additional packages required for GPU acceleration by running (Linux and Windows only):
+Ultrack uses the GPU for image processing operations.
+Install the additional packages for GPU acceleration (Linux and Windows only):
 
 .. code-block:: bash
 
-    conda install pytorch-cuda -c pytorch -c nvidia
-    conda install cupy -c conda-forge
-    # linux only
-    conda install cucim -c rapidsai
-    # for windows, you can install cucim using pip
-    pip install "git+https://github.com/rapidsai/cucim.git@v22.04.00#egg=cucim&subdirectory=python/cucim"
+    # Install PyTorch with CUDA — pick the right version at https://pytorch.org/get-started/locally/
+    pip install torch --index-url https://download.pytorch.org/whl/cu124
+    pip install cupy-cuda12x
+    # Linux only
+    pip install cucim-cu12
 
-See the `PyTorch website <https://pytorch.org/get-started/locally/>`_ for more information on how to install PyTorch with GPU support.
+See the `PyTorch website <https://pytorch.org/get-started/locally/>`_ for the full list of CUDA builds.
 
 .. _gurobi_install:
 
 Gurobi setup
 ------------
 
-Gurobi is a commercial optimization solver that is used in the tracking module of ``ultrack``.
-While it is not a requirement, it is recommended to install it for the best performance.
+Gurobi is a commercial optimization solver used in the tracking module of ``ultrack``.
+While not required, it is recommended for best performance.
 
-To use it, you need to obtain a license (free for academics) and activate it.
-
-Install gurobi using conda
-``````````````````````````
-
-You can skip this step if you have already installed Gurobi.
-
-In your existing Conda environment, install Gurobi with the following command:
-
-.. code-block:: bash
-
-    conda install -c gurobi gurobi
+``gurobipy`` is installed automatically with ``ultrack`` — no extra install step is needed.
+To use the solver, you must obtain and activate a license (free for academics).
 
 Obtain and activate an academic license
 ```````````````````````````````````````
@@ -72,13 +72,13 @@ Obtain and activate an academic license
 **Obtaining a license:** register for an account using your academic email at `Gurobi's website <https://portal.gurobi.com/iam/login>`_.
 Navigate to the Gurobi's `named academic license page <https://www.gurobi.com/features/academic-named-user-license/>`_, and follow the instructions to get your academic license key.
 
-**Activating license:** In your Conda environment, run:
+**Activating license:** run:
 
 .. code-block:: bash
 
     grbgetkey YOUR_LICENSE_KEY
 
-Replace YOUR_LICENSE_KEY with the key you received. Follow the prompts to complete activation.
+Replace ``YOUR_LICENSE_KEY`` with the key you received. Follow the prompts to complete activation.
 
 Test the installation
 `````````````````````
@@ -92,26 +92,28 @@ Verify Gurobi's installation by running:
 Troubleshooting
 ```````````````
 
-Depending on the operating system, the gurobi library might be missing and you need to install it from `here <https://www.gurobi.com/downloads/gurobi-software>`_.
+Depending on the operating system, the Gurobi library might be missing.
+Download it from `Gurobi's website <https://www.gurobi.com/downloads/gurobi-software>`_.
 
-If you're still having trouble, with the installation we recommend reaching out to us or using the docker image, see  :doc:`Docker instructions <docker/README>`.
+If you're still having trouble, reach out to us or use the Docker image — see :doc:`Docker instructions <docker/README>`.
 
 .. _pixi_install:
 
 Ultrack environment with pixi
 -----------------------------
 
-This is an alternative to the conda installation for environment management, using the `pixi <https://pixi-docs.com/>`_ package manager.
+For contributors and advanced users, we provide a `pixi <https://pixi.sh/>`_ configuration
+that sets up a full development environment in a single command.
 
-First, install ``pixi`` following the instructions for your operating system:
+Install ``pixi`` following the instructions for your operating system:
 
-For Linux and OSX:
+For Linux and macOS:
 
 .. code-block:: bash
 
     curl -fsSL https://pixi.sh/install.sh | bash
 
-For Windows, using PowerShell:
+For Windows (PowerShell):
 
 .. code-block:: powershell
 
