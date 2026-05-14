@@ -251,20 +251,37 @@ def test_compute_layout_anchored(tmp_path: Path) -> None:
     assert (layout.commit_start, layout.commit_end) == (6, 8)
 
 
-def test_compute_layout_mixed_anchoring(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "selected_slice, expect_left, expect_right, expected_window",
+    [
+        # (marked time slice, left_anchored, right_anchored,
+        #  (solver_start, solver_end, commit_start, commit_end))
+        (5, True, False, (6, 10, 6, 9)),  # only left neighbour committed
+        (9, False, True, (4, 8, 5, 8)),  # only right neighbour committed
+    ],
+)
+def test_compute_layout_mixed_anchoring(
+    tmp_path: Path,
+    selected_slice: int,
+    expect_left: bool,
+    expect_right: bool,
+    expected_window: Tuple[int, int, int, int],
+) -> None:
     """Only one side anchored: that side shrinks, the other keeps the overlap."""
     config = _make_minimal_tracking_config(tmp_path, window_size=3, overlap_size=2)
     _seed_nodes(config, n_t=15)
-    _mark_selected(config, time_slices=(5,))  # only left neighbour committed
+    _mark_selected(config, time_slices=(selected_slice,))
 
     tracker = SQLTracking(config)
     layout = tracker._compute_layout(index=2)
-    assert layout.left_anchored is True
-    assert layout.right_anchored is False
-    assert layout.solver_start == 6
-    assert layout.commit_start == 6
-    assert layout.solver_end == 10
-    assert layout.commit_end == 9
+    assert layout.left_anchored is expect_left
+    assert layout.right_anchored is expect_right
+    assert (
+        layout.solver_start,
+        layout.solver_end,
+        layout.commit_start,
+        layout.commit_end,
+    ) == expected_window
 
 
 def test_is_committed_at_out_of_range(tmp_path: Path) -> None:
