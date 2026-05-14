@@ -57,9 +57,10 @@ def _validate_tracking_solution(config: MainConfig):
 
     # every selected node's parent_id must reference another selected node;
     # regression guard for window-boundary phantoms in interleaved solving.
-    selected = nodes[nodes["selected"]]
-    parented = selected[selected["parent_id"] != NO_PARENT]
-    parents_selected = nodes.loc[parented["parent_id"].values, "selected"].values
+    # SQLite stores Boolean as 0/1, so cast before using as a mask.
+    is_selected = nodes["selected"].astype(bool)
+    parented = nodes[is_selected & (nodes["parent_id"] != NO_PARENT)]
+    parents_selected = is_selected.loc[parented["parent_id"].values].values
     assert np.all(parents_selected), (
         f"{(~parents_selected).sum()} selected nodes have parent_id pointing "
         "to a non-selected node (dangling parent)"
