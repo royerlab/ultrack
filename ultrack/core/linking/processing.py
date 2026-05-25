@@ -186,6 +186,9 @@ def compute_spatial_neighbors(
     source_pos = np.asarray([n.centroid for n in source_nodes])
     target_pos = np.asarray([n.centroid for n in target_nodes], dtype=np.float32)
 
+    if source_pos.ndim < 2 or target_pos.ndim < 2:
+        return
+
     n_dim = target_pos.shape[1]
     target_shift = target_shift[:, -n_dim:]  # matching positions dimensions
     target_pos += target_shift
