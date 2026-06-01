@@ -1,4 +1,5 @@
 import logging
+import warnings
 from contextlib import nullcontext
 from typing import Callable, List, Optional, Sequence
 
@@ -185,6 +186,27 @@ def compute_spatial_neighbors(
 
     source_pos = np.asarray([n.centroid for n in source_nodes])
     target_pos = np.asarray([n.centroid for n in target_nodes], dtype=np.float32)
+
+    # Guard against empty source/target frames (issue #274). `np.asarray([])`
+    # returns a 1D array of shape (0,), so accessing `shape[1]` would raise
+    # IndexError. Warn the user pinpointing which side and t-frame is empty
+    # so they can inspect their segmentation, then skip linking for this pair.
+    if source_pos.ndim < 2:
+        warnings.warn(
+            f"No segments found at source t={time}; "
+            f"skipping linking to t={time + 1}.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return
+    if target_pos.ndim < 2:
+        warnings.warn(
+            f"No segments found at target t={time + 1}; "
+            f"skipping linking from t={time}.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return
 
     n_dim = target_pos.shape[1]
     target_shift = target_shift[:, -n_dim:]  # matching positions dimensions
