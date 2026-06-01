@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Tuple
 
 import numpy as np
@@ -9,8 +10,6 @@ from ultrack import link
 from ultrack.config import MainConfig
 from ultrack.config.config import LinkingConfig
 from ultrack.core.database import LinkDB, NodeDB
-from types import SimpleNamespace
-
 from ultrack.core.linking.processing import compute_spatial_neighbors
 
 
