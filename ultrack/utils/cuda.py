@@ -19,6 +19,7 @@ try:
 
     if not cp.cuda.is_available():
         cp = None
+        xp = np
         LOG.info("cupy found but cuda is not available.")
     else:
         from cupy.cuda.memory import malloc_managed
