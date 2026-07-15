@@ -47,7 +47,7 @@ pip install ultrack
 ```
 
 We recommend installing into a virtual environment to avoid package conflicts.
-`gurobi` is optional but recommended for best performance; see the [installation guide](https://ultrack.readthedocs.io/en/latest/install.html) for details on Gurobi setup and GPU acceleration.
+`gurobi` is optional but recommended for best performance; see the [installation guide](https://royerlab.github.io/ultrack/install.html) for details on Gurobi setup and GPU acceleration.
 
 Optionally, we provide multiple Docker images. For instructions, see the [docker folder](https://github.com/royerlab/ultrack/tree/main/docker).
 
