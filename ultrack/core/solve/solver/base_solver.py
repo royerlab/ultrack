@@ -30,6 +30,8 @@ class BaseSolver(ABC):
         is_last_t: ArrayLike,
         is_border: ArrayLike = False,
         node_prob: Optional[ArrayLike] = None,
+        free_appear: bool = True,
+        free_disappear: bool = True,
     ) -> None:
         """Add nodes variables solver.
 
@@ -46,6 +48,15 @@ class BaseSolver(ABC):
             Default: False.
         node_prob: Optional[ArrayLike]
             If provided assigns a node probability score to the objective function.
+        free_appear : bool
+            When False, the ``is_first_t`` flag is ignored and appearance is
+            penalised even at the first slice of the solver window. Use this for
+            batches whose start slice is anchored to a neighbouring batch's
+            already-committed selection (interior of the experiment).
+            Default: True.
+        free_disappear : bool
+            Same as ``free_appear`` but for ``is_last_t`` and disappearance.
+            Default: True.
         """
 
     @abstractmethod

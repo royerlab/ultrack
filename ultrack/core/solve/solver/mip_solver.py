@@ -87,6 +87,8 @@ class MIPSolver(BaseSolver):
         is_last_t: ArrayLike,
         is_border: ArrayLike = False,
         nodes_prob: Optional[ArrayLike] = None,
+        free_appear: bool = True,
+        free_disappear: bool = True,
     ) -> None:
         """Add nodes slack variables to gurobi model.
 
@@ -103,6 +105,15 @@ class MIPSolver(BaseSolver):
             Default: False
         nodes_prob: Optional[ArrayLike]
             If provided assigns a node probability score to the objective function.
+        free_appear : bool
+            When False, appearance is penalised even at slices marked
+            ``is_first_t``. Use for batches whose start slice is anchored to a
+            neighbouring batch's already-committed selection so the solver
+            cannot freely spawn tracks at that interior boundary.
+            Default: True.
+        free_disappear : bool
+            Same as ``free_appear`` but for ``is_last_t`` and disappearance.
+            Default: True.
         """
         if self._nodes is not None:
             raise ValueError("Nodes have already been added.")
@@ -113,6 +124,13 @@ class MIPSolver(BaseSolver):
             is_last_t=is_last_t,
             nodes_prob=nodes_prob,
         )
+
+        is_first_t = np.asarray(is_first_t, dtype=bool)
+        is_last_t = np.asarray(is_last_t, dtype=bool)
+        if not free_appear:
+            is_first_t = np.zeros_like(is_first_t, dtype=bool)
+        if not free_disappear:
+            is_last_t = np.zeros_like(is_last_t, dtype=bool)
 
         LOG.info("# %s nodes at starting `t`.", np.sum(is_first_t))
         LOG.info("# %s nodes at last `t`.", np.sum(is_last_t))
