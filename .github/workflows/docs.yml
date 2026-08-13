@@ -14,7 +14,8 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  # Let the active deployment finish during the environment's wait period.
+  cancel-in-progress: false
 
 jobs:
   build:
