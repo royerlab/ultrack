@@ -6,8 +6,23 @@ import pytest
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
-from ultrack.utils.array import array_apply
+from ultrack.utils.array import array_apply, large_chunk_size
 from ultrack.utils.ultrack_array import UltrackArray
+
+
+@pytest.mark.parametrize(
+    "shape,dtype,max_size,expected",
+    [
+        ((100, 40_000), np.uint8, 2_147_483_647, (1, 32_768)),
+        ((10, 100, 40_000), np.uint8, 2_147_483_647, (1, 100, 32_768)),
+        ((2, 50, 100, 40_000), np.uint16, 65_536_000, (1, 10, 100, 32_768)),
+    ],
+)
+def test_large_chunk_size_returns_python_ints(shape, dtype, max_size, expected):
+    chunks = large_chunk_size(shape, dtype, max_size)
+
+    assert chunks == expected
+    assert all(type(chunk) is int for chunk in chunks)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
