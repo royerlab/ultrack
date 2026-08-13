@@ -55,7 +55,7 @@ def large_chunk_size(
         depth = min(max_size // (dtype.itemsize * np.prod(plane_shape)), shape[1])
         chunks = (1,) * (len(shape) - 3) + (depth, *plane_shape)
 
-    return chunks
+    return tuple(int(chunk) for chunk in chunks)
 
 
 def validate_and_overwrite_path(
