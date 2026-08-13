@@ -421,12 +421,10 @@ class SQLTracking:
 
         solver.add_nodes(
             df["id"],
-            df["t"] == start_time,
-            df["t"] == end_time,
+            np.logical_and(df["t"] == start_time, not layout.left_anchored),
+            np.logical_and(df["t"] == end_time, not layout.right_anchored),
             is_border=is_border,
             nodes_prob=nodes_prob,
-            free_appear=not layout.left_anchored,
-            free_disappear=not layout.right_anchored,
         )
 
     def _add_edges(self, solver: BaseSolver, layout: _BatchLayout) -> None:
