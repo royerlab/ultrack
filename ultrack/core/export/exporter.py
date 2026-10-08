@@ -16,7 +16,10 @@ LOG = logging.getLogger(__name__)
 
 
 def export_tracks_by_extension(
-    config: MainConfig, filename: Union[str, Path], overwrite: bool = False
+    config: MainConfig,
+    filename: Union[str, Path],
+    overwrite: bool = False,
+    **kwargs,
 ) -> None:
     """
     Export tracks to a file given the file extension.
@@ -38,6 +41,9 @@ def export_tracks_by_extension(
         The configuration object.
     overwrite : bool, optional
         Whether to overwrite the file if it already exists, by default False.
+    **kwargs
+        Additional keyword arguments forwarded to `to_geff` (e.g. `zarr_format`,
+        `segmentation_path`, `scale`). Only supported for `.geff` files.
 
     See Also
     --------
@@ -59,6 +65,12 @@ def export_tracks_by_extension(
         )
 
     file_ext = filename.suffix
+    if kwargs and file_ext.lower() != ".geff":
+        raise ValueError(
+            f"Additional keyword arguments {list(kwargs)} are only supported for "
+            f"`.geff` files. Got {file_ext}."
+        )
+
     if file_ext.lower() == ".xml":
         to_trackmate(config, filename, overwrite=True)
     elif file_ext.lower() == ".csv":
@@ -68,7 +80,7 @@ def export_tracks_by_extension(
         df, _ = to_tracks_layer(config)
         tracks_to_zarr(config, df, filename, overwrite=True)
     elif file_ext.lower() == ".geff":
-        to_geff(config, filename, overwrite=overwrite)
+        to_geff(config, filename, overwrite=overwrite, **kwargs)
     elif file_ext.lower() == ".parquet":
         df, _ = to_tracks_layer(config)
         df.to_parquet(filename)

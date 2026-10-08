@@ -1,6 +1,7 @@
 import functools
 from enum import Flag, auto
-from typing import Dict, Optional, Tuple
+from pathlib import Path
+from typing import Dict, Literal, Optional, Sequence, Tuple, Union
 
 import networkx as nx
 import pandas as pd
@@ -156,9 +157,34 @@ class Tracker:
         to_ctc(config=self.config, *args, **kwargs)
 
     @functools.wraps(to_geff)
-    def to_geff(self, filename: str, overwrite: bool = False) -> None:
+    def to_geff(
+        self,
+        filename: Union[str, Path],
+        overwrite: bool = False,
+        *,
+        zarr_format: Literal[2, 3] = 2,
+        include_masks: bool = True,
+        include_overlaps: bool = True,
+        segmentation_path: Optional[str] = None,
+        scale: Optional[Sequence[float]] = None,
+        spatial_unit: Optional[str] = None,
+        time_scale: Optional[float] = None,
+        time_unit: Optional[str] = None,
+    ) -> None:
         self._assert_solved()
-        to_geff(self.config, filename, overwrite=overwrite)
+        to_geff(
+            self.config,
+            filename,
+            overwrite=overwrite,
+            zarr_format=zarr_format,
+            include_masks=include_masks,
+            include_overlaps=include_overlaps,
+            segmentation_path=segmentation_path,
+            scale=scale,
+            spatial_unit=spatial_unit,
+            time_scale=time_scale,
+            time_unit=time_unit,
+        )
 
     @functools.wraps(to_tracks_layer)
     def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
@@ -167,9 +193,11 @@ class Tracker:
         return tracks_df, graph
 
     @functools.wraps(to_tracks_layer)
-    def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
+    def export_by_extension(
+        self, filename: str, overwrite: bool = False, **kwargs
+    ) -> None:
         self._assert_solved()
-        export_tracks_by_extension(self.config, filename, overwrite=overwrite)
+        export_tracks_by_extension(self.config, filename, overwrite=overwrite, **kwargs)
 
     @functools.wraps(get_nodes_features)
     def get_nodes_features(self, **kwargs) -> pd.DataFrame:
