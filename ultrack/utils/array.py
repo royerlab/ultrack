@@ -3,6 +3,7 @@ import logging
 import shutil
 import tempfile
 import warnings
+import weakref
 from pathlib import Path
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type, Union
 
@@ -182,7 +183,9 @@ def create_zarr(
     dtype : np.dtype
         Data type of the array.
     store_or_path : Optional[StoreLike], optional
-        Path to store the array, if None a zarr.storage.MemoryStore is used, by default None
+        Path to store the array. If None, a ``default_store_type`` store is used when
+        given, otherwise a temporary directory that is deleted together with the
+        returned array, by default None
     overwrite : bool, optional
         Overwrite existing file, by default False
     chunks : Optional[Tuple[int]], optional
@@ -196,10 +199,11 @@ def create_zarr(
     if "path" in kwargs:
         raise ValueError("`path` is not a valid argument, use `store_or_path` instead.")
 
+    tmp_dir = None
     if store_or_path is None:
         if default_store_type is None:
-            tmp_dir = tempfile.TemporaryDirectory()
-            store = zarr.storage.LocalStore(root=tmp_dir.name)
+            tmp_dir = tempfile.mkdtemp()
+            store = zarr.storage.LocalStore(root=tmp_dir)
         else:
             store = default_store_type()
 
@@ -217,7 +221,14 @@ def create_zarr(
     if chunks is None:
         chunks = large_chunk_size(shape, dtype=dtype)
 
-    return zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
+    array = zarr.zeros(shape, dtype=dtype, store=store, chunks=chunks, **kwargs)
+    if tmp_dir is not None:
+        # Tie the temporary directory's lifetime to the array. A TemporaryDirectory
+        # held only by this function was cleaned up on return, deleting the array's
+        # metadata; the first chunk write then recreated the directory, which was
+        # never removed.
+        weakref.finalize(array, shutil.rmtree, tmp_dir, ignore_errors=True)
+    return array
 
 
 def make_array_writeable(array: np.ndarray) -> np.ndarray:
