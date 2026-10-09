@@ -186,6 +186,13 @@ def test_geff_tracks_and_axes(
     )
     assert metadata.extra["ultrack"]["overlaps"]["path"] == "overlaps/ids"
 
+    # units of the coordinate properties
+    assert metadata.node_props_metadata["t"].unit == "frame"
+    for ax in spatial_axes:
+        assert metadata.node_props_metadata[ax].unit == "pixel"
+    assert metadata.node_props_metadata["bbox"].unit == "pixel"
+    assert metadata.node_props_metadata["mask"].varlength
+
     # node properties
     node_attrs = graph.nodes[next(iter(graph.nodes))]
     for prop in ("t", *spatial_axes, "track_id", "parent_track_id", "lineage_id"):
@@ -337,7 +344,28 @@ def test_geff_scale_validation(
     output_file = tmp_path / "tracks.geff.zarr"
     with pytest.raises(ValueError, match="one value per spatial axis"):
         to_geff(tracked_database_mock_data, output_file, scale=[1.0, 1.0])
-    with pytest.raises(ValueError, match="`scale` must be provided"):
+    # `scaled_unit` without `scale` is rejected by the geff `Axis` validator
+    with pytest.raises(ValueError, match="scaled_unit"):
         to_geff(tracked_database_mock_data, output_file, spatial_unit="micrometer")
-    with pytest.raises(ValueError, match="`time_scale` must be provided"):
+    with pytest.raises(ValueError, match="scaled_unit"):
         to_geff(tracked_database_mock_data, output_file, time_unit="minute")
+
+
+def test_geff_scale_from_metadata(
+    tracked_database_mock_data: MainConfig, tmp_path: Path
+) -> None:
+    """Test that `scale` defaults to the data config metadata (t, z, y, x) scale."""
+    config = tracked_database_mock_data
+    config.data_config.metadata_add({"scale": [1.0, 0.5, 0.25, 0.125]})
+
+    output_file = tmp_path / "tracks.geff.zarr"
+    to_geff(config, output_file)
+    _, metadata = _read_validated(output_file)
+
+    assert [ax.scale for ax in metadata.axes] == [None, 0.5, 0.25, 0.125]
+    assert all(ax.scaled_unit is None for ax in metadata.axes)
+
+    # an explicit `scale` takes precedence
+    to_geff(config, output_file, overwrite=True, scale=[2.0, 2.0, 2.0])
+    _, metadata = _read_validated(output_file)
+    assert [ax.scale for ax in metadata.axes] == [None, 2.0, 2.0, 2.0]

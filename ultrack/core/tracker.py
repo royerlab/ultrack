@@ -1,7 +1,6 @@
 import functools
 from enum import Flag, auto
-from pathlib import Path
-from typing import Dict, Literal, Optional, Sequence, Tuple, Union
+from typing import Dict, Optional, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -157,34 +156,9 @@ class Tracker:
         to_ctc(config=self.config, *args, **kwargs)
 
     @functools.wraps(to_geff)
-    def to_geff(
-        self,
-        filename: Union[str, Path],
-        overwrite: bool = False,
-        *,
-        zarr_format: Literal[2, 3] = 2,
-        include_masks: bool = True,
-        include_overlaps: bool = True,
-        segmentation_path: Optional[str] = None,
-        scale: Optional[Sequence[float]] = None,
-        spatial_unit: Optional[str] = None,
-        time_scale: Optional[float] = None,
-        time_unit: Optional[str] = None,
-    ) -> None:
+    def to_geff(self, *args, **kwargs) -> None:
         self._assert_solved()
-        to_geff(
-            self.config,
-            filename,
-            overwrite=overwrite,
-            zarr_format=zarr_format,
-            include_masks=include_masks,
-            include_overlaps=include_overlaps,
-            segmentation_path=segmentation_path,
-            scale=scale,
-            spatial_unit=spatial_unit,
-            time_scale=time_scale,
-            time_unit=time_unit,
-        )
+        to_geff(self.config, *args, **kwargs)
 
     @functools.wraps(to_tracks_layer)
     def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
@@ -192,12 +166,10 @@ class Tracker:
         tracks_df, graph = to_tracks_layer(self.config, *args, **kwargs)
         return tracks_df, graph
 
-    @functools.wraps(to_tracks_layer)
-    def export_by_extension(
-        self, filename: str, overwrite: bool = False, **kwargs
-    ) -> None:
+    @functools.wraps(export_tracks_by_extension)
+    def export_by_extension(self, *args, **kwargs) -> None:
         self._assert_solved()
-        export_tracks_by_extension(self.config, filename, overwrite=overwrite, **kwargs)
+        export_tracks_by_extension(self.config, *args, **kwargs)
 
     @functools.wraps(get_nodes_features)
     def get_nodes_features(self, **kwargs) -> pd.DataFrame:

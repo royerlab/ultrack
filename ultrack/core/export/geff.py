@@ -9,15 +9,30 @@ import pandas as pd
 import sqlalchemy as sqla
 import zarr
 from geff.core_io import construct_var_len_props, write_arrays
-from geff_spec import Axis, PropMetadata
+from geff_spec import Axis, PropMetadata, RelatedObject
+from geff_spec.utils import axes_from_lists, create_props_metadata
 from sqlalchemy.orm import Session
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NO_PARENT, LinkDB, NodeDB, OverlapDB
-from ultrack.core.export.utils import solution_dataframe_from_sql
-from ultrack.tracks.graph import add_track_ids_to_tracks_df
+from ultrack.tracks.graph import (
+    add_track_ids_to_tracks_df,
+    get_subtree,
+    tracks_df_forest,
+)
 
 OVERLAPS_PATH = "overlaps/ids"
+
+PROP_UNITS = {
+    "t": "frame",
+    "z": "pixel",
+    "y": "pixel",
+    "x": "pixel",
+    "z_shift": "pixel",
+    "y_shift": "pixel",
+    "x_shift": "pixel",
+    "bbox": "pixel",
+}
 
 PROP_DESCRIPTIONS = {
     "track_id": (
@@ -36,17 +51,6 @@ PROP_DESCRIPTIONS = {
 }
 
 
-# Helper function to convert pandas/numpy dtypes to string dtype names
-def dtype_to_str(dtype) -> str:
-    """Convert pandas/numpy dtype to string dtype name for PropMetadata."""
-    # Convert to numpy dtype first to get consistent .name attribute
-    np_dtype = np.dtype(dtype)
-    dtype_name = np_dtype.name
-
-    # Most dtypes work directly (int64, float64, bool, etc.)
-    return dtype_name
-
-
 def _to_sqlalchemy_url(database_path: Union[str, Path]) -> str:
     """Converts a database path to a SQLAlchemy URL, assuming SQLite for file paths."""
     database_path_str = str(database_path)
@@ -57,94 +61,40 @@ def _to_sqlalchemy_url(database_path: Union[str, Path]) -> str:
     return database_path_str
 
 
-def _track_ids_dataframe(database_path: str) -> pd.DataFrame:
-    """Computes `track_id`, `parent_track_id` and `lineage_id` of the solution nodes.
-
-    It uses the same code path as `to_tracks_layer` so the track ids are identical
-    to the ones from `to_tracks_layer` and the labels painted by `tracks_to_zarr`.
-
-    Parameters
-    ----------
-    database_path : str
-        SQLAlchemy database URL.
-
-    Returns
-    -------
-    pd.DataFrame
-        Dataframe indexed by node id with `track_id`, `parent_track_id` and
-        `lineage_id` columns.
-    """
-    df = solution_dataframe_from_sql(database_path)
-    df = add_track_ids_to_tracks_df(df)
-
-    track_parent = (
-        df[["track_id", "parent_track_id"]]
-        .drop_duplicates("track_id")
-        .set_index("track_id")["parent_track_id"]
-        .to_dict()
-    )
-
-    lineage: Dict[int, int] = {}
-    for track_id in track_parent:
-        path = []
-        current = track_id
-        while current not in lineage and track_parent[current] != NO_PARENT:
-            path.append(current)
-            current = track_parent[current]
-        root = lineage.get(current, current)
-        lineage[current] = root
-        for t in path:
-            lineage[t] = root
-
-    df["lineage_id"] = df["track_id"].map(lineage)
-
-    return df[["track_id", "parent_track_id", "lineage_id"]].astype(np.int64)
-
-
-def _make_axes(
+def _axes(
     spatial_axes: Sequence[str],
     scale: Optional[Sequence[float]],
     spatial_unit: Optional[str],
     time_scale: Optional[float],
     time_unit: Optional[str],
 ) -> List[Axis]:
-    """Creates the geff axes metadata.
+    """Creates the geff axes, `t` followed by `spatial_axes`.
 
-    Coordinates are stored in pixels / frames, as ultrack stores them,
-    `scale` and `scaled_unit` describe their conversion to physical units.
+    Coordinates are stored in frames / pixels, as ultrack stores them, `scale` and
+    `scaled_unit` describe their conversion to physical units.
     """
-    if time_unit is not None and time_scale is None:
-        raise ValueError("`time_scale` must be provided when `time_unit` is set.")
+    n_spatial = len(spatial_axes)
 
-    if spatial_unit is not None and scale is None:
-        raise ValueError("`scale` must be provided when `spatial_unit` is set.")
-
-    if scale is not None and len(scale) != len(spatial_axes):
-        raise ValueError(
-            f"`scale` must have one value per spatial axis {tuple(spatial_axes)}. "
-            f"Got {tuple(scale)}."
-        )
-
-    axes = [
-        Axis(
-            name="t",
-            type="time",
-            unit="frame",
-            scale=None if time_scale is None else float(time_scale),
-            scaled_unit=time_unit,
-        )
-    ]
-    for i, name in enumerate(spatial_axes):
-        axes.append(
-            Axis(
-                name=name,
-                type="space",
-                unit="pixel",
-                scale=None if scale is None else float(scale[i]),
-                scaled_unit=spatial_unit,
+    if scale is not None:
+        if len(scale) == n_spatial + 1:
+            # (t, (z), y, x) scale, as stored by the CLI in the data config metadata
+            scale = scale[1:]
+        elif len(scale) != n_spatial:
+            raise ValueError(
+                f"`scale` must have one value per spatial axis {tuple(spatial_axes)}. "
+                f"Got {tuple(scale)}."
             )
-        )
-    return axes
+        scale = [float(s) for s in scale]
+    else:
+        scale = [None] * n_spatial
+
+    return axes_from_lists(
+        axis_names=["t", *spatial_axes],
+        axis_types=["time"] + ["space"] * n_spatial,
+        axis_units=["frame"] + ["pixel"] * n_spatial,
+        axis_scales=[None if time_scale is None else float(time_scale), *scale],
+        scaled_units=[time_unit] + [spatial_unit] * n_spatial,
+    )
 
 
 def to_geff_from_database(
@@ -202,11 +152,13 @@ def to_geff_from_database(
         by default True.
     segmentation_path : str, optional
         Path of the segmentation labels exported by `to_zarr` / `tracks_to_zarr`,
-        relative to the geff group (e.g. "../labels"). When provided, it is recorded
-        as a `labels` related object linked through the `seg_id` node property.
+        relative to the geff group's zarr attributes (e.g. "../labels").
+        When provided, it is recorded as a `labels` related object linked through
+        the `seg_id` node property.
     scale : Sequence[float], optional
         Physical size of a pixel for each spatial axis, (z, y, x) for 3D data and
-        (y, x) for 2D data.
+        (y, x) for 2D data. A leading time entry, as stored by the CLI in the data
+        config metadata, is ignored.
     spatial_unit : str, optional
         Physical unit of `scale` (e.g. "micrometer"). Requires `scale`.
     time_scale : float, optional
@@ -354,59 +306,49 @@ def to_geff_from_database(
             f"Expected 2D or 3D segments. Found bounding box {all_bboxes[0]}."
         )
 
-    axes = _make_axes(spatial_axes, scale, spatial_unit, time_scale, time_unit)
+    axes = _axes(spatial_axes, scale, spatial_unit, time_scale, time_unit)
 
-    # Tracks information, computed with the same code path as `to_tracks_layer`
-    tracks_df = _track_ids_dataframe(database_path_str)
-    node_df = node_df.join(tracks_df, how="left")
-    if node_df["track_id"].isna().any():
-        raise RuntimeError("Some solution nodes were not assigned a `track_id`.")
-    for c in tracks_df.columns:
-        node_df[c] = node_df[c].astype(np.int64)
+    # Tracks information, same code path as `to_tracks_layer` so the ids are identical
+    add_track_ids_to_tracks_df(node_df)
+    forest = tracks_df_forest(node_df)
+    roots = forest.pop(NO_PARENT)
+    lineage = {t: r for r in roots for t in get_subtree(forest, r)}
+    node_df["lineage_id"] = node_df["track_id"].map(lineage).astype(np.int64)
     node_df["seg_id"] = node_df["track_id"]
 
-    # Create node properties metadata
-    node_props_metadata = {}
-    for c in node_df.columns:
-        node_props_metadata[c] = PropMetadata(
-            identifier=c,
-            dtype=dtype_to_str(node_df[c].dtype),
-            description=PROP_DESCRIPTIONS.get(c),
-        )
-    node_props_metadata["bbox"] = PropMetadata(
-        identifier="bbox",
-        dtype="int64",
-        unit="pixel",
-        description=PROP_DESCRIPTIONS["bbox"],
-    )
+    node_props = {
+        c: {"values": node_df[c].to_numpy(), "missing": None} for c in node_df.columns
+    }
+    node_props["bbox"] = {"values": np.stack(all_bboxes), "missing": None}
     if include_masks:
-        node_props_metadata["mask"] = PropMetadata(
-            identifier="mask",
-            dtype="bool",
-            varlength=True,
-            description=PROP_DESCRIPTIONS["mask"],
-        )
+        node_props["mask"] = construct_var_len_props(all_masks)
 
-    # Prepare edge IDs and properties
+    node_props_metadata: Dict[str, PropMetadata] = {
+        name: create_props_metadata(
+            name,
+            prop,
+            unit=PROP_UNITS.get(name),
+            description=PROP_DESCRIPTIONS.get(name),
+        )
+        for name, prop in node_props.items()
+    }
+
     edge_ids = np.column_stack(
         [
-            edge_df["source_id"].to_numpy(dtype=np.uint64),
-            edge_df["target_id"].to_numpy(dtype=np.uint64),
+            edge_df.pop("source_id").to_numpy(dtype=np.uint64),
+            edge_df.pop("target_id").to_numpy(dtype=np.uint64),
         ]
-    ).reshape(-1, 2)
-    edge_df = edge_df.drop(columns=["source_id", "target_id"])
-
-    # Create edge properties metadata
-    edge_props_metadata = {}
-    for c in edge_df.columns:
-        edge_props_metadata[c] = PropMetadata(
-            identifier=c, dtype=dtype_to_str(edge_df[c].dtype)
-        )
+    )
+    edge_props = {
+        c: {"values": edge_df[c].to_numpy(), "missing": None} for c in edge_df.columns
+    }
 
     related_objects = None
     if segmentation_path is not None:
         related_objects = [
-            {"type": "labels", "path": str(segmentation_path), "node_prop": "seg_id"}
+            RelatedObject(
+                type="labels", path=str(segmentation_path), node_prop="seg_id"
+            )
         ]
 
     extra = {}
@@ -427,24 +369,11 @@ def to_geff_from_database(
         directed=True,
         axes=axes,
         node_props_metadata=node_props_metadata,
-        edge_props_metadata=edge_props_metadata,
+        edge_props_metadata={},  # inferred from `edge_props` by `write_arrays`
         track_node_props={"tracklet": "track_id", "lineage": "lineage_id"},
         related_objects=related_objects,
         extra=extra,
     )
-
-    # Prepare node properties (using separately stored masks and bboxes)
-    node_props = {}
-    for c in node_df.columns:
-        node_props[c] = {"values": node_df[c].to_numpy(), "missing": None}
-
-    node_props["bbox"] = {"values": np.stack(all_bboxes), "missing": None}
-    if include_masks:
-        node_props["mask"] = construct_var_len_props(all_masks)
-
-    edge_props = {}
-    for c in edge_df.columns:
-        edge_props[c] = {"values": edge_df[c].to_numpy(), "missing": None}
 
     write_arrays(
         filename,
@@ -458,14 +387,11 @@ def to_geff_from_database(
 
     if include_overlaps:
         # custom element to geff, described in metadata `extra["ultrack"]`
-        store = zarr.open_group(filename, mode="a", zarr_format=zarr_format)
-        store.create_array(
-            OVERLAPS_PATH,
-            data=overlap_df[["ancestor_id", "node_id"]]
-            .to_numpy(dtype=np.uint64)
-            .reshape(-1, 2),
+        group = zarr.open_group(filename, mode="a", zarr_format=zarr_format)
+        group[OVERLAPS_PATH] = overlap_df[["ancestor_id", "node_id"]].to_numpy(
+            dtype=np.uint64
         )
-        store.create_group("overlaps/props")
+        group.create_group("overlaps/props")
 
 
 def to_geff(
@@ -503,9 +429,11 @@ def to_geff(
         Whether to store the segmentation hypotheses overlaps, by default True.
     segmentation_path : str, optional
         Path of the segmentation labels exported by `to_zarr` / `tracks_to_zarr`,
-        relative to the geff group, linked through the `seg_id` node property.
+        relative to the geff group's zarr attributes, linked through the `seg_id`
+        node property.
     scale : Sequence[float], optional
         Physical pixel size for each spatial axis, (z, y, x) or (y, x).
+        By default, the `scale` of the data config metadata, if present.
     spatial_unit : str, optional
         Physical unit of `scale` (e.g. "micrometer").
     time_scale : float, optional
@@ -518,6 +446,9 @@ def to_geff(
     FileExistsError
         If the file already exists and overwrite is False.
     """
+    if scale is None:
+        scale = config.data_config.metadata.get("scale")
+
     to_geff_from_database(
         database_path=config.data_config.database_path,
         filename=filename,
