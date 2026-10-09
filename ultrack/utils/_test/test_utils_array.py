@@ -1,12 +1,15 @@
+import gc
 import operator
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 import pytest
+import zarr
 
 from ultrack.config import MainConfig
 from ultrack.core.database import NodeDB
-from ultrack.utils.array import array_apply, large_chunk_size
+from ultrack.utils.array import array_apply, create_zarr, large_chunk_size
 from ultrack.utils.ultrack_array import UltrackArray
 
 
@@ -130,3 +133,18 @@ def test_ultrack_array_set_filter(segmentation_database_mock_data: MainConfig):
     assert isinstance(new_result, np.ndarray)
 
     assert np.any(original_result != new_result)
+
+
+def test_create_zarr_temporary_store_lives_with_the_array() -> None:
+    array = create_zarr((4, 8, 8), np.uint16)
+    root = Path(array.store.root)
+
+    # The store, metadata included, exists for as long as the array does.
+    reopened = zarr.open_array(root, mode="r")
+    assert reopened.shape == (4, 8, 8)
+    array[:] = 1
+    np.testing.assert_array_equal(zarr.open_array(root, mode="r")[:], 1)
+
+    del array, reopened
+    gc.collect()
+    assert not root.exists()
