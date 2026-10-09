@@ -156,9 +156,9 @@ class Tracker:
         to_ctc(config=self.config, *args, **kwargs)
 
     @functools.wraps(to_geff)
-    def to_geff(self, filename: str, overwrite: bool = False) -> None:
+    def to_geff(self, *args, **kwargs) -> None:
         self._assert_solved()
-        to_geff(self.config, filename, overwrite=overwrite)
+        to_geff(self.config, *args, **kwargs)
 
     @functools.wraps(to_tracks_layer)
     def to_tracks_layer(self, *args, **kwargs) -> Tuple[pd.DataFrame, Dict]:
@@ -166,10 +166,10 @@ class Tracker:
         tracks_df, graph = to_tracks_layer(self.config, *args, **kwargs)
         return tracks_df, graph
 
-    @functools.wraps(to_tracks_layer)
-    def export_by_extension(self, filename: str, overwrite: bool = False) -> None:
+    @functools.wraps(export_tracks_by_extension)
+    def export_by_extension(self, *args, **kwargs) -> None:
         self._assert_solved()
-        export_tracks_by_extension(self.config, filename, overwrite=overwrite)
+        export_tracks_by_extension(self.config, *args, **kwargs)
 
     @functools.wraps(get_nodes_features)
     def get_nodes_features(self, **kwargs) -> pd.DataFrame:

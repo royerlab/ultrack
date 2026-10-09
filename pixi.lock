@@ -435,8 +435,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/00/20/1aaa380bef966598ecdb0c0ef8daea8d3451acaaa0abd9c29b8eede67871/blosc2-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/86/9cf33e48356fdf5001dbee4ab3ee04068a2f8c59bd7fffb452531bcb1b34/gurobipy-12.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -871,8 +871,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/00/20/1aaa380bef966598ecdb0c0ef8daea8d3451acaaa0abd9c29b8eede67871/blosc2-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/86/9cf33e48356fdf5001dbee4ab3ee04068a2f8c59bd7fffb452531bcb1b34/gurobipy-12.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -1259,8 +1259,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.6-h915ae27_0.conda
       - pypi: https://files.pythonhosted.org/packages/0d/b8/e4fcf10610de0a69fca8a55a4b7a636386a30f376a48101b305645dab696/blosc2-3.0.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/74/cfa692c327b44bf7c2c5250dbcfe66a19cc9ec1dd6524de8dbbaeaff311c/gurobipy-12.0.1-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -1631,8 +1631,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: https://files.pythonhosted.org/packages/c8/09/a2bff6e1b87c0addc93e963533cb46834512f9be435a424cd569927e8f0c/blosc2-3.0.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/0f/de29b131d3dce78b5f6b37919dd97f722adb23daa1057d91177c02e95389/gurobipy-12.0.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -2067,8 +2067,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/00/20/1aaa380bef966598ecdb0c0ef8daea8d3451acaaa0abd9c29b8eede67871/blosc2-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/86/9cf33e48356fdf5001dbee4ab3ee04068a2f8c59bd7fffb452531bcb1b34/gurobipy-12.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -2455,8 +2455,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.6-h915ae27_0.conda
       - pypi: https://files.pythonhosted.org/packages/0d/b8/e4fcf10610de0a69fca8a55a4b7a636386a30f376a48101b305645dab696/blosc2-3.0.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/74/cfa692c327b44bf7c2c5250dbcfe66a19cc9ec1dd6524de8dbbaeaff311c/gurobipy-12.0.1-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -2827,8 +2827,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: https://files.pythonhosted.org/packages/c8/09/a2bff6e1b87c0addc93e963533cb46834512f9be435a424cd569927e8f0c/blosc2-3.0.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/0f/de29b131d3dce78b5f6b37919dd97f722adb23daa1057d91177c02e95389/gurobipy-12.0.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -3327,8 +3327,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/00/20/1aaa380bef966598ecdb0c0ef8daea8d3451acaaa0abd9c29b8eede67871/blosc2-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/86/9cf33e48356fdf5001dbee4ab3ee04068a2f8c59bd7fffb452531bcb1b34/gurobipy-12.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -3753,8 +3753,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.6-h915ae27_0.conda
       - pypi: https://files.pythonhosted.org/packages/0d/b8/e4fcf10610de0a69fca8a55a4b7a636386a30f376a48101b305645dab696/blosc2-3.0.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/74/cfa692c327b44bf7c2c5250dbcfe66a19cc9ec1dd6524de8dbbaeaff311c/gurobipy-12.0.1-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -4156,8 +4156,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: https://files.pythonhosted.org/packages/c8/09/a2bff6e1b87c0addc93e963533cb46834512f9be435a424cd569927e8f0c/blosc2-3.0.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/51/ac/e5d886f892666d2d1e5cb8c1a41146e1d79ae8896477b1153a21711d3b44/fasteners-0.20-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/0f/de29b131d3dce78b5f6b37919dd97f722adb23daa1057d91177c02e95389/gurobipy-12.0.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c7/d3/39e276363e9afb5c80336addf903a133b458dcc130a4d0f5e60bc9e881e7/mip-1.16rc0-py3-none-any.whl
@@ -7115,15 +7115,16 @@ packages:
   purls: []
   size: 516815
   timestamp: 1715783154558
-- pypi: https://files.pythonhosted.org/packages/b5/4f/e0885a8b6464ba2c83de922f700fdd52b07f94ce0a4d08e122f3b8d3abda/geff-1.1.1.1.1-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/98/ae/dcc06a6dc25d52988ab8eb0bf2da34ed5adc7cc41c5cad0dd085797918b2/geff-1.3.1.1.3-py3-none-any.whl
   name: geff
-  version: 1.1.1.1.1
-  sha256: 14c9cf0f75bba0207bdc9a30776869373f15747050f4922f075f90ef4120a9d8
+  version: 1.3.1.1.3
+  sha256: d86d608f5a3eab5e7be3252d3a900f0d8ac0e2bf2a53e97ac546a91b675ff6b2
   requires_dist:
-  - geff-spec<=1.1
+  - geff-spec<1.4
   - networkx>=3.2.1
   - numcodecs>=0.13,<0.16
-  - numcodecs>=0.15,<0.16 ; python_full_version >= '3.13'
+  - numcodecs>=0.13
+  - numcodecs>=0.15 ; python_full_version >= '3.13'
   - numpy>=1.24
   - numpy>=1.26 ; python_full_version >= '3.12'
   - numpy>=2.1 ; python_full_version >= '3.13'
@@ -7138,18 +7139,19 @@ packages:
   - pandas>=2 ; extra == 'pandas'
   - pandas>=2.3 ; python_full_version >= '3.12' and extra == 'pandas'
   - rustworkx>=0.16.0 ; extra == 'rx'
-  - spatial-graph>=0.0.4 ; extra == 'spatial-graph'
+  - spatial-graph>=0.0.7 ; extra == 'spatial-graph'
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/be/1c/976fdbb4a1835c4831bc5c4000ced14d186e6495b656822fc8c36c0fae66/geff_spec-1.1.0-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/3c/79/5c5cfcbccbb83e32d8163cf26d998a6887d716b944f8599e6e14702e3cda/geff_spec-1.3.0-py3-none-any.whl
   name: geff-spec
-  version: 1.1.0
-  sha256: d08abbb52204d832ba6a641ef3947b1d82e16a607119ae582e923fd5e078643a
+  version: 1.3.0
+  sha256: cc629ced0bf9ff2bbe6c1b2184fe9d89f134776f1d5d9f1daa2b0096e92e6fbd
   requires_dist:
   - pydantic>=2.11
   - numpy>=1.24
   - numpy>=1.26 ; python_full_version >= '3.12'
   - numpy>=2.1 ; python_full_version >= '3.13'
   - annotated-types
+  - zarr>=2.18,<4
   requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/win-64/getopt-win32-0.1-hcfcfb64_1.conda
   sha256: f3b6e689724a62f36591f6f0e4657db5507feca78e7ef08690a6b2a384216a5c
@@ -16263,8 +16265,8 @@ packages:
   timestamp: 1725784449622
 - pypi: ./
   name: ultrack
-  version: 0.7.1
-  sha256: 60e5cb45bcb92c4fb2690680495234f4012ef7cb7ed4c0a569d4e827936b89ca
+  version: 0.7.3
+  sha256: e8b7c6b684af9e59d8007f298851c870dc52eaec1b8682c4eda93e4050f39e81
   requires_dist:
   - blosc2>=2.2.0
   - click>=8.1.3
@@ -16272,7 +16274,8 @@ packages:
   - edt>=2.3.2
   - fastapi>=0.109.2
   - fasteners>=0.20
-  - geff>=1.0.0
+  - geff-spec>=1.3.0
+  - geff>=1.3.0
   - gurobipy>=9.0.0,!=12.0.0
   - higra>=0.6.10
   - httpx>=0.26.0
@@ -16288,7 +16291,7 @@ packages:
   - pillow>=10.0.0
   - psycopg2-binary>=2.9.6
   - psygnal>=0.9.0
-  - pyarrow>=16.1.0,<20
+  - pyarrow>=16.1.0
   - pydantic-settings
   - pydantic>=2.11.0
   - pydot>=2.0.0
@@ -16303,7 +16306,7 @@ packages:
   - urllib3
   - uvicorn>=0.27.0.post1
   - websockets>=12.0
-  - zarr>=3.0.0
+  - zarr>=3.1.0
   - autodoc-pydantic ; extra == 'docs'
   - furo ; extra == 'docs'
   - myst-parser>=2.0.0 ; extra == 'docs'
@@ -16318,11 +16321,11 @@ packages:
   - asv>=0.5.1 ; extra == 'test'
   - napari[testing]>0.4.18 ; extra == 'test'
   - pre-commit>=3.2.2 ; extra == 'test'
-  - pyqt5>=5.15.4 ; extra == 'test'
+  - pytest-cov>=6.0.0 ; extra == 'test'
   - pytest-qt>=4.2.0 ; extra == 'test'
   - pytest>=7.3.1 ; extra == 'test'
   - pytrackmate>=1.3.4 ; extra == 'test'
-  requires_python: '>=3.9,<3.13'
+  requires_python: '>=3.11,<3.14'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/unicodedata2-16.0.0-py312h66e93f0_0.conda
   sha256: 638916105a836973593547ba5cf4891d1f2cb82d1cf14354fcef93fd5b941cdc
   md5: 617f5d608ff8c28ad546e5d9671cbb95
