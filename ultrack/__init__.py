@@ -7,6 +7,13 @@ if os.environ.get("ULTRACK_DEBUG", False):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+# Cellpose and ultrack had conflicts due to torch/cuda leading to Segmentation Fault
+# importing Cellpose first avoids the issue, https://github.com/royerlab/ultrack/issues/108
+try:
+    from cellpose.models import Cellpose  # noqa: F401
+except (ImportError, ModuleNotFoundError):
+    pass
+
 # ignoring small float32/64 zero flush warning
 warnings.filterwarnings("ignore", message="The value of the smallest subnormal for")
 
