@@ -97,6 +97,24 @@ def _axes(
     )
 
 
+def _tracks_df_node_ids(tracks_df: pd.DataFrame) -> pd.Index:
+    """Returns the node ids of a tracks dataframe, its `id` column or its index."""
+    if "id" in tracks_df.columns:
+        node_ids = pd.Index(tracks_df["id"])
+    else:
+        node_ids = tracks_df.index
+
+    node_ids = node_ids.astype(np.int64)
+
+    if node_ids.has_duplicates:
+        duplicated = node_ids[node_ids.duplicated()].unique()
+        raise ValueError(
+            f"`tracks_df` has duplicated node ids, e.g. {duplicated[:5].tolist()}."
+        )
+
+    return node_ids
+
+
 def to_geff_from_database(
     database_path: Union[str, Path],
     filename: Union[str, Path],
@@ -110,11 +128,13 @@ def to_geff_from_database(
     spatial_unit: Optional[str] = None,
     time_scale: Optional[float] = None,
     time_unit: Optional[str] = None,
+    tracks_df: Optional[pd.DataFrame] = None,
 ) -> None:
     """
     Export tracks to a geff (Graph Exchange File Format) file from a database.
 
-    Only the nodes and edges of the solution are exported.
+    Only the nodes and edges of the solution are exported. When `tracks_df` is
+    provided, only its nodes are exported, with its track ids.
 
     Besides ultrack's node attributes, each node stores:
 
@@ -165,14 +185,41 @@ def to_geff_from_database(
         Physical time interval between frames.
     time_unit : str, optional
         Physical unit of `time_scale` (e.g. "minute"). Requires `time_scale`.
+    tracks_df : pd.DataFrame, optional
+        Tracks dataframe as returned by `to_tracks_layer`, possibly edited
+        afterwards, e.g. by `filter_short_sibling_tracks`. Its node ids are read
+        from the `id` column, or from the index if there is no `id` column, and it
+        must have the `track_id` and `parent_track_id` columns.
+        When provided, only its nodes are exported, `track_id` and
+        `parent_track_id` are taken from it instead of being recomputed from the
+        database, `lineage_id` is derived from them and `seg_id` is its
+        `track_id`, so the geff is consistent with the segmentation painted by
+        `tracks_to_zarr(tracks_df=...)` from the same dataframe. Edges are the
+        solution edges between exported nodes; `parent_id` and `parent_track_id`
+        are -1 for nodes whose parent node or parent tracklet is not exported.
+        The remaining node properties (positions, area, masks, ...) are read
+        from the database. By default, all solution nodes are exported with
+        track ids computed as in `to_tracks_layer`.
 
     Raises
     ------
     FileExistsError
         If the file already exists and overwrite is False.
     ValueError
-        If the solution is empty or the scale / unit parameters are inconsistent.
+        If the solution is empty, the scale / unit parameters are inconsistent or
+        `tracks_df` has duplicated ids or ids that are not solution nodes.
     """
+    if tracks_df is not None:
+        tracks_node_ids = _tracks_df_node_ids(tracks_df)
+        missing_columns = {"track_id", "parent_track_id"} - set(tracks_df.columns)
+        if missing_columns:
+            raise ValueError(
+                f"`tracks_df` is missing the columns {sorted(missing_columns)}."
+            )
+        selected_ids = set(tracks_node_ids.tolist())
+    else:
+        selected_ids = None
+
     filename = Path(filename)
     if filename.exists():
         if not overwrite:
@@ -225,6 +272,13 @@ def to_geff_from_database(
         ).where(
             NodeDB.selected
         ):
+            if selected_ids is not None:
+                if node_id not in selected_ids:
+                    continue
+                if parent_id not in selected_ids:
+                    # parent is not exported, the node becomes a root
+                    parent_id = NO_PARENT
+
             node_dict = {
                 "id": node_id,
                 "parent_id": parent_id,
@@ -249,6 +303,15 @@ def to_geff_from_database(
             if parent_id != NO_PARENT:
                 solution_source.append(parent_id)
                 solution_target.append(node_id)
+
+        if selected_ids is not None:
+            unknown_ids = tracks_node_ids.difference([n["id"] for n in all_nodes_data])
+            if len(unknown_ids) > 0:
+                raise ValueError(
+                    f"`tracks_df` has {len(unknown_ids)} node ids that are not "
+                    f"solution nodes in the database, e.g. "
+                    f"{unknown_ids[:5].tolist()}."
+                )
 
         if len(all_nodes_data) == 0:
             raise ValueError(
@@ -308,8 +371,19 @@ def to_geff_from_database(
 
     axes = _axes(spatial_axes, scale, spatial_unit, time_scale, time_unit)
 
-    # Tracks information, same code path as `to_tracks_layer` so the ids are identical
-    add_track_ids_to_tracks_df(node_df)
+    if tracks_df is None:
+        # Tracks information, same code path as `to_tracks_layer` so the ids are identical
+        add_track_ids_to_tracks_df(node_df)
+    else:
+        # Tracks information from the (possibly edited) tracks dataframe
+        for column in ("track_id", "parent_track_id"):
+            values = pd.Series(
+                tracks_df[column].to_numpy(dtype=np.int64), index=tracks_node_ids
+            )
+            node_df[column] = values.reindex(node_df.index).to_numpy()
+        # tracklets whose parent tracklet is not exported become roots
+        orphans = ~node_df["parent_track_id"].isin(node_df["track_id"])
+        node_df.loc[orphans, "parent_track_id"] = NO_PARENT
     forest = tracks_df_forest(node_df)
     roots = forest.pop(NO_PARENT)
     lineage = {t: r for r in roots for t in get_subtree(forest, r)}
@@ -407,6 +481,7 @@ def to_geff(
     spatial_unit: Optional[str] = None,
     time_scale: Optional[float] = None,
     time_unit: Optional[str] = None,
+    tracks_df: Optional[pd.DataFrame] = None,
 ) -> None:
     """
     Export tracks to a geff (Graph Exchange File Format) file.
@@ -440,11 +515,19 @@ def to_geff(
         Physical time interval between frames.
     time_unit : str, optional
         Physical unit of `time_scale` (e.g. "minute").
+    tracks_df : pd.DataFrame, optional
+        Tracks dataframe as returned by `to_tracks_layer`, possibly edited
+        afterwards (e.g. by `filter_short_sibling_tracks`). When provided, only its
+        nodes are exported and their `track_id`, `parent_track_id` and `seg_id`
+        are taken from it, keeping the geff consistent with
+        `tracks_to_zarr(tracks_df=...)`. See `to_geff_from_database`.
 
     Raises
     ------
     FileExistsError
         If the file already exists and overwrite is False.
+    ValueError
+        If `tracks_df` has ids that are not solution nodes.
     """
     if scale is None:
         scale = config.data_config.metadata.get("scale")
@@ -461,4 +544,5 @@ def to_geff(
         spatial_unit=spatial_unit,
         time_scale=time_scale,
         time_unit=time_unit,
+        tracks_df=tracks_df,
     )

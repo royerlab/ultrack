@@ -369,3 +369,135 @@ def test_geff_scale_from_metadata(
     to_geff(config, output_file, overwrite=True, scale=[2.0, 2.0, 2.0])
     _, metadata = _read_validated(output_file)
     assert [ax.scale for ax in metadata.axes] == [None, 2.0, 2.0, 2.0]
+
+
+_TRACK_PROPS = ("track_id", "parent_track_id", "lineage_id", "seg_id")
+
+
+def test_geff_from_unedited_tracks_df(
+    tracked_cell_division_mock_data: MainConfig, tmp_path: Path
+) -> None:
+    """Test that `to_tracks_layer`'s output as `tracks_df` gives the default export."""
+    from ultrack.core.export import to_tracks_layer
+
+    config = tracked_cell_division_mock_data
+    tracks_df, _ = to_tracks_layer(config)
+
+    default_file = tmp_path / "default.geff.zarr"
+    tracks_df_file = tmp_path / "tracks_df.geff.zarr"
+    to_geff(config, default_file)
+    to_geff(config, tracks_df_file, tracks_df=tracks_df)
+
+    default_graph, _ = _read_validated(default_file)
+    graph, _ = _read_validated(tracks_df_file)
+
+    assert set(graph.nodes) == set(default_graph.nodes)
+    assert set(graph.edges) == set(default_graph.edges)
+    for node_id, attrs in graph.nodes(data=True):
+        for prop in (*_TRACK_PROPS, "parent_id", "t", "z", "y", "x", "area"):
+            assert attrs[prop] == default_graph.nodes[node_id][prop], prop
+
+
+def _deselect_tracks(config: MainConfig, track_ids) -> None:
+    """Removes the nodes of `track_ids` from the database solution."""
+    import sqlalchemy as sqla
+    from sqlalchemy.orm import Session
+
+    from ultrack.core.database import NodeDB
+    from ultrack.core.export import to_tracks_layer
+
+    tracks_df, _ = to_tracks_layer(config)
+    node_ids = tracks_df.loc[tracks_df["track_id"].isin(track_ids), "id"].tolist()
+    assert len(node_ids) > 0
+
+    engine = sqla.create_engine(config.data_config.database_path)
+    with Session(engine) as session:
+        session.query(NodeDB).where(NodeDB.id.in_(node_ids)).update(
+            {NodeDB.selected: False}, synchronize_session=False
+        )
+        session.commit()
+
+
+def test_geff_from_filtered_tracks_df(
+    tracked_cell_division_mock_data: MainConfig, tmp_path: Path
+) -> None:
+    """Test that the geff agrees with the tracks and labels edited by
+    `filter_short_sibling_tracks`."""
+    import numpy as np
+
+    from ultrack.core.export import to_tracks_layer, tracks_to_zarr
+    from ultrack.tracks import filter_short_sibling_tracks
+
+    config = tracked_cell_division_mock_data
+    tracks_df, _ = to_tracks_layer(config)
+
+    # make a division with a single short and childless daughter by removing the
+    # granddaughter tracklets from the solution
+    lengths = tracks_df.groupby("track_id").size()
+    parent_track = tracks_df.groupby("track_id")["parent_track_id"].first()
+    children = {
+        p: c.index.tolist()
+        for p, c in parent_track[parent_track != -1].groupby(parent_track)
+    }
+    grandparents = [p for p, c in children.items() if any(i in children for i in c)]
+    assert len(grandparents) > 0, "Mock data has no nested divisions"
+    root = grandparents[0]
+    daughters = children[root]
+    short = next(d for d in daughters if d in children)
+    (long,) = (d for d in daughters if d != short)
+    _deselect_tracks(config, children[short])
+
+    tracks_df, _ = to_tracks_layer(config)
+    min_length = int(lengths[short])
+    assert lengths[long] > min_length
+
+    segments = tracks_to_zarr(config, tracks_df)
+    filtered_df, filtered_segments = filter_short_sibling_tracks(
+        tracks_df, min_length, segments=segments
+    )
+    dropped_ids = set(tracks_df.loc[tracks_df["track_id"] == short, "id"])
+    assert len(dropped_ids) > 0
+    assert len(filtered_df) == len(tracks_df) - len(dropped_ids)
+    # the long daughter is merged into its parent
+    assert not (filtered_df["track_id"] == long).any()
+
+    output_file = tmp_path / "tracks.geff.zarr"
+    to_geff(config, output_file, tracks_df=filtered_df)
+    graph, _ = _read_validated(output_file)
+
+    assert set(graph.nodes) == set(filtered_df["id"])
+    assert dropped_ids.isdisjoint(graph.nodes)
+    assert all(graph.out_degree(n) <= 1 for n in graph.nodes)
+
+    filtered_df = filtered_df.set_index("id")
+    for node_id, attrs in graph.nodes(data=True):
+        row = filtered_df.loc[node_id]
+        assert attrs["track_id"] == row["track_id"]
+        assert attrs["parent_track_id"] == row["parent_track_id"]
+        assert attrs["seg_id"] == row["track_id"]
+        assert attrs["lineage_id"] == root
+
+    # seg_ids match the labels painted from the filtered tracks
+    painted_segments = tracks_to_zarr(config, filtered_df)[...]
+    np.testing.assert_array_equal(painted_segments, filtered_segments[...])
+    for t in range(painted_segments.shape[0]):
+        painted = set(np.unique(painted_segments[t])) - {0}
+        exported = {a["seg_id"] for _, a in graph.nodes(data=True) if a["t"] == t}
+        assert painted == exported
+
+
+def test_geff_tracks_df_unknown_ids(
+    tracked_database_mock_data: MainConfig, tmp_path: Path
+) -> None:
+    """Test that ids of `tracks_df` that are not solution nodes are rejected."""
+    from ultrack.core.export import to_tracks_layer
+
+    config = tracked_database_mock_data
+    tracks_df, _ = to_tracks_layer(config)
+    tracks_df = tracks_df.copy()
+    tracks_df.iloc[0, tracks_df.columns.get_loc("id")] = 999_999_999
+
+    output_file = tmp_path / "tracks.geff.zarr"
+    with pytest.raises(ValueError, match="999999999"):
+        to_geff(config, output_file, tracks_df=tracks_df)
+    assert not output_file.exists()
